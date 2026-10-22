@@ -97,10 +97,11 @@ function buildMenu() {
   const m = document.getElementById("dd-menu");
   m.innerHTML = Object.entries(groups).map(([g, ls]) => `<div class="dd-col"><span class="lbl">${esc(g)}</span>` +
     ls.map(L => `<button class="dd-item" data-go="liga" data-liga="${L.id}" data-tab="resumen">${leagueMark(L)}<span>${esc(L.nombre)}<small>${esc(L.pais)}</small></span></button>`).join("") + `</div>`).join("");
-  const btn = document.getElementById("dd-btn");
-  btn.onclick = e => { e.stopPropagation(); const open = m.hidden; m.hidden = !open; btn.setAttribute("aria-expanded", String(open)); };
-  document.addEventListener("click", e => { if (!e.target.closest(".dd")) { m.hidden = true; btn.setAttribute("aria-expanded", "false"); } });
-  document.addEventListener("keydown", e => { if (e.key === "Escape") { m.hidden = true; btn.setAttribute("aria-expanded", "false"); document.getElementById("sres").hidden = true; } });
+  const btns = [...document.querySelectorAll(".dd-toggle")];
+  const setOpen = open => { m.hidden = !open; btns.forEach(b => b.setAttribute("aria-expanded", String(open))); document.body.classList.toggle("sheet-open", open); };
+  btns.forEach(b => b.addEventListener("click", e => { e.stopPropagation(); setOpen(m.hidden); }));
+  document.addEventListener("click", e => { if (!e.target.closest(".dd-menu") && !e.target.closest(".dd-toggle")) setOpen(false); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { setOpen(false); document.getElementById("sres").hidden = true; } });
   const q = document.getElementById("q"), res = document.getElementById("sres");
   const teams = ligasIds().flatMap(id => D.ligas[id].tabla.map(s => ({ L: D.ligas[id], t: s.equipo })))
     .concat(ligasIds().filter(id => !D.ligas[id].tabla.length).flatMap(id => Object.keys(D.ligas[id].equipos).map(t => ({ L: D.ligas[id], t }))));
@@ -115,7 +116,7 @@ function buildMenu() {
   });
   document.addEventListener("click", e => { if (!e.target.closest(".search")) res.hidden = true; });
   res.addEventListener("click", () => { res.hidden = true; q.value = ""; });
-  m.addEventListener("click", () => { m.hidden = true; });
+  m.addEventListener("click", e => { if (e.target.closest("[data-go]")) setOpen(false); });
 }
 
 /* ---------------- rutas ---------------- */
@@ -153,12 +154,13 @@ document.addEventListener("click", e => {
   const v = el.dataset.go;
   go({ v, liga: el.dataset.liga || (v === "inicio" ? "todas" : undefined), id: el.dataset.id, team: el.dataset.team, tab: el.dataset.tab,
        wk: el.dataset.wk, sort: el.dataset.sort, keepScroll: el.hasAttribute("data-keep") });
+  if (el.classList.contains("lpick")) { const g = document.querySelector(".lgrid"); if (g) window.scrollTo({ top: g.getBoundingClientRect().top + window.scrollY - 90 }); }
 });
 
 function render() {
   timers.splice(0).forEach(clearInterval);
-  document.querySelectorAll("nav.main > button").forEach(b => b.setAttribute("aria-current", b.dataset.go === ({ partido: "inicio", equipo: "inicio", liga: "x" }[R.v] || R.v) ? "page" : "false"));
-  document.getElementById("dd-btn").setAttribute("aria-current", R.v === "liga" ? "page" : "false");
+  const sec = ({ partido: "inicio", equipo: "liga" }[R.v] || R.v);
+  document.querySelectorAll("[data-nav]").forEach(b => b.setAttribute("aria-current", b.dataset.nav === sec ? "page" : "false"));
   const f = { inicio: vInicio, liga: vLiga, partido: vPartido, equipo: vEquipo, registro: vRegistro, metodo: vMetodo }[R.v] || vInicio;
   $app.innerHTML = f();
   if (R.v === "partido") bindOdds();
@@ -194,6 +196,16 @@ function resultRow(L, x) {
 function card(title, body, extra = "", cls = "") {
   return `<article class="panel wcard ${cls}"><header class="wh"><h3>${title}</h3>${extra}</header>${body}</article>`;
 }
+function picker(key, sel, items) {
+  const cur = items.find(x => x.id === sel) || items[0];
+  return `<div class="pk" data-pk="${key}"><button class="pk-btn" aria-haspopup="listbox" aria-expanded="false">${leagueMark(cur.L, "sm")}<span>${esc(cur.L.nombre)}</span><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <div class="pk-menu" role="listbox" hidden>${items.map(x => `<button role="option" aria-selected="${x.id === cur.id}" ${x.attrs}>${leagueMark(x.L, "sm")}<span>${esc(x.L.nombre)}<small>${esc(x.L.pais)}</small></span></button>`).join("")}</div></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest(".pk-btn");
+  document.querySelectorAll(".pk-menu").forEach(m => { if (!b || m.parentNode !== b.parentNode) { m.hidden = true; m.parentNode.querySelector(".pk-btn").setAttribute("aria-expanded", "false"); } });
+  if (b) { const m = b.parentNode.querySelector(".pk-menu"); m.hidden = !m.hidden; b.setAttribute("aria-expanded", String(!m.hidden)); }
+});
 function carousel(id, slides, label) {
   if (!slides.length) return `<p class="note">Sin datos todavía.</p>`;
   return `<div class="car" data-car="${id}" aria-roledescription="carrusel" aria-label="${esc(label)}">
@@ -285,7 +297,8 @@ function vInicio() {
     rk.map((s, i) => `<tr class="click" data-go="equipo" data-liga="${HL.id}" data-team="${esc(s.equipo)}"><td><span class="pos">${i + 1}</span></td><td class="team">${badge(HL, s.equipo)}${esc(corto(HL, s.equipo))}</td><td class="n">${dec(s.ataque)}</td><td class="n">${dec(s.defensa)}</td><td class="n"><b>${sgn(Math.round((s.ataque / s.defensa - 1) * 100))}</b></td></tr>`).join("") + `</tbody></table>`;
   const tabla = `<table class="t compact"><thead><tr><th>#</th><th>Equipo</th><th class="n">PJ</th><th class="n">DG</th><th class="n">Pts</th></tr></thead><tbody>` +
     HL.tabla.slice(0, 8).map(s => `<tr class="click" data-go="equipo" data-liga="${HL.id}" data-team="${esc(s.equipo)}"><td>${posTag(HL, s.pos)}</td><td class="team">${badge(HL, s.equipo)}${esc(corto(HL, s.equipo))}</td><td class="n">${s.pj}</td><td class="n">${sgn(s.dg)}</td><td class="n"><b>${s.pts}</b></td></tr>`).join("") + `</tbody></table>`;
-  const sw = `<div class="chips mini" role="group" aria-label="Liga">${ligasIds().filter(id => D.ligas[id].tabla_ok).map(id => `<button class="chip-btn" data-hl="${id}" data-go="inicio" data-liga="${R.liga || "todas"}" data-keep aria-pressed="${id === hl}">${esc(D.ligas[id].nombre)}</button>`).join("")}</div>`;
+  const swItems = ligasIds().filter(id => D.ligas[id].tabla_ok).map(id => ({ id, L: D.ligas[id], attrs: `data-hl="${id}" data-go="inicio" data-liga="${R.liga || "todas"}" data-keep` }));
+  const sw = (key) => picker(key, hl, swItems);
 
   // próximos y trío
   const soon = allMatches().filter(p => new Date(p.kickoff).getTime() >= now).sort((a, b) => a.kickoff.localeCompare(b.kickoff)).slice(0, 6);
@@ -312,8 +325,8 @@ function vInicio() {
   const groups = {}; ms.forEach(p => (groups[dayKey(p.kickoff)] ||= []).push(p));
   const list = Object.keys(groups).length ? Object.entries(groups).map(([k, arr]) => `<div class="day">${esc(dayLabel(k))}</div>` + arr.map(p => matchRow(p, sel === "todas")).join("")).join("")
     : `<div class="empty">No hay partidos en los próximos 7 días${sel !== "todas" ? " para esta liga" : ""}.</div>`;
-  const chips = `<div class="chips" role="group" aria-label="Liga"><button class="chip-btn" data-go="inicio" data-liga="todas" data-keep aria-pressed="${sel === "todas"}">Todas</button>` +
-    ligasIds().map(id => `<button class="chip-btn" data-go="inicio" data-liga="${id}" data-keep aria-pressed="${sel === id}">${esc(D.ligas[id].nombre)}</button>`).join("") + `</div>`;
+  const chips = `<div class="lgrid" role="group" aria-label="Filtrar por liga"><button class="lpick all" data-go="inicio" data-liga="todas" data-keep aria-pressed="${sel === "todas"}" title="Todas las ligas"><span class="lmark">★</span><span>Todas</span></button>` +
+    ligasIds().map(id => `<button class="lpick" data-go="inicio" data-liga="${id}" data-keep aria-pressed="${sel === id}" title="${esc(D.ligas[id].nombre)}">${leagueMark(D.ligas[id])}<span>${esc(D.ligas[id].nombre)}</span></button>`).join("") + `</div>`;
 
   return `<section class="view" aria-labelledby="h-inicio">
     <h1 id="h-inicio" class="sr">Ballytics: probabilidades de fútbol</h1>
@@ -322,14 +335,14 @@ function vInicio() {
       ${card("Jugador destacado", carousel("jug", jug, "Jugadores destacados"), `<span class="tag">Goleadores</span>`, "accent")}
       ${card("Equipo en forma", carousel("eq", eqs, "Equipos en forma"), `<span class="tag">Últimos 5</span>`)}
       ${card("Proyección del partido", proy, fx ? `<span class="tag">${esc(fx.L.nombre)}</span>` : "")}
-      ${card("Ranking de fuerza", `${sw}<div class="scroll">${rank}</div><button class="link" data-go="liga" data-liga="${hl}" data-tab="fuerza">Ranking completo →</button>`)}
-      ${card("Tabla", `${sw}<div class="scroll">${tabla}</div><button class="link" data-go="liga" data-liga="${hl}" data-tab="tabla">Tabla completa →</button>`)}
+      ${card("Ranking de fuerza", `<div class="scroll">${rank}</div><button class="link" data-go="liga" data-liga="${hl}" data-tab="fuerza">Ranking completo →</button>`, sw("rk"))}
+      ${card("Tabla", `<div class="scroll">${tabla}</div><button class="link" data-go="liga" data-liga="${hl}" data-tab="tabla">Tabla completa →</button>`, sw("tb"))}
       ${card("Próximos partidos", `<div class="nlist">${prox}</div>`)}
       ${card("Trío más probable", `<div class="trio">${trio}</div>`, `<span class="tag">Esta semana</span>`, "dark")}
       ${card("Rachas activas", `<div class="slist">${rach}</div>`)}
       ${card("Rendimiento del modelo", `${perf}<button class="link" data-go="registro">Ver registro →</button>`, `<span class="tag">Público</span>`)}
     </div>
-    <div class="row" style="justify-content:space-between"><h2>Todos los partidos de la semana</h2></div>
+    <div class="row" style="justify-content:space-between"><h2>Todos los partidos de la semana</h2><span class="note">Elige una liga</span></div>
     ${chips}
     <div class="panel flush">${list}</div>
   </section>`;
