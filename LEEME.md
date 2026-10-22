@@ -1,4 +1,4 @@
-# Laboratorio DC
+# Ballytics
 
 Sitio de probabilidades de fútbol con un modelo Dixon-Coles abierto. Se actualiza solo tres veces al día con GitHub Actions y se publica gratis en GitHub Pages.
 

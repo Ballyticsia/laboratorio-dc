@@ -1,4 +1,4 @@
-/* Laboratorio DC — sitio estático. Lee data/*.json que genera pipeline/generar.py. */
+/* Ballytics — sitio estático. Lee data/*.json que genera pipeline/generar.py. */
 (() => {
 "use strict";
 const D = { ligas: {} };
