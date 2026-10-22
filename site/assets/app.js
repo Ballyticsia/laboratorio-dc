@@ -116,20 +116,43 @@ function buildMenu() {
   document.addEventListener("click", e => { if (!e.target.closest(".dd-menu") && !e.target.closest(".dd-toggle")) setOpen(false); });
   document.addEventListener("keydown", e => { if (e.key === "Escape") { setOpen(false); document.getElementById("sres").hidden = true; } });
   const q = document.getElementById("q"), res = document.getElementById("sres");
-  let teams = [];
-  const indexTeams = () => { teams = ligasIds().flatMap(id => Object.keys(D.ligas[id].equipos).map(t => ({ L: D.ligas[id], t }))); };
-  indexTeams(); D.all.then(indexTeams);
-  const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  let idx = [];
+  const norm = x => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const indexAll = () => {
+    const ligas = D.indice.ligas.map(l => ({ k: "Ligas", n: l.nombre, sub: l.pais, html: leagueMark(l), go: `data-go="liga" data-liga="${l.id}" data-tab="resumen"` }));
+    const eq = [], seen = new Set(), pl = [], seenP = new Set();
+    ligasIds().forEach(id => { const L = D.ligas[id];
+      Object.keys(L.equipos).forEach(t => { const key = id + "|" + t; if (seen.has(key)) return; seen.add(key);
+        eq.push({ k: "Equipos", n: corto(L, t), alt: t, sub: L.nombre, html: badge(L, t), go: `data-go="equipo" data-liga="${id}" data-team="${esc(t)}"` }); });
+      (L.goleadores || []).forEach(g => { const key = g.jid + "|" + id; if (seenP.has(key)) return; seenP.add(key);
+        pl.push({ k: "Jugadores", n: g.jugador, sub: `${corto(L, g.equipo)} · ${L.nombre} · ${g.goles} goles`, html: badge(L, g.equipo), go: `data-go="jugador" data-liga="${id}" data-id="${esc(g.jid)}"` }); });
+    });
+    idx = [...ligas, ...eq, ...pl].map(x => ({ ...x, s: norm(x.n + " " + (x.alt || "")) }));
+  };
+  indexAll(); D.all.then(indexAll);
+  let act = -1;
+  const items = () => [...res.querySelectorAll(".dd-item")];
+  const setAct = i => { const it = items(); if (!it.length) return; act = (i + it.length) % it.length; it.forEach((x, j) => x.classList.toggle("act", j === act)); it[act].scrollIntoView({ block: "nearest" }); };
   q.addEventListener("input", () => {
-    const v = norm(q.value.trim());
+    const v = norm(q.value.trim()); act = -1;
     if (v.length < 2) { res.hidden = true; return; }
-    const hits = teams.filter(x => norm(x.t).includes(v) || norm(corto(x.L, x.t)).includes(v)).slice(0, 8);
-    res.innerHTML = hits.length ? hits.map(x => `<button class="dd-item" data-go="equipo" data-liga="${x.L.id}" data-team="${esc(x.t)}">${badge(x.L, x.t)}<span>${esc(corto(x.L, x.t))}<small>${esc(x.L.nombre)}</small></span></button>`).join("")
+    const sc = x => x.s.startsWith(v) ? 2 : x.s.includes(" " + v) ? 1 : 0;
+    const hits = idx.filter(x => x.s.includes(v)).sort((a, b) => sc(b) - sc(a)).slice(0, 14);
+    const groups = {}; hits.forEach(h => (groups[h.k] ||= []).push(h));
+    res.innerHTML = hits.length ? ["Ligas", "Equipos", "Jugadores"].filter(k => groups[k]).map(k => `<span class="lbl sgrp">${k}</span>` +
+      groups[k].slice(0, k === "Jugadores" ? 5 : 6).map(x => `<button class="dd-item" ${x.go}>${x.html}<span>${esc(x.n)}<small>${esc(x.sub)}</small></span></button>`).join("")).join("")
       : `<p class="note" style="padding:10px">Sin resultados.</p>`;
     res.hidden = false;
   });
+  q.addEventListener("keydown", e => {
+    if (res.hidden) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setAct(act + 1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setAct(act - 1); }
+    else if (e.key === "Enter") { const it = items(); const t = it[act >= 0 ? act : 0]; if (t) { e.preventDefault(); t.click(); q.blur(); } }
+  });
   document.addEventListener("click", e => { if (!e.target.closest(".search")) res.hidden = true; });
   res.addEventListener("click", () => { res.hidden = true; q.value = ""; });
+  document.addEventListener("keydown", e => { if (e.key === "/" && document.activeElement.tagName !== "INPUT") { e.preventDefault(); q.focus(); } });
   m.addEventListener("click", e => { if (e.target.closest("[data-go]")) setOpen(false); });
 }
 
@@ -250,7 +273,9 @@ function bindCarousels() {
     const slides = [...c.querySelectorAll(".car-slide")], dots = [...c.querySelectorAll(".car-dots button")];
     if (slides.length < 2) return;
     let i = 0, paused = false;
-    const show = k => { i = (k + slides.length) % slides.length; slides.forEach((s, j) => s.hidden = j !== i); dots.forEach((d, j) => d.setAttribute("aria-pressed", String(j === i))); };
+    const show = k => { i = (k + slides.length) % slides.length; slides.forEach((s, j) => s.hidden = j !== i); dots.forEach((d, j) => d.setAttribute("aria-pressed", String(j === i)));
+      document.querySelectorAll(`.car[data-sync="${c.dataset.car}"] .car-slide`).forEach((s, j) => s.hidden = j !== i); };
+    if (c.dataset.sync) return;
     dots.forEach(d => d.addEventListener("click", e => { e.stopPropagation(); show(+d.dataset.i); paused = true; }));
     c.addEventListener("mouseenter", () => paused = true);
     c.addEventListener("mouseleave", () => paused = false);
@@ -389,20 +414,21 @@ function vInicio() {
       <button class="btn ghost sm" data-go="equipo" data-liga="${L.id}" data-team="${esc(e.equipo)}">Ver equipo</button></div>`;
   }).filter(Boolean);
 
-  // proyección del partido destacado
-  const fx = heroMs[0];
-  let proy = `<p class="note">Sin partidos próximos.</p>`;
-  if (fx) {
+  // proyección: una por cada partido destacado, sincronizada con el carrusel de arriba
+  const projOf = fx => {
     const L = fx.L, mk = markets(matrix(L.modelo, fx.home, fx.away).m);
     const ct = fx.ch != null ? fx.ch + fx.ca : null, tt = fx.th != null ? fx.th + fx.ta : null;
-    proy = `<div class="proj">
+    return `<div class="proj">
+      <div class="proj-l"><span class="tag">${esc(L.nombre)}</span></div>
       <div class="proj-t">${badge(L, fx.home)}<b>${esc(corto(L, fx.home))}</b><span class="num xg2">${dec(fx.lh, 1)}</span><span class="faint">–</span><span class="num xg2">${dec(fx.la, 1)}</span><b>${esc(corto(L, fx.away))}</b>${badge(L, fx.away)}</div>
       <div class="p3">${bar3(mk.H, mk.D, mk.A)}</div>
       <div class="oddsrow">${[["1", mk.H], ["X", mk.D], ["2", mk.A]].map(([k, v]) => `<div><span class="lbl">${k}</span><b class="num">${dec(1 / v)}</b><small>${pct(v)}</small></div>`).join("")}</div>
       <div class="oddsrow">${[["+2,5 goles", mk.O25], ["Ambos marcan", mk.B]].map(([k, v]) => `<div><span class="lbl">${k}</span><b class="num">${dec(1 / v)}</b><small>${pct(v)}</small></div>`).join("")}
         ${ct != null ? `<div><span class="lbl">Córners</span><b class="num">${dec(ct, 1)}</b><small>esperados</small></div>` : ""}${tt != null ? `<div><span class="lbl">Tarjetas</span><b class="num">${dec(tt, 1)}</b><small>esperadas</small></div>` : ""}</div>
-      <p class="note">Cuota justa = 1 / probabilidad, sin margen de casa.</p></div>`;
-  }
+      <p class="note">Cuota justa = 1 / probabilidad, sin margen de casa. ${help("La cuota justa es la que pagaría una casa sin ganancia: 1 dividido por la probabilidad. Si te ofrecen más que esto, el modelo ve valor.")}</p></div>`;
+  };
+  const fx = heroMs[0];
+  const proy = heroMs.length ? `<div class="car" data-car="proj" data-sync="hero">${heroMs.map((m, i) => `<div class="car-slide" ${i ? "hidden" : ""}>${projOf(m)}</div>`).join("")}</div>` : `<p class="note">Sin partidos próximos.</p>`;
 
   // ranking de fuerza y tabla (por liga)
   const rk = [...HL.tabla].sort((a, b) => b.ataque / b.defensa - a.ataque / a.defensa).slice(0, 7);
@@ -446,7 +472,7 @@ function vInicio() {
     <div class="cards">
       ${card("Jugador destacado", carousel("jug", jug, "Jugadores destacados"), `<span class="tag">Goleadores</span>`, "accent")}
       ${card("Equipo en forma", carousel("eq", eqs, "Equipos en forma"), `<span class="tag">Últimos 5</span>`)}
-      ${card("Proyección del partido", proy, fx ? `<span class="tag">${esc(fx.L.nombre)}</span>` : "")}
+      ${card("Proyección del partido", proy, `<span class="tag">Destacado</span>`)}
       ${card("Ranking de fuerza", `<div class="scroll">${rank}</div><button class="link" data-go="liga" data-liga="${hl}" data-tab="fuerza">Ranking completo →</button>`, sw("rk"))}
       ${card("Tabla", `<div class="scroll">${tabla}</div><button class="link" data-go="liga" data-liga="${hl}" data-tab="tabla">Tabla completa →</button>`, sw("tb"))}
       ${card("Próximos partidos", `<div class="nlist">${prox}</div>`)}
@@ -584,7 +610,7 @@ function lProy(L) {
   const zs = []; (L.zonas || []).forEach(z => { if (!zs.some(x => x.cls === z.cls)) zs.push(z); });
   const pb = (v, cls = "") => `<div class="pbar ${cls}"><span class="tr"><i style="width:${100 * (v || 0)}%"></i></span><span class="num">${!v || v < 0.005 ? "<1 %" : pct(v)}</span></div>`;
   const zname = z => z.cls === "desc" ? "Descenso" : z.nombre.replace(" (fase de grupos)", "").replace(" (previa)", "");
-  return `<div class="panel flush scroll"><table class="t"><thead><tr><th>#</th><th>Equipo</th><th class="n hide-m">Pts hoy</th><th class="n">Pts finales</th><th class="n">Campeón</th>${zs.map(z => `<th class="n hide-m">${esc(zname(z))}</th>`).join("")}</tr></thead><tbody>` +
+  return `<div class="panel flush scroll"><table class="t"><thead><tr><th>#</th><th>Equipo</th><th class="n hide-m">Pts hoy</th><th class="n">Pts finales ${help(TIPS.proy)}</th><th class="n">Campeón</th>${zs.map(z => `<th class="n hide-m">${esc(zname(z))}</th>`).join("")}</tr></thead><tbody>` +
     t.map((s, i) => `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}"><td><span class="pos">${i + 1}</span></td><td class="team">${badge(L, s.equipo)}${esc(corto(L, s.equipo))}</td><td class="n hide-m">${s.pts}</td><td class="n"><b>${dec(s.pts_esp, 1)}</b></td><td>${pb(s.p_campeon, "gold")}</td>${zs.map(z => `<td class="hide-m">${pb((s.zonas || {})[z.cls], z.cls === "desc" ? "bad" : "")}</td>`).join("")}</tr>`).join("") +
     `</tbody></table></div><p class="note">10.000 simulaciones del resto de la temporada con el modelo actual.</p>`;
 }
@@ -595,7 +621,7 @@ function lFuerza(L) {
 function lFuerzaTabla(L) {
   const t = [...L.tabla].sort((a, b) => (b.ataque / b.defensa) - (a.ataque / a.defensa));
   const mx = Math.max(...t.map(s => s.ataque / s.defensa));
-  return `<div class="panel flush scroll"><table class="t"><thead><tr><th>#</th><th>Equipo</th><th class="n">Ataque</th><th class="n">Defensa</th><th>Fuerza global</th></tr></thead><tbody>` +
+  return `<div class="panel flush scroll"><table class="t"><thead><tr><th>#</th><th>Equipo</th><th class="n">Ataque ${help(TIPS.atq)}</th><th class="n">Defensa ${help(TIPS.def)}</th><th>Fuerza global</th></tr></thead><tbody>` +
     t.map((s, i) => `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}"><td><span class="pos">${i + 1}</span></td><td class="team">${badge(L, s.equipo)}${esc(corto(L, s.equipo))}</td><td class="n">${dec(s.ataque)}</td><td class="n">${dec(s.defensa)}</td><td style="width:35%"><div class="pbar" style="justify-content:flex-start"><span class="tr" style="width:100%"><i style="width:${(100 * (s.ataque / s.defensa) / mx).toFixed(1)}%"></i></span></div></td></tr>`).join("") +
     `</tbody></table></div><p class="note">Ataque: goles que marca frente a una defensa promedio (1,00 = promedio de la liga). Defensa: goles que recibe; menos es mejor.</p>`;
 }
@@ -640,13 +666,13 @@ function vPartido() {
   let mkt = "";
   if (cq) { const inv = [1 / cq.h, 1 / cq.d, 1 / cq.a], sm = inv[0] + inv[1] + inv[2];
     mkt = `<div class="mktrow"><span class="lbl">Mercado (${esc(cq.casa || "casas")}, sin margen)</span><span class="num">${pct(inv[0] / sm)} · ${pct(inv[1] / sm)} · ${pct(inv[2] / sm)}</span><span class="lbl">Modelo</span><span class="num">${pct(k.H)} · ${pct(k.D)} · ${pct(k.A)}</span></div>`; }
-  const mk = `<tr><th>Mercado</th><th style="text-align:right">Prob.</th><th style="text-align:right">Justa</th><th style="text-align:right">Tu cuota</th><th style="text-align:right">EV</th><th><span class="sr">Combinada</span></th></tr>` +
+  const mk = `<tr><th>Mercado</th><th style="text-align:right">Prob.</th><th style="text-align:right">Justa ${help(TIPS.justa)}</th><th style="text-align:right">Tu cuota</th><th style="text-align:right">EV ${help(TIPS.ev)}</th><th><span class="sr">Combinada</span></th></tr>` +
     groups.map(([g, rows]) => `<tr class="grp"><td colspan="6">${g}</td></tr>` + rows.map(([key, n, pr]) => `<tr><td>${esc(n)}</td><td class="n">${pct(pr, 1)}</td><td class="n">${dec(1 / pr)}</td>
       <td class="n"><input class="odd" inputmode="decimal" aria-label="Cuota ${esc(n)}" data-k="${esc(key)}" data-p="${pr}" value="${st[key] ? String(st[key]).replace(".", ",") : ""}" placeholder="—"></td><td class="n" data-ev="${esc(key)}"></td>
       <td class="n"><button class="addsel" data-sel="${esc(key)}" data-label="${esc(selLabel(g, n))}" data-jug="${key[0] === "G" ? esc(n.replace(/ \(.*\)$/, "")) : ""}" data-liga="${L.id}" data-mid="${esc(p.id)}" aria-pressed="${inCombo(p.id, key)}" title="Agregar a la combinada">+</button></td></tr>`).join("")).join("");
   const reg = D.registro && D.registro.filas && D.registro.filas.find(f => String(f.id) === String(p.id));
   const side = (s, t, cls) => `<div class="side ${cls}">${badge(L, t, "lg")}<button class="tn" data-go="equipo" data-liga="${L.id}" data-team="${esc(t)}">${esc(corto(L, t))}</button>
-      <span class="xgv">${dec(cls === "l" ? lh : la)}</span><span class="lbl">goles esperados</span>
+      <span class="xgv">${dec(cls === "l" ? lh : la)}</span><span class="lbl">goles esperados ${cls === "l" ? help(TIPS.xg) : ""}</span>
       <span class="row" style="gap:8px;${cls === "r" ? "justify-content:flex-end" : ""}">${s.pos ? `<span class="muted num" style="font-size:12px">${s.pos}º · ${s.pts} pts</span>` : ""}${formHtml(s.forma)}</span></div>`;
   const s1 = statOf(L, p.home), s2 = statOf(L, p.away);
   const cmp = [["Goles por partido", "gf", 2], ["Goles recibidos", "gc", 2], ["Tiros al arco", "tiros_arco", 1], ["Córners", "corners", 1], ["Posesión (%)", "posesion", 0], ["Tarjetas", "tarjetas", 1], ["Ambos marcan", "ambos", -1], ["Más de 2,5 goles", "over25", -1]]
@@ -781,14 +807,14 @@ function vRegistro() {
   return `<section class="view" aria-labelledby="h-r">
     <h1 id="h-r">Registro público</h1>
     <p class="muted">Cada predicción se guarda antes de que empiece el partido y no se puede cambiar después. Así se mide si el modelo sirve, con resultados reales y no con capturas de los aciertos.${g.desde ? ` Registro desde el ${fecha(g.desde + "T12:00")}.` : ""}</p>
-    <div class="kpis">${kpi("m", "Partidos calificados", g.n || 0, "")}${kpi("", "Acierto 1X2", pct(g.acierto_1x2, 1), "el resultado más probable")}${kpi("k", "Log-loss", dec(g.logloss, 3), `ingenuo ${dec(g.logloss_ingenuo, 3)} · menos es mejor`)}${kpi("", "Más/Menos 2,5", pct(g.acierto_o25, 1), "acierto")}${kpi("", "Marcador exacto", pct(g.marcador_exacto, 1), "el más probable")}</div>
+    <div class="kpis">${kpi("m", "Partidos calificados", g.n || 0, "")}${kpi("", "Acierto 1X2", pct(g.acierto_1x2, 1), "el resultado más probable")}${kpi("k", `Log-loss ${help(TIPS.logloss)}`, dec(g.logloss, 3), `ingenuo ${dec(g.logloss_ingenuo, 3)} · menos es mejor`)}${kpi("", "Más/Menos 2,5", pct(g.acierto_o25, 1), "acierto")}${kpi("", "Marcador exacto", pct(g.marcador_exacto, 1), "el más probable")}</div>
     ${g.vs_mercado ? `<div class="panel stack"><h3>Modelo contra el mercado</h3><div class="kpis">${kpi("m", "Log-loss modelo", dec(g.vs_mercado.modelo, 3), "")}${kpi("k", "Log-loss mercado", dec(g.vs_mercado.mercado, 3), "")}${kpi("", "Partidos con cuota", g.vs_mercado.n, "")}</div><p class="note">Solo partidos en que ESPN publicó cuotas antes del inicio. Menos es mejor.</p></div>` : ""}
     ${g.n ? `<div class="grid2">
       <div class="panel flush scroll"><div class="ph"><h3>Por liga</h3></div><table class="t"><thead><tr><th>Liga</th><th class="n">Partidos</th><th class="n">Acierto</th><th class="n">Log-loss</th></tr></thead><tbody>${(g.por_liga || []).map(x => `<tr><td class="team">${D.ligas[x.liga] ? leagueMark(D.ligas[x.liga]) + esc(D.ligas[x.liga].nombre) : esc(x.liga)}</td><td class="n">${x.n}</td><td class="n">${pct(x.acierto, 1)}</td><td class="n">${dec(x.logloss, 3)}</td></tr>`).join("")}</tbody></table></div>
       <div class="panel flush scroll"><div class="ph"><h3>Según la confianza del modelo</h3></div><table class="t"><thead><tr><th>Probabilidad del favorito</th><th class="n">Partidos</th><th class="n">Esperado</th><th class="n">Real</th></tr></thead><tbody>${(g.confianza || []).map(x => `<tr><td>${esc(x.rango)}</td><td class="n">${x.n}</td><td class="n">${pct(x.prob, 1)}</td><td class="n ${x.acierto >= x.prob ? "good" : "bad"}">${pct(x.acierto, 1)}</td></tr>`).join("")}</tbody></table><p class="note" style="padding:0 16px 12px">Si "Real" se parece a "Esperado", las probabilidades están bien medidas.</p></div>
     </div>` : ""}
     <div class="grid2">
-      <div class="panel stack"><h3>Calibración</h3><p class="note">Si el modelo dice 40 %, ¿pasa el 40 % de las veces?</p>${calChart(g.calibracion)}${spark(g.serie)}</div>
+      <div class="panel stack"><h3>Calibración ${help(TIPS.cal)}</h3><p class="note">Si el modelo dice 40 %, ¿pasa el 40 % de las veces?</p>${calChart(g.calibracion)}${spark(g.serie)}</div>
       <div class="panel flush"><div class="ph"><h3>Predicciones</h3><div class="tabs2" role="group" aria-label="Filtro">${[["calificados", "Calificadas"], ["pendientes", "Pendientes"]].map(([k, n]) => `<button data-go="registro" data-tab="${k}" data-keep aria-pressed="${k === tab}">${n}</button>`).join("")}</div></div><div class="scroll" style="max-height:560px;overflow:auto"><table class="t"><thead><tr><th>Fecha</th><th>Partido</th><th class="n hide-m">1 · X · 2</th><th class="n">Pick</th><th class="n">Resultado</th><th></th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="empty">${tab === "pendientes" ? "No hay partidos pendientes en el registro." : "Todavía no hay partidos calificados."}</td></tr>`}</tbody></table></div></div>
     </div></section>`;
 }
@@ -825,6 +851,40 @@ function vMetodo() {
 }
 
 
+
+
+/* ---------------- AYUDA ---------------- */
+function help(text) { return `<button class="hlp" data-tip="${esc(text)}" aria-label="Qué significa">?</button>`; }
+const TIPS = {
+  xg: "Goles esperados: cuántos goles debería marcar cada equipo según el modelo. Sale de su ataque, la defensa del rival y la localía.",
+  justa: "Cuota justa: 1 dividido por la probabilidad. Es lo que pagaría una casa sin margen. Si te ofrecen más, el modelo ve valor.",
+  ev: "Valor esperado (EV): cuánto ganarías o perderías en promedio por cada $1 si la probabilidad del modelo fuera correcta. Positivo = el modelo ve valor.",
+  logloss: "Log-loss: mide qué tan buenas son las probabilidades. Castiga mucho estar muy seguro y equivocarse. Menos es mejor; adivinar al azar da cerca de 1,10.",
+  atq: "Ataque: goles que marca frente a una defensa promedio, comparado con el promedio de la liga (1,00). Más es mejor.",
+  def: "Defensa: goles que recibe frente a un ataque promedio, comparado con el promedio de la liga (1,00). Menos es mejor.",
+  cal: "Calibración: si el modelo dice 40 %, eso debería pasar cerca del 40 % de las veces. Puntos sobre la diagonal = bien calibrado.",
+  pick: "Pick: el resultado más probable según el modelo (1 local, X empate, 2 visita) y el marcador exacto más probable.",
+  proy: "Proyección: se simula 10.000 veces el resto de la temporada con las probabilidades del modelo y se cuenta en cuántas simulaciones pasa cada cosa.",
+};
+let tipEl = null;
+function closeTip() { if (tipEl) { tipEl.remove(); tipEl = null; } }
+document.addEventListener("click", e => {
+  const b = e.target.closest(".hlp");
+  if (!b) { if (!e.target.closest(".tipbox")) closeTip(); return; }
+  e.stopPropagation(); e.preventDefault();
+  if (tipEl && tipEl._src === b) { closeTip(); return; }
+  closeTip();
+  tipEl = document.createElement("div"); tipEl.className = "tipbox"; tipEl.role = "tooltip"; tipEl._src = b; tipEl.textContent = b.dataset.tip;
+  document.body.appendChild(tipEl); tipY = window.scrollY;
+  const r = b.getBoundingClientRect(), w = Math.min(300, window.innerWidth - 24);
+  tipEl.style.width = w + "px";
+  tipEl.style.left = Math.max(12, Math.min(window.innerWidth - w - 12, r.left + r.width / 2 - w / 2)) + "px";
+  const top = r.bottom + 8 + window.scrollY;
+  tipEl.style.top = top + "px";
+}, true);
+let tipY = 0;
+window.addEventListener("scroll", () => { if (tipEl && Math.abs(window.scrollY - tipY) > 60) closeTip(); }, { passive: true });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeTip(); });
 
 /* ---------------- GRÁFICOS ---------------- */
 function niceTicks(lo, hi, n = 4) {
@@ -1370,6 +1430,21 @@ document.addEventListener("click", e => {
   const L = D.ligas[b.dataset.liga], p = L && findMatch(L.id, b.dataset.mid); if (!p) return;
   b.disabled = true; shareImage(L, p).finally(() => { b.disabled = false; });
 });
+
+
+/* ---------------- MODO CLARO ---------------- */
+(function () {
+  const b = document.getElementById("themebtn"); if (!b) return;
+  const sync = () => { const light = document.documentElement.dataset.theme === "light"; b.setAttribute("aria-label", light ? "Cambiar a modo oscuro" : "Cambiar a modo claro");
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = light ? "#f3f6fb" : "#060912"; };
+  b.addEventListener("click", () => {
+    const light = document.documentElement.dataset.theme !== "light";
+    if (light) document.documentElement.dataset.theme = "light"; else delete document.documentElement.dataset.theme;
+    try { localStorage.setItem("bt_theme", light ? "light" : "dark"); } catch (e) {}
+    sync();
+  });
+  sync();
+})();
 
 /* ---------------- arranque ---------------- */
 load().then(() => { R = fromHash(); render(); pollLive(); setInterval(pollLive, 60000);
