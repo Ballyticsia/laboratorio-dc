@@ -72,8 +72,8 @@ Luego abre `http://localhost:8000` en el navegador. Abrir `index.html` con doble
 
 ## API-Football (lesiones y suspensiones)
 El robot usa la clave guardada en **Settings → Secrets and variables → Actions** con el nombre `API_FOOTBALL_KEY`.
-- Con el plan gratis (100 consultas al día) consulta las bajas de hoy y los dos días siguientes cada 6 horas (unas 12 consultas al día).
-- Con el plan Pro se puede bajar `API_FOOTBALL_MIN_HORAS` a `2` en `.github/workflows/actualizar.yml`.
+- Con el plan gratis (100 consultas al día) consulta las bajas de hoy y mañana cada 6 horas (unas 8 consultas al día); el plan gratis no permite fechas más lejanas.
+- Con el plan Pro se puede subir `API_FOOTBALL_DIAS` a `3` y bajar `API_FOOTBALL_MIN_HORAS` a `2` en `.github/workflows/actualizar.yml`.
 - El estado de la conexión (consultas usadas, restantes y errores) queda en `data/api_football/estado.json`.
 - Si la clave falta o la API falla, el sitio sigue funcionando sin bajas.
 
