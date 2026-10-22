@@ -87,7 +87,7 @@ const ligasIds = () => Object.keys(D.ligas);
 const allMatches = () => ligasIds().flatMap(id => D.ligas[id].partidos.map(p => ({ ...p, L: D.ligas[id] })));
 const findMatch = (liga, id) => { const L = D.ligas[liga]; return L && L.partidos.find(p => String(p.id) === String(id)); };
 const statOf = (L, t) => (L.stats || []).find(s => s.equipo === t) || {};
-const rowOf = (L, t) => (L.tabla || []).find(s => s.equipo === t) || {};
+const rowOf = (L, t) => { const s = (L.tabla || []).find(s => s.equipo === t) || {}; return L.tabla_ok ? s : { ...s, pos: null, pts: s.pts, zonas: null, pts_esp: null }; };
 const strength = (L, t) => { const s = rowOf(L, t); return (s.ataque || 1) / (s.defensa || 1); };
 
 /* ---------------- menú y búsqueda ---------------- */
@@ -254,7 +254,7 @@ function vInicio() {
     const L = D.ligas[e.liga]; if (!L) return "";
     const s = rowOf(L, e.equipo), st = statOf(L, e.equipo);
     return `<div class="fp">
-      <div class="fp-head">${badge(L, e.equipo, "lg")}<div><b class="fp-name">${esc(corto(L, e.equipo))}</b><span class="muted">${esc(L.nombre)} · ${s.pos}º con ${s.pts} pts</span></div></div>
+      <div class="fp-head">${badge(L, e.equipo, "lg")}<div><b class="fp-name">${esc(corto(L, e.equipo))}</b><span class="muted">${esc(L.nombre)}${s.pos ? ` · ${s.pos}º con ${s.pts} pts` : ""}</span></div></div>
       <div class="row" style="justify-content:space-between"><span class="lbl">Últimos 5</span>${formHtml(s.forma)}</div>
       <div class="sgrid">
         <div><span class="lbl">Goles/PJ</span><b class="num">${dec(st.gf)}</b></div><div><span class="lbl">Recibe/PJ</span><b class="num">${dec(st.gc)}</b></div>

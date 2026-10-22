@@ -45,20 +45,20 @@ LIGAS = [
          zonas=[(1, 4, "Champions League", "cl"), (5, 5, "Europa League", "el"), (6, 6, "Conference League", "ecl"), (16, 16, "Promoción", "promo"), (17, 18, "Descenso", "desc")]),
     dict(id="ligue1", nombre="Ligue 1", pais="Francia", region=EUROPA, s1="fra.1", s2=["fra.2"], inicio=7,
          zonas=[(1, 3, "Champions League", "cl"), (4, 4, "Champions (previa)", "cl"), (5, 5, "Europa League", "el"), (6, 6, "Conference League", "ecl"), (16, 16, "Promoción", "promo"), (17, 18, "Descenso", "desc")]),
-    dict(id="championship", nombre="Championship", pais="Inglaterra", region=EUROPA, s1="eng.2", s2=["eng.1", "eng.3"], inicio=7,
+    dict(id="championship", peso=0.75, nombre="Championship", pais="Inglaterra", region=EUROPA, s1="eng.2", s2=["eng.1", "eng.3"], inicio=7,
          zonas=[(1, 2, "Ascenso directo", "cl"), (3, 6, "Playoffs de ascenso", "el"), (22, 24, "Descenso", "desc")]),
-    dict(id="portugal", nombre="Primeira Liga", pais="Portugal", region=EUROPA, s1="por.1", s2=[], inicio=7,
+    dict(id="portugal", peso=0.85, nombre="Primeira Liga", pais="Portugal", region=EUROPA, s1="por.1", s2=[], inicio=7,
          zonas=[(1, 2, "Champions League", "cl"), (3, 3, "Champions (previa)", "cl"), (4, 4, "Europa League", "el"), (16, 16, "Promoción", "promo"), (17, 18, "Descenso", "desc")]),
-    dict(id="eredivisie", nombre="Eredivisie", pais="Países Bajos", region=EUROPA, s1="ned.1", s2=[], inicio=7,
+    dict(id="eredivisie", peso=0.85, nombre="Eredivisie", pais="Países Bajos", region=EUROPA, s1="ned.1", s2=[], inicio=7,
          zonas=[(1, 2, "Champions League", "cl"), (3, 3, "Champions (previa)", "cl"), (4, 4, "Europa League", "el"), (16, 16, "Promoción", "promo"), (17, 18, "Descenso", "desc")]),
-    dict(id="chile", nombre="Primera División", pais="Chile", region="Sudamérica", s1="chi.1", s2=[], inicio=1,
+    dict(id="chile", peso=0.9, nombre="Primera División", pais="Chile", region="Sudamérica", s1="chi.1", s2=[], inicio=1,
          zonas=[(1, 1, "Libertadores (fase de grupos)", "cl"), (2, 3, "Libertadores (previa)", "el"), (4, 7, "Sudamericana", "ecl"), (15, 16, "Descenso", "desc")]),
-    dict(id="argentina", nombre="Liga Profesional", pais="Argentina", region="Sudamérica", s1="arg.1", s2=[], inicio=1, tabla=False),
-    dict(id="brasil", nombre="Brasileirão", pais="Brasil", region="Sudamérica", s1="bra.1", s2=[], inicio=1,
+    dict(id="argentina", peso=0.85, nombre="Liga Profesional", pais="Argentina", region="Sudamérica", s1="arg.1", s2=[], inicio=1, tabla=False),
+    dict(id="brasil", peso=0.85, nombre="Brasileirão", pais="Brasil", region="Sudamérica", s1="bra.1", s2=[], inicio=1,
          zonas=[(1, 4, "Libertadores (fase de grupos)", "cl"), (5, 6, "Libertadores (previa)", "el"), (7, 12, "Sudamericana", "ecl"), (17, 20, "Descenso", "desc")]),
-    dict(id="mls", nombre="MLS", pais="Estados Unidos", region="Norteamérica", s1="usa.1", s2=[], inicio=1, tabla=False),
-    dict(id="champions", nombre="Champions League", pais="UEFA", region="Copas", s1="uefa.champions", s2=["uefa.europa", "uefa.europa.conf"], inicio=7, tabla=False),
-    dict(id="libertadores", nombre="Copa Libertadores", pais="CONMEBOL", region="Copas", s1="conmebol.libertadores", s2=["conmebol.sudamericana"], inicio=1, tabla=False),
+    dict(id="mls", peso=0.75, nombre="MLS", pais="Estados Unidos", region="Norteamérica", s1="usa.1", s2=[], inicio=1, tabla=False),
+    dict(id="champions", peso=1.2, nombre="Champions League", pais="UEFA", region="Copas", s1="uefa.champions", s2=["uefa.europa", "uefa.europa.conf"], inicio=7, tabla=False),
+    dict(id="libertadores", peso=1.0, nombre="Copa Libertadores", pais="CONMEBOL", region="Copas", s1="conmebol.libertadores", s2=["conmebol.sudamericana"], inicio=1, tabla=False),
 ]
 
 
@@ -464,7 +464,7 @@ def main():
         for p in partidos:
             k = pd.Timestamp(p["kickoff"]).tz_localize(None)
             if now_ts - pd.Timedelta(hours=2) <= k <= now_ts + pd.Timedelta(days=4):
-                peso = min(fuerza.get(p["home"], 1), fuerza.get(p["away"], 1)) * (1 - abs(p["pH"] - p["pA"]) * .5)
+                peso = min(fuerza.get(p["home"], 1), fuerza.get(p["away"], 1)) * (1 - abs(p["pH"] - p["pA"]) * .5) * L.get("peso", 1.0)
                 portada["partidos"].append(dict(liga=L["id"], id=p["id"], peso=r(peso, 4), kickoff=p["kickoff"]))
         for p in partidos:
             k = pd.Timestamp(p["kickoff"]).tz_localize(None)
