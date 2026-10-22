@@ -12,7 +12,7 @@ Parámetros elegidos con un backtest walk-forward en 2024-25 y evaluados en 2025
 """
 import numpy as np
 import pandas as pd
-from scipy.optimize import minimize, minimize_scalar
+from scipy.optimize import least_squares, minimize, minimize_scalar
 from scipy.stats import poisson
 
 XI = 0.003
@@ -124,3 +124,52 @@ def markets(m):
     i, j = np.unravel_index(np.argmax(m), m.shape)
     return {"H": float(np.tril(m, -1).sum()), "D": float(np.trace(m)), "A": float(np.triu(m, 1).sum()),
             "O25": float(m[tot > 2.5].sum()), "BTTS": float(m[1:, 1:].sum()), "top": f"{i}-{j}"}
+
+
+def p_over(m, line):
+    """Probabilidad de más de `line` goles (en líneas enteras se descuenta el empate de la apuesta)."""
+    g = np.arange(m.shape[0])
+    tot = g[:, None] + g[None, :]
+    over = float(m[tot > line].sum())
+    push = float(m[tot == line].sum()) if float(line).is_integer() else 0.0
+    return over / (1 - push) if push < 1 else over
+
+
+def sin_margen(cuotas):
+    """Probabilidades 1X2 y de más/menos sin el margen de la casa."""
+    try:
+        inv = np.array([1 / float(cuotas["h"]), 1 / float(cuotas["d"]), 1 / float(cuotas["a"])])
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+        return None, None
+    q = inv / inv.sum()
+    qo = None
+    if cuotas.get("linea") is not None and cuotas.get("over") and cuotas.get("under"):
+        io, iu = 1 / float(cuotas["over"]), 1 / float(cuotas["under"])
+        qo = io / (io + iu)
+    return q, qo
+
+
+def calibrar(cuotas, rho, lh0, la0):
+    """Goles esperados que reproducen la cuota (1X2 y más/menos sin margen).
+
+    En el backtest 2025-26 (3.747 partidos) la cuota fue más precisa que el modelo solo, y la
+    tabla de marcadores armada con estos goles mejoró el marcador exacto y "ambos marcan"."""
+    q, qo = sin_margen(cuotas)
+    if q is None:
+        return None
+    line = cuotas.get("linea")
+
+    def res(z):
+        m = score_matrix(np.exp(z[0]), np.exp(z[1]), rho)
+        mk = markets(m)
+        out = [mk["H"] - q[0], mk["A"] - q[2]]
+        if qo is not None:
+            out.append(p_over(m, float(line)) - qo)
+        return out
+
+    lo, hi = np.log(0.05), np.log(6.0)
+    x0 = np.clip(np.log([max(lh0, 0.05), max(la0, 0.05)]), lo + 1e-6, hi - 1e-6)
+    sol = least_squares(res, x0, bounds=([lo, lo], [hi, hi]))
+    if not sol.success or np.max(np.abs(sol.fun)) > 0.04:
+        return None
+    return float(np.exp(sol.x[0])), float(np.exp(sol.x[1]))

@@ -693,3 +693,22 @@ svg .dotg:hover .pt{fill:var(--card)}
 :root[data-theme="light"] .pface .ph{background:linear-gradient(170deg,var(--fc) -40%,#e8edf6 80%)}
 :root[data-theme="light"] .badge.xs{box-shadow:0 0 0 1.5px #fff}
 @media (max-width:760px){.pface.xl{width:76px;height:76px;font-size:24px}.pface.xl .fb .badge.xs{width:26px;height:26px}}
+
+/* ---------- v10: Ballytics, modelo y mercado ---------- */
+.vm{margin-top:14px;padding:12px 14px;border-radius:12px;background:rgba(7,9,15,.5);border:1px solid var(--line)}
+.vm-t{font-size:13.5px}
+.vm-t th,.vm-t td{padding:7px 8px}
+.vm-t td:first-child{white-space:nowrap}
+.vm-t td small{color:var(--faint);font-size:11px;margin-left:4px}
+.vm-t td.n{font-family:var(--f-mono);font-weight:600}
+.vm-t tr.vm-b td{color:var(--ink);font-weight:700}
+.vm-t tr.vm-b td.n{color:var(--pitch)}
+.vm-t tr.vm-m td,.vm-t tr.vm-j td,.vm-t tr.vm-k td{color:var(--muted)}
+.vm-t tr.vm-j td:first-child{color:var(--card)}
+.vm-diff{margin:10px 0 0;font-size:13.5px;padding:8px 10px;border-radius:9px;background:rgba(255,176,32,.08);border:1px solid rgba(255,176,32,.25)}
+.vm-diff.ok{background:rgba(52,211,153,.07);border-color:rgba(52,211,153,.22)}
+.vm-pp{font-size:16px!important}
+.vm-pp{color:var(--ink)!important}
+:root[data-theme="light"] .vm{background:#f4f7fb}
+.vm-t .sh{display:none}
+@media (max-width:640px){.vm{padding:10px}.vm-t .lg{display:none}.vm-t .sh{display:inline}.vm-t td:first-child{white-space:normal}.vm-t td small{display:block;margin:2px 0 0}.vm-t th,.vm-t td{padding:7px 5px}}

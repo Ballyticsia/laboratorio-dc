@@ -69,8 +69,17 @@ function rates(M, h, a) {
   const hv = (M.local && M.local[h]) || 0;
   return [Math.exp(M.mu + M.home + hv + ah - da), Math.exp(M.mu + aa - dh)];
 }
-function matrix(M, h, a) {
-  const [lh, la] = rates(M, h, a), r = M.rho, m = []; let s = 0;
+function matrix(M, h, a) { const [lh, la] = rates(M, h, a); return matrixLam(lh, la, M.rho); }
+/* tabla de marcadores del partido con los goles esperados publicados (ajustados a la cuota si la hay) */
+function pmatrix(L, p) { return p && p.lh != null && p.la != null ? matrixLam(p.lh, p.la, L.modelo.rho) : matrix(L.modelo, p.home, p.away); }
+function noVig(c) {
+  if (!c || !c.h || !c.d || !c.a) return null;
+  const inv = [1 / c.h, 1 / c.d, 1 / c.a], s = inv[0] + inv[1] + inv[2];
+  let o = null; if (c.linea === 2.5 && c.over && c.under) o = (1 / c.over) / (1 / c.over + 1 / c.under);
+  return { p: inv.map(x => x / s), o, casa: c.casa || "la casa" };
+}
+function matrixLam(lh, la, r) {
+  const m = []; let s = 0;
   for (let i = 0; i <= MAXG; i++) { m.push([]); for (let j = 0; j <= MAXG; j++) {
     let p = pois(i, lh) * pois(j, la);
     if (i === 0 && j === 0) p *= 1 - lh * la * r; else if (i === 0 && j === 1) p *= 1 + lh * r;
@@ -429,7 +438,7 @@ function vInicio() {
 
   // proyección: una por cada partido destacado, sincronizada con el carrusel de arriba
   const projOf = fx => {
-    const L = fx.L, mk = markets(matrix(L.modelo, fx.home, fx.away).m);
+    const L = fx.L, mk = markets(pmatrix(L, fx).m);
     const ct = fx.ch != null ? fx.ch + fx.ca : null, tt = fx.th != null ? fx.th + fx.ta : null;
     return `<div class="proj">
       <div class="proj-l"><span class="tag">${esc(L.nombre)}</span></div>
@@ -463,6 +472,15 @@ function vInicio() {
   const trio = wk.length ? wk.map(x => `<button class="leg" data-go="partido" data-liga="${x.p.L.id}" data-id="${esc(x.p.id)}">${badge(x.p.L, x.t)}<span><b>${esc(corto(x.p.L, x.t))}</b> gana<small>${esc(corto(x.p.L, x.p.home))} vs ${esc(corto(x.p.L, x.p.away))} · ${esc(cuando(x.p.kickoff))}</small></span><span class="num pr">${pct(x.pr)}</span></button>`).join("") +
     `<div class="trio-tot"><span>Las tres juntas</span><b class="num">${pct(comb, 1)}</b><span class="muted">cuota justa <b class="num">${dec(1 / comb)}</b></span></div>` : `<p class="note">Sin partidos esta semana.</p>`;
 
+  // modelo propio contra el mercado: mayores diferencias de los próximos días
+  const difs = allMatches().filter(p => { const t = new Date(p.kickoff).getTime(); return p.modelo && p.cuotas && t >= now && t <= now + 4 * DAYMS; })
+    .map(p => { const q = noVig(p.cuotas); if (!q) return null; const own = [p.modelo.pH, p.modelo.pD, p.modelo.pA];
+      const i = [0, 1, 2].sort((a, b) => Math.abs(own[b] - q.p[b]) - Math.abs(own[a] - q.p[a]))[0]; return { p, i, m: own[i], k: q.p[i], d: own[i] - q.p[i] }; })
+    .filter(Boolean).sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 5);
+  const vmc = difs.length ? `<div class="slist">${difs.map(x => { const L = x.p.L, t = x.i === 0 ? x.p.home : x.i === 2 ? x.p.away : null;
+      return `<button class="srow" data-go="partido" data-liga="${L.id}" data-id="${esc(x.p.id)}">${t ? badge(L, t) : `<span class="badge" style="background:var(--panel2);color:var(--muted)">X</span>`}<span><b>${t ? esc(corto(L, t)) + " gana" : "Empate"}</b><small>${esc(corto(L, x.p.home))} vs ${esc(corto(L, x.p.away))} · modelo ${pct(x.m)} · casa ${pct(x.k)}</small></span><span class="sn num vm-pp ${x.d > 0 ? "up" : "dn"}">${x.d > 0 ? "+" : "−"}${Math.round(Math.abs(x.d) * 100)}</span></button>`; }).join("")}</div>
+      <p class="note">Puntos de diferencia entre el modelo propio y la cuota sin margen. Solo comparación: en el backtest la cuota fue más precisa.</p>` : `<p class="note">Sin cuotas publicadas para los próximos días.</p>`;
+
   // rachas
   const rach = (P.rachas || []).map(s => { const L = D.ligas[s.liga]; return L ? `<button class="srow" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}">${badge(L, s.equipo)}<span><b>${esc(corto(L, s.equipo))}</b><small>${esc(s.texto)}</small></span><span class="sn num">${s.n}</span></button>` : ""; }).join("") || `<p class="note">Sin rachas destacadas.</p>`;
 
@@ -490,6 +508,7 @@ function vInicio() {
       ${card("Tabla", `<div class="scroll">${tabla}</div><button class="link" data-go="liga" data-liga="${hl}" data-tab="tabla">Tabla completa →</button>`, sw("tb"))}
       ${card("Próximos partidos", `<div class="nlist">${prox}</div>`)}
       ${card("Trío más probable", `<div class="trio">${trio}</div>`, `<span class="tag">Esta semana</span>`, "dark")}
+      ${card("Modelo vs mercado", vmc, `<span class="tag">Mayores diferencias</span>`)}
       ${card("Rachas activas", `<div class="slist">${rach}</div>`)}
       ${card("Rendimiento del modelo", `${perf}<button class="link" data-go="registro">Ver registro →</button>`, `<span class="tag">Público</span>`)}
     </div>
@@ -654,7 +673,7 @@ function lResumen(L) {
 function vPartido() {
   const L = D.ligas[R.liga], p = findMatch(R.liga, R.id);
   if (!L || !p) return `<section class="view"><button class="back" data-go="inicio">← Inicio</button><div class="panel empty">Este partido ya no está en el calendario (puede que ya se haya jugado).</div></section>`;
-  const { m, lh, la } = matrix(L.modelo, p.home, p.away), k = markets(m);
+  const { m, lh, la } = pmatrix(L, p), k = markets(m);
   const sh = rowOf(L, p.home), sa = rowOf(L, p.away), H = corto(L, p.home), A = corto(L, p.away);
   const N = 6; let mx = 0; for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) mx = Math.max(mx, m[i][j]);
   let heat = `<tr><th></th>${[...Array(N).keys()].map(j => `<th>${j}</th>`).join("")}</tr>`;
@@ -676,9 +695,7 @@ function vPartido() {
     st._pre = true; st.H = cq.h; st.D = cq.d; st.A = cq.a;
     if (cq.linea === 2.5 && cq.over && cq.under) { st.O25 = cq.over; st.U25 = cq.under; }
   }
-  let mkt = "";
-  if (cq) { const inv = [1 / cq.h, 1 / cq.d, 1 / cq.a], sm = inv[0] + inv[1] + inv[2];
-    mkt = `<div class="mktrow"><span class="lbl">Mercado (${esc(cq.casa || "casas")}, sin margen)</span><span class="num">${pct(inv[0] / sm)} · ${pct(inv[1] / sm)} · ${pct(inv[2] / sm)}</span><span class="lbl">Modelo</span><span class="num">${pct(k.H)} · ${pct(k.D)} · ${pct(k.A)}</span></div>`; }
+  const mkt = vsMercado(L, p, k);
   const mk = `<tr><th>Mercado</th><th style="text-align:right">Prob.</th><th style="text-align:right">Justa ${help(TIPS.justa)}</th><th style="text-align:right">Tu cuota</th><th style="text-align:right">EV ${help(TIPS.ev)}</th><th><span class="sr">Combinada</span></th></tr>` +
     groups.map(([g, rows]) => `<tr class="grp"><td colspan="6">${g}</td></tr>` + rows.map(([key, n, pr]) => `<tr><td>${esc(n)}</td><td class="n">${pct(pr, 1)}</td><td class="n">${dec(1 / pr)}</td>
       <td class="n"><input class="odd" inputmode="decimal" aria-label="Cuota ${esc(n)}" data-k="${esc(key)}" data-p="${pr}" value="${st[key] ? String(st[key]).replace(".", ",") : ""}" placeholder="—"></td><td class="n" data-ev="${esc(key)}"></td>
@@ -742,7 +759,6 @@ function vPartido() {
         <div class="pt a"><span class="lbl">${esc(A)}</span><span class="v">${pct(k.A, 1)}</span><div class="tr"><i style="width:${100 * k.A}%"></i></div></div>
       </div>
       <div class="kpis mini">${kpi("", "Más de 2,5 goles", pct(k.O25), "")}${kpi("", "Ambos marcan", pct(k.B), "")}${ct != null ? kpi("", "Córners esperados", dec(ct, 1), `${dec(p.ch, 1)} – ${dec(p.ca, 1)}`) : ""}${tt != null ? kpi("", "Tarjetas esperadas", dec(tt, 1), `${dec(p.th, 1)} – ${dec(p.ta, 1)}`) : ""}</div>
-      ${p.ajuste ? `<div class="mktrow adj"><span class="lbl">Con las bajas ${help("Probabilidades recalculadas descontando a los goleadores lesionados o suspendidos. El registro público guarda la versión sin ajuste.")}</span><span class="num">${pct(p.ajuste.pH)} · ${pct(p.ajuste.pD)} · ${pct(p.ajuste.pA)}</span><span class="lbl">Sin ajuste</span><span class="num">${pct(k.H)} · ${pct(k.D)} · ${pct(k.A)}</span></div>` : ""}
       ${tab !== "mercados" ? mkt : ""}
       ${reg ? `<p class="note" style="margin-top:14px">Predicción guardada en el registro público el ${fecha(reg.predicho)}; se califica al terminar el partido.</p>` : ""}
     </div>
@@ -814,16 +830,16 @@ function vRegistro() {
   const filas = (g.filas || []).filter(f => tab === "pendientes" ? f.hg == null : f.hg != null);
   if (tab === "pendientes") filas.sort((a, b) => a.kickoff.localeCompare(b.kickoff));
   const rows = filas.map(f => {
-    const L = D.ligas[f.liga] || { equipos: {} }, P = [f.pH, f.pD, f.pA], pick = ["1", "X", "2"][P.indexOf(Math.max(...P))];
+    const L = D.ligas[f.liga] || { equipos: {} }, P = f.fH != null ? [f.fH, f.fD, f.fA] : [f.pH, f.pD, f.pA], pick = ["1", "X", "2"][P.indexOf(Math.max(...P))];
     let res = `<span class="faint">pendiente</span>`, ok = "";
     if (f.hg != null) { const r = f.hg > f.ag ? "1" : f.hg === f.ag ? "X" : "2"; res = `<b class="num">${f.hg} – ${f.ag}</b>`; ok = r === pick ? `<span class="good">✓</span>` : `<span class="bad">✗</span>`; }
-    return `<tr><td class="num muted">${fecha(f.kickoff)}</td><td>${esc(corto(L, f.home))} – ${esc(corto(L, f.away))}</td><td class="n hide-m">${pct(f.pH)} · ${pct(f.pD)} · ${pct(f.pA)}</td><td class="n">${pick}</td><td class="n">${res}</td><td class="n">${ok}</td></tr>`;
+    return `<tr><td class="num muted">${fecha(f.kickoff)}</td><td>${esc(corto(L, f.home))} – ${esc(corto(L, f.away))}</td><td class="n hide-m">${pct(P[0])} · ${pct(P[1])} · ${pct(P[2])}</td><td class="n">${pick}</td><td class="n">${res}</td><td class="n">${ok}</td></tr>`;
   }).join("");
   return `<section class="view" aria-labelledby="h-r">
     <h1 id="h-r">Registro público</h1>
-    <p class="muted">Cada predicción se guarda antes de que empiece el partido y no se puede cambiar después. Así se mide si el modelo sirve, con resultados reales y no con capturas de los aciertos.${g.desde ? ` Registro desde el ${fecha(g.desde + "T12:00")}.` : ""}</p>
+    <p class="muted">Cada predicción se guarda antes de que empiece el partido y no se puede cambiar después. Así se mide si el modelo sirve, con resultados reales y no con capturas de los aciertos. Los números de arriba son de la probabilidad Ballytics; también se guardan el modelo propio y la cuota para compararlos.${g.desde ? ` Registro desde el ${fecha(g.desde + "T12:00")}.` : ""}</p>
     <div class="kpis">${kpi("m", "Partidos calificados", g.n || 0, "")}${kpi("", "Acierto 1X2", pct(g.acierto_1x2, 1), "el resultado más probable")}${kpi("k", `Log-loss ${help(TIPS.logloss)}`, dec(g.logloss, 3), `ingenuo ${dec(g.logloss_ingenuo, 3)} · menos es mejor`)}${kpi("", "Más/Menos 2,5", pct(g.acierto_o25, 1), "acierto")}${kpi("", "Marcador exacto", pct(g.marcador_exacto, 1), "el más probable")}</div>
-    ${g.vs_mercado ? `<div class="panel stack"><h3>Modelo contra el mercado</h3><div class="kpis">${kpi("m", "Log-loss modelo", dec(g.vs_mercado.modelo, 3), "")}${kpi("k", "Log-loss mercado", dec(g.vs_mercado.mercado, 3), "")}${kpi("", "Partidos con cuota", g.vs_mercado.n, "")}</div><p class="note">Solo partidos en que ESPN publicó cuotas antes del inicio. Menos es mejor.</p></div>` : ""}
+    ${g.vs_mercado ? `<div class="panel stack"><h3>Ballytics, modelo propio y mercado</h3><div class="kpis">${kpi("m", "Log-loss Ballytics", dec(g.vs_mercado.ballytics, 3), g.vs_mercado.acierto_ballytics != null ? `acierto ${pct(g.vs_mercado.acierto_ballytics, 1)}` : "")}${kpi("", "Log-loss modelo propio", dec(g.vs_mercado.modelo, 3), g.vs_mercado.acierto_modelo != null ? `acierto ${pct(g.vs_mercado.acierto_modelo, 1)}` : "")}${kpi("k", "Log-loss mercado", dec(g.vs_mercado.mercado, 3), g.vs_mercado.acierto_mercado != null ? `acierto ${pct(g.vs_mercado.acierto_mercado, 1)}` : "")}${kpi("", "Partidos con cuota", g.vs_mercado.n, "")}</div><p class="note">Solo partidos en que ESPN publicó cuotas antes del inicio. Menos es mejor.</p></div>` : ""}
     ${g.n ? `<div class="grid2">
       <div class="panel flush scroll"><div class="ph"><h3>Por liga</h3></div><table class="t"><thead><tr><th>Liga</th><th class="n">Partidos</th><th class="n">Acierto</th><th class="n">Log-loss</th></tr></thead><tbody>${(g.por_liga || []).map(x => `<tr><td class="team">${D.ligas[x.liga] ? leagueMark(D.ligas[x.liga]) + esc(D.ligas[x.liga].nombre) : esc(x.liga)}</td><td class="n">${x.n}</td><td class="n">${pct(x.acierto, 1)}</td><td class="n">${dec(x.logloss, 3)}</td></tr>`).join("")}</tbody></table></div>
       <div class="panel flush scroll"><div class="ph"><h3>Según la confianza del modelo</h3></div><table class="t"><thead><tr><th>Probabilidad del favorito</th><th class="n">Partidos</th><th class="n">Esperado</th><th class="n">Real</th></tr></thead><tbody>${(g.confianza || []).map(x => `<tr><td>${esc(x.rango)}</td><td class="n">${x.n}</td><td class="n">${pct(x.prob, 1)}</td><td class="n ${x.acierto >= x.prob ? "good" : "bad"}">${pct(x.acierto, 1)}</td></tr>`).join("")}</tbody></table><p class="note" style="padding:0 16px 12px">Si "Real" se parece a "Esperado", las probabilidades están bien medidas.</p></div>
@@ -832,6 +848,18 @@ function vRegistro() {
       <div class="panel stack"><h3>Calibración ${help(TIPS.cal)}</h3><p class="note">Si el modelo dice 40 %, ¿pasa el 40 % de las veces?</p>${calChart(g.calibracion)}${spark(g.serie)}</div>
       <div class="panel flush"><div class="ph"><h3>Predicciones</h3><div class="tabs2" role="group" aria-label="Filtro">${[["calificados", "Calificadas"], ["pendientes", "Pendientes"]].map(([k, n]) => `<button data-go="registro" data-tab="${k}" data-keep aria-pressed="${k === tab}">${n}</button>`).join("")}</div></div><div class="scroll" style="max-height:560px;overflow:auto"><table class="t"><thead><tr><th>Fecha</th><th>Partido</th><th class="n hide-m">1 · X · 2</th><th class="n">Pick</th><th class="n">Resultado</th><th></th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="empty">${tab === "pendientes" ? "No hay partidos pendientes en el registro." : "Todavía no hay partidos calificados."}</td></tr>`}</tbody></table></div></div>
     </div></section>`;
+}
+function btMercado() {
+  const B = D.indice && D.indice.backtest_mercado; if (!B || !B.modelo) return "";
+  const row = (n, a, b, c, fmt = v => dec(v, 4)) => `<tr><td>${n}</td><td class="n">${a != null ? fmt(a) : "—"}</td><td class="n">${b != null ? fmt(b) : "—"}</td><td class="n"><b>${c != null ? fmt(c) : "—"}</b></td></tr>`;
+  const m = B.modelo, k = B.mercado || {}, b = B.ballytics;
+  return `<h2>Modelo propio, mercado y Ballytics</h2>
+    <p class="muted">Backtest de la temporada ${esc(B.temporada)} en ${esc(B.ligas)} (${B.n.toLocaleString("es-CL")} partidos). Cada semana se reajustó el modelo solo con partidos anteriores y se comparó con las cuotas de cierre.</p>
+    <div class="panel flush scroll"><table class="t"><thead><tr><th>Log-loss (menos es mejor)</th><th class="n">Modelo propio</th><th class="n">Mercado</th><th class="n">Ballytics</th></tr></thead><tbody>
+      ${row("Resultado 1X2", m.ll_1x2, k.ll_1x2, b.ll_1x2)}${row("Más/menos 2,5", m.ll_o25, k.ll_o25, b.ll_o25)}${row("Ambos marcan", m.ll_btts, null, b.ll_btts)}${row("Marcador exacto", m.ll_marcador, null, b.ll_marcador)}
+      ${row("Acierto 1X2", m.acierto_1x2, k.acierto_1x2, b.acierto_1x2, v => pct(v, 1))}${row("Acierto marcador exacto", m.acierto_marcador, null, b.acierto_marcador, v => pct(v, 1))}
+    </tbody></table></div>
+    <div class="panel verdict">La cuota de cierre fue más precisa que el modelo propio en el resultado, y mezclar ambos no mejoró. Pero usar los goles que implica la cuota mejoró el marcador exacto y "ambos marcan", mercados donde la casa no siempre publica cuota. Por eso Ballytics parte de la cuota cuando existe y usa el modelo propio cuando no.</div>`;
 }
 function vMetodo() {
   const B = D.metodo;
@@ -854,8 +882,10 @@ function vMetodo() {
       <p><b>Córners y tarjetas.</b> El mismo modelo de ataque y defensa, ajustado sobre córners ganados y tarjetas recibidas. No conoce al árbitro.</p>
       <p><b>Goleadores.</b> La probabilidad de que un jugador marque sale de su parte de los goles de su equipo en la temporada y de los goles esperados de su equipo en ese partido.</p>
       <p><b>Proyecciones.</b> El resto de la temporada se simula 10.000 veces para estimar puntos finales y opciones de título, copas o descenso.</p>
-      <p class="muted">Lo que no sabe: lesiones, alineaciones, fichajes, rotaciones ni motivación. Por eso las casas de apuestas, que sí incorporan esa información, predicen mejor.</p>
+      <p><b>Probabilidad Ballytics.</b> Cuando una casa de apuestas publica cuotas (vía ESPN, hoy DraftKings), se buscan los goles esperados que reproducen esa cuota sin margen (1X2 y más/menos) y con ellos se arma la tabla de marcadores. De ahí salen el marcador exacto, ambos marcan, los goleadores y la combinada. Cuando no hay cuota, se usa el modelo propio con las bajas informadas.</p>
+      <p class="muted">Lo que el modelo propio no sabe: alineaciones, fichajes, rotaciones ni motivación. Por eso las casas de apuestas, que sí incorporan esa información, predicen mejor el resultado, y por eso la probabilidad Ballytics parte de la cuota.</p>
     </div>
+    ${btMercado()}
     ${B ? `<h2>¿Le gana al mercado?</h2>
     <p class="muted">Backtest de la temporada 2025-26 en las cinco grandes ligas: cada semana se reajustó el modelo solo con partidos anteriores y se comparó con las cuotas de Bet365 (${(B.n_test || 0).toLocaleString("es-CL")} partidos).</p>
     <div class="kpis">${kpi("m", "Log-loss modelo", dec(B.logloss.modelo, 4), "menos es mejor")}${kpi("k", "Log-loss mercado", dec(B.logloss.mercado, 4), "cuotas sin margen")}${kpi("", "Log-loss ingenuo", dec(B.logloss.ingenuo, 4), "% histórico L/E/V")}</div>
@@ -878,6 +908,7 @@ const TIPS = {
   atq: "Ataque: goles que marca frente a una defensa promedio, comparado con el promedio de la liga (1,00). Más es mejor.",
   def: "Defensa: goles que recibe frente a un ataque promedio, comparado con el promedio de la liga (1,00). Menos es mejor.",
   cal: "Calibración: si el modelo dice 40 %, eso debería pasar cerca del 40 % de las veces. Puntos sobre la diagonal = bien calibrado.",
+  ballytics: "Probabilidad Ballytics: cuando hay cuota de una casa de apuestas, los goles esperados se ajustan a esa cuota (1X2 y más/menos, sin margen) y de ahí salen todos los mercados. Cuando no hay cuota, es el modelo propio. En el backtest fue más precisa que el modelo solo.",
   pick: "Pick: el resultado más probable según el modelo (1 local, X empate, 2 visita) y el marcador exacto más probable.",
   proy: "Proyección: se simula 10.000 veces el resto de la temporada con las probabilidades del modelo y se cuenta en cuántas simulaciones pasa cada cosa.",
 };
@@ -1068,6 +1099,28 @@ async function loadSummary() {
 
 
 /* ---------------- BAJAS (API-Football) ---------------- */
+/* ---------------- Ballytics, modelo propio y mercado ---------------- */
+function vsMercado(L, p, k) {
+  const H = corto(L, p.home), A = corto(L, p.away), q = noVig(p.cuotas);
+  const own = p.calib && p.modelo ? p.modelo : { pH: k.H, pD: k.D, pA: k.A, pO25: k.O25 };
+  const rows = [];
+  if (p.calib) rows.push(["b", `Ballytics ${help(TIPS.ballytics)}`, [k.H, k.D, k.A], k.O25]);
+  rows.push(["m", p.calib ? "Modelo propio" : `Modelo propio ${help(TIPS.ballytics)}`, [own.pH, own.pD, own.pA], own.pO25]);
+  if (p.ajuste) rows.push(["j", `Modelo con bajas ${help("El modelo propio descontando a los goleadores lesionados o suspendidos. La cuota de la casa ya considera las bajas conocidas.")}`, [p.ajuste.pH, p.ajuste.pD, p.ajuste.pA], p.ajuste.pO25]);
+  if (q) rows.push(["k", `Mercado <small>${esc(q.casa)}, sin margen</small>`, q.p, q.o]);
+  if (rows.length < 2) return "";
+  const head = `<tr><th></th><th class="n"><span class="lg">${esc(H)}</span><span class="sh">1</span></th><th class="n"><span class="lg">Empate</span><span class="sh">X</span></th><th class="n"><span class="lg">${esc(A)}</span><span class="sh">2</span></th><th class="n hide-m">+2,5</th></tr>`;
+  const body = rows.map(([c, n, P, o]) => `<tr class="vm-${c}"><td>${n}</td>${P.map(v => `<td class="n">${pct(v)}</td>`).join("")}<td class="n hide-m">${o != null ? pct(o) : "—"}</td></tr>`).join("");
+  let msg = "";
+  if (q) {
+    const names = [H, "el empate", A], d = [0, 1, 2].map(i => [i, own[["pH", "pD", "pA"][i]] - q.p[i]]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0];
+    const pp = Math.round(Math.abs(d[1]) * 100);
+    msg = pp >= 5 ? `<p class="vm-diff"><b>Diferencia grande:</b> el modelo propio le da a ${esc(names[d[0]])} <b>${pp} puntos ${d[1] > 0 ? "más" : "menos"}</b> que ${esc(q.casa)} (${pct(own[["pH", "pD", "pA"][d[0]]])} contra ${pct(q.p[d[0]])}).</p>`
+      : `<p class="vm-diff ok">Modelo propio y mercado coinciden: la mayor diferencia es de ${pp} ${pp === 1 ? "punto" : "puntos"}.</p>`;
+  }
+  return `<div class="vm"><div class="scroll"><table class="t vm-t">${head}${body}</table></div>${msg}
+    <p class="note">${p.calib ? "La probabilidad Ballytics ajusta los goles esperados a la cuota, porque en el backtest la cuota fue más precisa que el modelo solo." : q ? "No se pudo ajustar a la cuota; se muestra el modelo propio." : "Sin cuota publicada para este partido: la probabilidad es la del modelo propio."} Una diferencia no es una recomendación de apuesta.</p></div>`;
+}
 function bajasPanel(L, p) {
   const b = p.bajas;
   if (!b) return D.indice && D.indice.api_football && D.indice.api_football.activa && new Date(p.kickoff).getTime() - Date.now() < 3 * DAYMS
@@ -1290,7 +1343,7 @@ function comboProb(sels) {
     const L = D.ligas[g[0].liga], p = L && findMatch(g[0].liga, g[0].mid);
     if (!p) { missing = true; continue; }
     const preds = g.map(s => scorePred(s.key)).filter(Boolean), others = g.filter(s => !scorePred(s.key));
-    if (preds.length) { const { m } = matrix(L.modelo, p.home, p.away); let q = 0;
+    if (preds.length) { const { m } = pmatrix(L, p); let q = 0;
       for (let i = 0; i <= MAXG; i++) for (let j = 0; j <= MAXG; j++) if (preds.every(f => f(i, j))) q += m[i][j];
       prob *= q; }
     others.forEach(s => { const q = otherProb(L, p, s.key); if (q == null) missing = true; else prob *= q; });

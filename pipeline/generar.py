@@ -24,7 +24,7 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(__file__))
 import datos  # noqa: E402
 import lesiones  # noqa: E402
-from modelo import XI, ALPHA, fit, markets, score_matrix  # noqa: E402
+from modelo import XI, ALPHA, calibrar, fit, markets, score_matrix, sin_margen  # noqa: E402
 
 RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SALIDA = os.path.join(RAIZ, "site", "data")
@@ -272,9 +272,9 @@ def players(df):
     return gol, tar, goles, team_games
 
 
-def scorer_probs(model, home, away, goles, team_goals):
+def scorer_probs(model, home, away, goles, team_goals, lam=None):
     """Probabilidad de que cada goleador marque: 1 − exp(−λ_equipo · parte de los goles del equipo)."""
-    lh, la = model.rates(home, away)
+    lh, la = lam or model.rates(home, away)
     out = []
     for team, lam, lado in ((home, lh, "h"), (away, la, "a")):
         tot = team_goals.get(team, 0)
@@ -313,17 +313,22 @@ def side_model(played, today, col):
 
 # ---------------- registro público ----------------
 def ledger_update(pred_rows, jugados, now_iso):
-    cols = ["id", "liga", "kickoff", "home", "away", "lh", "la", "pH", "pD", "pA", "pO25", "pBTTS", "top", "predicho", "hg", "ag", "mH", "mD", "mA"]
+    # lh…top = modelo propio; m* = mercado sin margen; f* = probabilidad Ballytics (ajustada a la cuota si la hay)
+    cols = ["id", "liga", "kickoff", "home", "away", "lh", "la", "pH", "pD", "pA", "pO25", "pBTTS", "top", "predicho", "hg", "ag", "mH", "mD", "mA",
+            "fH", "fD", "fA", "fO25", "fBTTS", "ftop"]
     reg = pd.read_csv(REGISTRO, dtype={"id": str}) if os.path.exists(REGISTRO) else pd.DataFrame(columns=cols)
     reg = reg.reindex(columns=cols).set_index("id", drop=False)
+    for a, b in (("fH", "pH"), ("fD", "pD"), ("fA", "pA"), ("fO25", "pO25"), ("fBTTS", "pBTTS"), ("ftop", "top")):
+        reg[a] = reg[a].where(reg[a].notna(), reg[b])   # filas antiguas: lo publicado era el modelo propio
     for p in pred_rows:
         if p["id"] in reg.index and pd.notna(reg.at[p["id"], "hg"]):
             continue
-        reg.loc[p["id"], cols[:14]] = [p[c] for c in cols[:13]] + [now_iso]
-        c = p.get("cuotas")
-        if c:
-            inv = np.array([1 / c["h"], 1 / c["d"], 1 / c["a"]])
-            reg.loc[p["id"], ["mH", "mD", "mA"]] = (inv / inv.sum()).round(4)
+        own = p.get("modelo") or p
+        reg.loc[p["id"], cols[:14]] = [p[c] for c in cols[:5]] + [own[c] for c in cols[5:13]] + [now_iso]
+        reg.loc[p["id"], ["fH", "fD", "fA", "fO25", "fBTTS", "ftop"]] = [p["pH"], p["pD"], p["pA"], p["pO25"], p["pBTTS"], p["top"]]
+        q, _ = sin_margen(p["cuotas"]) if p.get("cuotas") else (None, None)
+        if q is not None:
+            reg.loc[p["id"], ["mH", "mD", "mA"]] = q.round(4)
     res = jugados.set_index("id")
     for i in reg.index[reg.hg.isna()]:
         if i in res.index:
@@ -341,24 +346,25 @@ def ledger_summary(reg, base):
         out["desde"] = str(reg.predicho.dropna().min())[:10]
     if len(g):
         g["res"] = np.select([g.hg > g.ag, g.hg == g.ag], ["H", "D"], "A")
-        P = g[["pH", "pD", "pA"]].astype(float).values
+        # las métricas principales son de la probabilidad Ballytics (la que se publica)
+        P = g[["fH", "fD", "fA"]].astype(float).values
         k = g.res.map({"H": 0, "D": 1, "A": 2}).values
         pk = np.clip(P[np.arange(len(k)), k], 1e-9, None)
         bk = np.clip(np.array([base[x] for x in g.res]), 1e-9, None)
         over = ((g.hg + g.ag) > 2.5).values
-        po = g.pO25.astype(float).values
+        po = g.fO25.astype(float).values
         pick = np.array(["H", "D", "A"])[P.argmax(1)]
         hit = pick == g.res.values
         out.update(n=int(len(g)), logloss=r(-np.log(pk).mean()), logloss_ingenuo=r(-np.log(bk).mean()),
                    acierto_1x2=r(hit.mean()), acierto_o25=r(((po > .5) == over).mean()),
-                   marcador_exacto=r((g.top == g.hg.astype(int).astype(str) + "-" + g.ag.astype(int).astype(str)).mean()))
+                   marcador_exacto=r((g.ftop == g.hg.astype(int).astype(str) + "-" + g.ag.astype(int).astype(str)).mean()))
         g["hit"], g["dia"] = hit, g.kickoff.str[:10]
         acc = g.groupby("dia").hit.agg(["sum", "count"]).cumsum()
         out["serie"] = [dict(dia=d, acierto=r(s / c, 4), n=int(c)) for d, (s, c) in acc.iterrows()]
         por_liga = []
         for lg, gg in g.groupby("liga"):
             kk = gg.res.map({"H": 0, "D": 1, "A": 2}).values
-            PP = gg[["pH", "pD", "pA"]].astype(float).values
+            PP = gg[["fH", "fD", "fA"]].astype(float).values
             por_liga.append(dict(liga=lg, n=int(len(gg)), acierto=r(gg.hit.mean()),
                                  logloss=r(-np.log(np.clip(PP[np.arange(len(kk)), kk], 1e-9, None)).mean())))
         out["por_liga"] = sorted(por_liga, key=lambda x: -x["n"])
@@ -372,11 +378,11 @@ def ledger_summary(reg, base):
         gm = g.dropna(subset=["mH", "mD", "mA"])
         if len(gm) >= 10:
             km = gm.res.map({"H": 0, "D": 1, "A": 2}).values
-            Pm = gm[["pH", "pD", "pA"]].astype(float).values
-            Mm = gm[["mH", "mD", "mA"]].astype(float).values
-            out["vs_mercado"] = dict(n=int(len(gm)),
-                                     modelo=r(-np.log(np.clip(Pm[np.arange(len(km)), km], 1e-9, None)).mean()),
-                                     mercado=r(-np.log(np.clip(Mm[np.arange(len(km)), km], 1e-9, None)).mean()))
+            ll3 = lambda cs: r(-np.log(np.clip(gm[cs].astype(float).values[np.arange(len(km)), km], 1e-9, None)).mean())
+            hit3 = lambda cs: r((gm[cs].astype(float).values.argmax(1) == km).mean())
+            out["vs_mercado"] = dict(n=int(len(gm)), modelo=ll3(["pH", "pD", "pA"]), mercado=ll3(["mH", "mD", "mA"]),
+                                     ballytics=ll3(["fH", "fD", "fA"]), acierto_modelo=hit3(["pH", "pD", "pA"]),
+                                     acierto_mercado=hit3(["mH", "mD", "mA"]), acierto_ballytics=hit3(["fH", "fD", "fA"]))
         probs, hits = P.ravel(), np.eye(3)[k].ravel()
         cal = []
         for lo in np.arange(0, 1, .1):
@@ -471,23 +477,34 @@ def main():
                     if v.get("jid"):
                         name_of[v["jid"]] = v.get("jug")
 
-        partidos = []
+        partidos, n_calib = [], 0
         limite = hoy + pd.Timedelta(days=DETALLE_DIAS)
         for x in rest.itertuples():
             lh, la = model.rates(x.home, x.away)
             mk = markets(model.matrix(x.home, x.away))
+            solo = dict(lh=r(lh, 3), la=r(la, 3), pH=r(mk["H"]), pD=r(mk["D"]), pA=r(mk["A"]),
+                        pO25=r(mk["O25"]), pBTTS=r(mk["BTTS"]), top=mk["top"])
             p = dict(id=x.id or f"{x.kickoff}-{x.home}", liga=L["id"], kickoff=x.kickoff, home=x.home, away=x.away,
-                     estado=x.estado, lh=r(lh, 3), la=r(la, 3), pH=r(mk["H"]), pD=r(mk["D"]), pA=r(mk["A"]),
-                     pO25=r(mk["O25"]), pBTTS=r(mk["BTTS"]), top=mk["top"])
+                     estado=x.estado, **solo)
+            lam = None
             od = getattr(x, "odds", None)
             if isinstance(od, dict):
                 p["cuotas"] = od
+                # Probabilidad Ballytics: goles esperados ajustados a la cuota; el modelo propio queda en p["modelo"]
+                cal = calibrar(od, model.rho, lh, la)
+                if cal:
+                    lam = cal
+                    fm = markets(score_matrix(cal[0], cal[1], model.rho))
+                    p["modelo"] = solo
+                    p.update(lh=r(cal[0], 3), la=r(cal[1], 3), pH=r(fm["H"]), pD=r(fm["D"]), pA=r(fm["A"]),
+                             pO25=r(fm["O25"]), pBTTS=r(fm["BTTS"]), top=fm["top"], calib=1)
+                    n_calib += 1
             if x.date <= limite:
                 if mc:
                     p["ch"], p["ca"] = (r(v, 3) for v in mc.rates(x.home, x.away))
                 if mt:
                     p["th"], p["ta"] = (r(v, 3) for v in mt.rates(x.home, x.away))
-                p["goleadores"] = [dict(s, jugador=name_of.get(s["jid"], "")) for s in scorer_probs(model, x.home, x.away, goles_cnt, team_goals)]
+                p["goleadores"] = [dict(s, jugador=name_of.get(s["jid"], "")) for s in scorer_probs(model, x.home, x.away, goles_cnt, team_goals, lam)]
                 p["h2h"] = h2h(both, x.home, x.away)
             if x.estado == "pendiente":
                 h = hist.setdefault(str(p["id"]), {"k": p["kickoff"], "s": []})
@@ -550,7 +567,8 @@ def main():
         indice.append(dict(id=L["id"], slug=L["s1"], nombre=L["nombre"], pais=L["pais"], region=L["region"], logo=meta.get("logo"),
                            datos_hasta=out["datos_hasta"], proximos=len(partidos)))
         print(f"  {len(jug)} jugados · {len(partidos)} por jugar · datos hasta {out['datos_hasta']} · "
-              f"córners {'sí' if mc else 'no'} · tarjetas {'sí' if mt else 'no'} · {len(goleadores)} goleadores", flush=True)
+              f"córners {'sí' if mc else 'no'} · tarjetas {'sí' if mt else 'no'} · {len(goleadores)} goleadores · "
+              f"{n_calib} ajustados a la cuota", flush=True)
 
     if not indice:
         print("No conseguí datos de ninguna liga. Revisa la conexión y vuelve a intentar.")
@@ -594,7 +612,8 @@ def main():
                 p["bajas"] = bj
                 if share["h"] > 0 or share["a"] > 0:
                     # cada gol "perdido" se compensa en parte con el reemplazo: se descuenta el 40 %
-                    lh2, la2 = p["lh"] * (1 - 0.4 * share["h"]), p["la"] * (1 - 0.4 * share["a"])
+                    base_m = p.get("modelo") or p   # el ajuste se aplica al modelo propio; la cuota ya considera las bajas conocidas
+                    lh2, la2 = base_m["lh"] * (1 - 0.4 * share["h"]), base_m["la"] * (1 - 0.4 * share["a"])
                     mk2 = markets(score_matrix(lh2, la2, ctx["model"].rho))
                     p["ajuste"] = dict(lh=r(lh2, 3), la=r(la2, 3), pH=r(mk2["H"]), pD=r(mk2["D"]), pA=r(mk2["A"]),
                                        pO25=r(mk2["O25"]), pBTTS=r(mk2["BTTS"]), top=mk2["top"])
@@ -611,7 +630,12 @@ def main():
     portada["equipos"] = sorted(portada["equipos"], key=lambda p: (-p["puntos5"], p["pos"]))[:6]
     portada["rachas"] = sorted(portada["rachas"], key=lambda p: -p["n"])[:8]
     with open(os.path.join(SALIDA, "indice.json"), "w", encoding="utf-8") as f:
-        json.dump(clean(dict(actualizado=now.isoformat(timespec="minutes"), xi=XI, alpha=ALPHA, ligas=indice, portada=portada,
+        try:
+            with open(os.path.join(os.path.dirname(__file__), "backtest_mercado.json"), encoding="utf-8") as fb:
+                bt_mercado = json.load(fb)
+        except (OSError, ValueError):
+            bt_mercado = None
+        json.dump(clean(dict(actualizado=now.isoformat(timespec="minutes"), xi=XI, alpha=ALPHA, ligas=indice, portada=portada, backtest_mercado=bt_mercado,
                              api_football=dict(activa=lesiones.ESTADO["activa"], bajas=len(bajas), restantes=lesiones.ESTADO["restantes"]))),
                   f, ensure_ascii=False, separators=(",", ":"))
     print("Listo: datos en site/data/")
