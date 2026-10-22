@@ -48,6 +48,16 @@ def _logo(team):
     return team.get("logo")
 
 
+def _all_stats(comp):
+    out = {}
+    for s in comp.get("statistics") or []:
+        k = s.get("name") or s.get("abbreviation")
+        v = _num(s.get("displayValue", s.get("value")))
+        if k and v is not None:
+            out[k] = v
+    return out
+
+
 def _num(x):
     try:
         return float(x)
@@ -78,6 +88,8 @@ def parse_events(data):
             row["ag"] = _num(a.get("score")) if done else None
             row["hst"] = _stat(h, "shotsOnTarget", "ST", "SOT") if done else None
             row["ast"] = _stat(a, "shotsOnTarget", "ST", "SOT") if done else None
+            if done:  # todas las estadísticas que ESPN publique (córners, tarjetas, posesión…)
+                row["hstats"], row["astats"] = _all_stats(h), _all_stats(a)
             rows.append(row)
         except (KeyError, TypeError, IndexError):
             continue
@@ -97,7 +109,7 @@ def _fetch(url):
 
 def get_month(slug, ym, fresh):
     os.makedirs(CACHE, exist_ok=True)
-    path = os.path.join(CACHE, f"{slug}_{ym}.json")
+    path = os.path.join(CACHE, f"v2_{slug}_{ym}.json")
     if os.path.exists(path) and not fresh:
         with open(path, encoding="utf-8") as f:
             return json.load(f)
@@ -117,6 +129,11 @@ def get_month(slug, ym, fresh):
     if DEBUG:
         with open(os.path.join(CACHE, "..", "espn_ejemplo.json"), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=1)
+    muestra = os.path.join(CACHE, "..", "espn_muestra.json")
+    if not os.path.exists(muestra) and data and data.get("events"):
+        done = [e for e in data["events"] if ((e.get("status") or {}).get("type") or {}).get("completed")]
+        with open(muestra, "w", encoding="utf-8") as f:  # un partido de ejemplo, para saber qué campos trae ESPN
+            json.dump({"leagues": data.get("leagues", [])[:1], "events": (done or data["events"])[:1]}, f, ensure_ascii=False, indent=1)
     rows = parse_events(data)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(rows, f, ensure_ascii=False)
