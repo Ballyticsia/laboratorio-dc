@@ -1,0 +1,69 @@
+{
+ "fecha": "2026-10-22",
+ "n": 0,
+ "por_liga": {},
+ "total": {},
+ "cobertura": {
+  "premier": {
+   "partidos": 2076,
+   "con_xg": 0,
+   "understat": 0
+  },
+  "laliga": {
+   "partidos": 1895,
+   "con_xg": 0,
+   "understat": 0
+  },
+  "seriea": {
+   "partidos": 1680,
+   "con_xg": 0,
+   "understat": 0
+  },
+  "bundesliga": {
+   "partidos": 1350,
+   "con_xg": 0,
+   "understat": 0
+  },
+  "ligue1": {
+   "partidos": 1367,
+   "con_xg": 0,
+   "understat": 0
+  },
+  "championship": {
+   "partidos": 3316,
+   "con_xg": 0,
+   "understat": 0
+  },
+  "champions": {
+   "partidos": 6403,
+   "con_xg": 0,
+   "understat": 0
+  }
+ },
+ "mejor": null,
+ "usar": false,
+ "alpha": 0.3,
+ "beta": 0.0,
+ "errores": [
+  "EPL 2024: no encontré datesData",
+  "EPL 2025: no encontré datesData",
+  "EPL 2026: no encontré datesData",
+  "La_liga 2024: no encontré datesData",
+  "La_liga 2025: no encontré datesData",
+  "La_liga 2026: no encontré datesData",
+  "Serie_A 2024: no encontré datesData",
+  "Serie_A 2025: no encontré datesData",
+  "Serie_A 2026: no encontré datesData",
+  "Bundesliga 2024: no encontré datesData",
+  "Bundesliga 2025: no encontré datesData",
+  "Bundesliga 2026: no encontré datesData",
+  "Ligue_1 2024: no encontré datesData",
+  "Ligue_1 2025: no encontré datesData",
+  "Ligue_1 2026: no encontré datesData",
+  "EPL 2024: no encontré datesData",
+  "EPL 2025: no encontré datesData",
+  "EPL 2026: no encontré datesData",
+  "EPL 2024: no encontré datesData",
+  "EPL 2025: no encontré datesData"
+ ]
+}
