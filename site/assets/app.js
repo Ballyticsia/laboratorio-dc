@@ -158,7 +158,7 @@ function vInicio() {
   const claros = allMatches().filter(p => new Date(p.kickoff).getTime() <= lim && new Date(p.kickoff).getTime() >= now).map(p => ({ p, m: Math.max(p.pH, p.pA) })).sort((a, b) => b.m - a.m).slice(0, 5);
   const Lmini = D.ligas[sel] || D.ligas[ligasIds()[0]];
   return `<section class="view" aria-labelledby="h-inicio">
-    <div class="row" style="justify-content:space-between"><h1 id="h-inicio">Partidos de la semana</h1><span class="stamp">Modelo · <b>Ballytics</b></span></div>
+    <div class="row" style="justify-content:space-between"><h1 id="h-inicio">Partidos de la semana</h1></div>
     ${chips(sel, "inicio")}
     <div class="layout">
       <div class="panel flush">${list}</div>
