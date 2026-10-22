@@ -896,3 +896,13 @@ svg .dotg:hover .pt{fill:var(--card)}
   .search{max-width:220px}
 }
 @media (max-width:960px) and (min-width:761px){.nav-i[data-nav="inicio"] span{display:none}.search{max-width:170px}}
+.flagimg{border-radius:3px;object-fit:cover;width:28px;height:20px;box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+.cimg.xl.flagimg{width:84px;height:56px;border-radius:6px}
+.vconf summary{display:flex;align-items:center;gap:10px;cursor:pointer;list-style:none}
+.vconf summary::-webkit-details-marker{display:none}
+.vconf summary h3{margin:0}
+.vconf summary small{color:var(--faint)}
+.vconf summary::after{content:"›";margin-left:auto;color:var(--faint);transition:transform .2s}
+.vconf[open] summary::after{transform:rotate(90deg)}
+.vconf[open] summary{margin-bottom:6px}
+#vs-next{margin-bottom:14px}

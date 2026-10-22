@@ -156,9 +156,11 @@ function buildMenu() {
       (L.goleadores || []).forEach(g => { const key = g.jid + "|" + id; if (seenP.has(key)) return; seenP.add(key);
         pl.push({ k: "Jugadores", n: g.jugador, sub: `${corto(L, g.equipo)} · ${L.nombre} · ${g.goles} goles`, html: face(L, g.equipo, g.jid, g.jugador), go: `data-go="jugador" data-liga="${id}" data-id="${esc(g.jid)}"` }); });
     });
-    idx = [...ligas, ...eq, ...pl].map(x => ({ ...x, s: norm(x.n + " " + (x.alt || "")) }));
+    const sel = ((VV.sel || {}).equipos || []).map(t => ({ k: "Selecciones", n: t.n, alt: t.en, sub: (VV.sel.conf[t.cf] || "").split(" (")[0], html: selImg(t), go: `data-go="club" data-liga="sel" data-id="${esc(t.id)}"` }));
+    const comps = (VV.comps || []).map(c => ({ k: "Competiciones", n: c.n, alt: c.p, sub: c.p, html: compImg(c), go: `data-go="comp" data-liga="${esc(c.s)}"` }));
+    idx = [...ligas, ...eq, ...sel, ...comps, ...pl].map(x => ({ ...x, s: norm(x.n + " " + (x.alt || "")) }));
   };
-  indexAll(); D.all.then(indexAll);
+  indexAll(); D.all.then(indexAll); Promise.all([vComps(), vSel()]).then(indexAll);
   let act = -1;
   const items = () => [...res.querySelectorAll(".dd-item")];
   const setAct = i => { const it = items(); if (!it.length) return; act = (i + it.length) % it.length; it.forEach((x, j) => x.classList.toggle("act", j === act)); it[act].scrollIntoView({ block: "nearest" }); };
@@ -168,8 +170,8 @@ function buildMenu() {
     const sc = x => x.s.startsWith(v) ? 2 : x.s.includes(" " + v) ? 1 : 0;
     const hits = idx.filter(x => x.s.includes(v)).sort((a, b) => sc(b) - sc(a)).slice(0, 14);
     const groups = {}; hits.forEach(h => (groups[h.k] ||= []).push(h));
-    res.innerHTML = hits.length ? ["Ligas", "Equipos", "Jugadores"].filter(k => groups[k]).map(k => `<span class="lbl sgrp">${k}</span>` +
-      groups[k].slice(0, k === "Jugadores" ? 5 : 6).map(x => `<button class="dd-item" ${x.go}>${x.html}<span>${esc(x.n)}<small>${esc(x.sub)}</small></span></button>`).join("")).join("")
+    res.innerHTML = hits.length ? ["Ligas", "Equipos", "Selecciones", "Competiciones", "Jugadores"].filter(k => groups[k]).map(k => `<span class="lbl sgrp">${k}</span>` +
+      groups[k].slice(0, k === "Jugadores" || k === "Competiciones" ? 5 : 6).map(x => `<button class="dd-item" ${x.go}>${x.html}<span>${esc(x.n)}<small>${esc(x.sub)}</small></span></button>`).join("")).join("")
       : `<p class="note" style="padding:10px">Sin resultados.</p>`;
     res.hidden = false;
   });
@@ -219,6 +221,7 @@ function fromHash() {
     case "vivo": return { v: "vivo", tab: /^\d{8}$/.test(p[1] || "") ? p[1] : undefined, id: p[2] || (p[1] === "envivo" ? "envivo" : undefined) };
     case "envivo": return /^\d+$/.test(p[1] || "") ? { v: "envivo", id: p[1], tab: p[2] || "resumen" } : { v: "envivo", id: p[2], tab: p[3] || "resumen" };
     case "competiciones": return { v: "competiciones" };
+    case "selecciones": return { v: "selecciones" };
     case "noticias": return { v: "noticias" };
     case "comp": return { v: "comp", liga: p[1], tab: p[2] || "partidos" };
     case "club": return { v: "club", liga: p[1], id: p[2], tab: p[3] || "partidos" };
@@ -245,11 +248,11 @@ function render() {
   timers.splice(0).forEach(clearInterval);
   const need = ["liga", "partido", "equipo", "jugador", "comparar"].includes(R.v) && R.liga && D.meta && D.meta[R.liga] && !D.ligas[R.liga] ? R.liga : null;
   if (need) { $app.innerHTML = skeleton(); ensure(need).then(() => render()); return; }
-  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", combinada: "seguimiento", envivo: "vivo", competiciones: "vivo", comp: "vivo", club: "vivo", noticias: "vivo" }[R.v] || R.v);
+  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", combinada: "seguimiento", envivo: "vivo", competiciones: "vivo", comp: "vivo", club: "vivo", noticias: "vivo", selecciones: "vivo" }[R.v] || R.v);
   document.querySelectorAll("[data-nav]").forEach(b => b.setAttribute("aria-current", b.dataset.nav === sec ? "page" : "false"));
   const f = { inicio: vInicio, liga: vLiga, partido: vPartido, equipo: vEquipo, registro: vRegistro, metodo: vMetodo,
     sobre: vSobre, responsable: vResponsable, jugador: vJugador, comparar: vComparar, combinada: vCombinada, seguimiento: vSeguimiento,
-    vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias }[R.v] || vInicio;
+    vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias, selecciones: vSelecciones }[R.v] || vInicio;
   $app.innerHTML = staleBanner() + f();
   if (R.v === "partido") { if (R.tab === "mercados") bindOdds(); if (R.tab === "alineaciones" || document.getElementById("xi-adj")) loadSummary(); }
   if (R.v === "comparar") bindCompare();
@@ -1610,6 +1613,53 @@ async function vComps() {
   VV.comps.forEach(c => { VV.byId[c.id] = c; VV.bySlug[c.s] = c; });
   return VV.comps;
 }
+async function vSel() {
+  if (VV.sel) return VV.sel;
+  try { VV.sel = await vget("assets/selecciones.json?v=1"); } catch (e) { VV.sel = { conf: {}, orden: [], equipos: [] }; }
+  VV.selById = {}; VV.sel.equipos.forEach(t => VV.selById[t.id] = t);
+  return VV.sel;
+}
+const favSel = () => lsGet("bt_vsel", []);
+const selImg = (t, cls = "") => t && t.l ? `<img class="cimg flagimg ${cls}" src="${esc(t.l)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : `<span class="cflag">🏳️</span>`;
+const NAT_SLUGS = ["fifa.friendly", "uefa.nations", "concacaf.nations.league", "fifa.worldq.conmebol", "fifa.worldq.uefa", "fifa.worldq.concacaf", "fifa.worldq.afc", "fifa.worldq.caf", "fifa.worldq.ofc", "conmebol.america", "uefa.euroq", "caf.nations", "afc.asian.cup", "fifa.world"];
+function vSelecciones() {
+  setTimeout(vFillSel, 0);
+  return `<section class="view" aria-labelledby="h-sel"><h1 id="h-sel">Selecciones</h1>${vHub("selecciones")}
+    <div class="vbar"><div class="vsearch wide"><input id="vs-q" type="search" placeholder="Buscar selección" autocomplete="off"></div></div>
+    <div id="vs-next"></div><div id="vs-list"><div class="panel empty">Cargando…</div></div></section>`;
+}
+async function vFillSel() {
+  const S = await vSel(), box = document.getElementById("vs-list"); if (!box) return;
+  const q = ((document.getElementById("vs-q") || {}).value || "").trim().toLowerCase(), fav = favSel();
+  const L = S.equipos.filter(t => !q || (t.n + " " + t.en).toLowerCase().includes(q));
+  const item = t => `<div class="vci"><button class="vcib" data-go="club" data-liga="sel" data-id="${esc(t.id)}">${selImg(t)}<span><b>${esc(t.n)}</b><small>${esc((S.conf[t.cf] || "").split(" (")[0])}</small></span></button><button class="vstar${fav.includes(t.id) ? " on" : ""}" data-fsel="${esc(t.id)}" aria-label="Seguir">${fav.includes(t.id) ? "★" : "☆"}</button></div>`;
+  let html = "";
+  const favs = S.equipos.filter(t => fav.includes(t.id));
+  if (!q && favs.length) html += `<div class="panel stack"><h3>Mis selecciones</h3><div class="vcgrid">${favs.map(item).join("")}</div></div>`;
+  if (!q) html += `<div class="panel stack"><h3>Destacadas</h3><div class="vcgrid">${S.equipos.filter(t => t.top < 99).sort((a, b) => a.top - b.top).map(item).join("")}</div></div>`;
+  S.orden.forEach(c => { const g = L.filter(t => t.cf === c); if (g.length) html += `<details class="panel stack vconf"${q || c === "conmebol" ? " open" : ""}><summary><h3>${esc(S.conf[c] || "Otras")}</h3><small>${g.length}</small></summary><div class="vcgrid">${g.map(item).join("")}</div></details>`; });
+  box.innerHTML = html || `<div class="panel empty">Sin resultados.</div>`;
+  if (!q) vFillNatNext();
+}
+/* próximos partidos de selecciones (fechas FIFA) */
+async function vFillNatNext() {
+  const box = document.getElementById("vs-next"); if (!box) return;
+  if (!VV.natNext || Date.now() - VV.natNext.t > 600000) {
+    const now = new Date(), months = [0, 1, 2].map(i => { const d = new Date(now.getFullYear(), now.getMonth() + i, 1); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`; });
+    await vComps();
+    const res = await Promise.all(NAT_SLUGS.flatMap(s => months.map(m => vget(`${ESPN}/${s}/scoreboard?dates=${m}&limit=1000`).catch(() => null))));
+    const map = new Map(); res.filter(Boolean).forEach(j => (j.events || []).forEach(e => { const x = vParse(e); if (!map.has(x.id)) map.set(x.id, x); }));
+    VV.natNext = { t: Date.now(), evs: [...map.values()].sort((a, b) => a.date.localeCompare(b.date)) };
+  }
+  const fav = favSel(), now = Date.now();
+  let evs = VV.natNext.evs.filter(e => e.state !== "post" && new Date(e.date).getTime() > now - 3 * 3600e3);
+  const mine = evs.filter(e => fav.includes(e.h.id) || fav.includes(e.a.id));
+  const top = new Set(((VV.sel || {}).equipos || []).filter(t => t.top < 99).map(t => t.id));
+  const show = (mine.length ? mine : evs.filter(e => top.has(e.h.id) || top.has(e.a.id))).slice(0, 12);
+  if (!document.getElementById("vs-next")) return;
+  box.innerHTML = show.length ? `<div class="panel flush vcomp"><div class="vch"><b>${mine.length ? "Próximos partidos de mis selecciones" : "Próximos partidos de selecciones"}</b><small class="faint" style="margin-left:auto">${evs.length} en los próximos meses</small></div>${show.map(e => `<div class="vday sm"><span class="lbl">${esc(new Date(e.date).toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" }))} · ${esc(e.comp)}</span></div>${vRow(e)}`).join("")}</div>`
+    : `<div class="panel empty">No hay partidos de selecciones programados en los próximos meses.</div>`;
+}
 const compImg = (c, cls = "") => c && c.l ? `<img class="cimg ${cls}" src="${esc(c.l)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'cflag',textContent:'${esc(c.f || "⚽")}'}))">` : `<span class="cflag">${esc((c && c.f) || "⚽")}</span>`;
 function modelBySlug(slug) { return Object.values(D.ligas || {}).find(L => L.slug === slug) || (D.indice ? D.indice.ligas.find(l => l.slug === slug) : null); }
 
@@ -1656,7 +1706,7 @@ function vRow(e) {
     <span class="vside">${m && e.state !== "post" ? `<span class="vmodel" title="Probabilidad Ballytics">${pct(m.p.pH)} · ${pct(m.p.pD)} · ${pct(m.p.pA)}</span>` : ""}${e.state !== "post" ? `<button class="vbell${f ? " on" : ""}" data-follow="${esc(e.id)}" title="${f ? "Dejar de seguir" : "Avisarme de goles"}" aria-label="Avisarme de goles">${f ? "🔔" : "🔕"}</button>` : ""}</span></div>`;
 }
 function vHub(active) {
-  return `<div class="vhub" role="tablist">${[["vivo", "Partidos"], ["competiciones", "Competiciones"], ["noticias", "Noticias"]].map(([v, n]) => `<button role="tab" data-go="${v}" aria-selected="${v === active}">${n}</button>`).join("")}</div>`;
+  return `<div class="vhub" role="tablist">${[["vivo", "Partidos"], ["competiciones", "Competiciones"], ["selecciones", "Selecciones"], ["noticias", "Noticias"]].map(([v, n]) => `<button role="tab" data-go="${v}" aria-selected="${v === active}">${n}</button>`).join("")}</div>`;
 }
 function vVivo() {
   const today = ymd(new Date()), key = /^\d{8}$/.test(R.tab || "") ? R.tab : today, solo = R.id === "envivo";
@@ -1713,7 +1763,7 @@ async function vFillComps() {
   const L = all.filter(c => !q || (c.n + " " + c.p).toLowerCase().includes(q));
   const item = c => `<div class="vci"><button class="vcib" data-go="comp" data-liga="${esc(c.s)}">${compImg(c)}<span><b>${esc(c.n)}${modelBySlug(c.s) ? ` <span class="tagm" title="Con probabilidades de Ballytics">%</span>` : ""}</b><small>${esc(c.p)}${c.t.includes("fem") ? " · femenino" : ""}${c.t.includes("juv") ? " · juvenil" : ""}</small></span></button><button class="vstar${fav.includes(c.s) ? " on" : ""}" data-fcomp="${esc(c.s)}" aria-label="Seguir">${fav.includes(c.s) ? "★" : "☆"}</button></div>`;
   const favs = all.filter(c => fav.includes(c.s)), top = L.filter(c => c.o < 40);
-  const regs = ["Internacional", "Sudamérica", "Europa", "Norteamérica", "Asia", "África"];
+  const regs = ["Selecciones", "Copas internacionales", "Sudamérica", "Europa", "Norteamérica", "Asia", "África"];
   let html = "";
   if (!q && favs.length) html += `<div class="panel stack"><h3>Mis competiciones</h3><div class="vcgrid">${favs.map(item).join("")}</div></div>`;
   if (!q) html += `<div class="panel stack"><h3>Populares</h3><div class="vcgrid">${top.map(item).join("")}</div></div>`;
@@ -1726,6 +1776,7 @@ async function vFillComps() {
 }
 document.addEventListener("input", e => {
   if (e.target.id === "vc-q") vFillComps();
+  if (e.target.id === "vs-q") vFillSel();
   if (e.target.id === "vv-q") { VV.q = e.target.value; vFillList(/^\d{8}$/.test(R.tab || "") ? R.tab : ymd(new Date()), R.id === "envivo"); }
 });
 document.addEventListener("change", e => { if (e.target.id === "vv-date" && e.target.value) go({ v: "vivo", tab: e.target.value.replace(/-/g, ""), id: R.id, keepScroll: true }); });
@@ -1733,6 +1784,9 @@ document.addEventListener("click", e => {
   const s = e.target.closest("[data-fcomp]");
   if (s) { e.stopPropagation(); e.preventDefault(); const f = favComps(), k = s.dataset.fcomp, i = f.indexOf(k); if (i >= 0) f.splice(i, 1); else f.push(k); lsSet("bt_vcomp", f);
     s.classList.toggle("on", i < 0); s.textContent = i < 0 ? "★" : "☆"; return; }
+  const ss = e.target.closest("[data-fsel]");
+  if (ss) { e.stopPropagation(); e.preventDefault(); const f = favSel(), k = ss.dataset.fsel, i = f.indexOf(k); if (i >= 0) f.splice(i, 1); else f.push(k); lsSet("bt_vsel", f);
+    ss.classList.toggle("on", i < 0); ss.textContent = i < 0 ? "★" : "☆"; return; }
   const m = e.target.closest("[data-more]");
   if (m) { VV.more[m.dataset.more] = true; vFillList(/^\d{8}$/.test(R.tab || "") ? R.tab : ymd(new Date()), R.id === "envivo"); return; }
   const b = e.target.closest("[data-follow]");
@@ -1822,7 +1876,7 @@ async function vFillComp(slug, tab) {
 function vClub() {
   const slug = R.liga, id = R.id, tabs = [["partidos", "Partidos"], ["plantel", "Plantel"]], tab = tabs.some(t => t[0] === R.tab) ? R.tab : "partidos";
   setTimeout(() => vFillClub(slug, id, tab), 0);
-  return `<section class="view"><button class="back" data-go="comp" data-liga="${esc(slug)}">← Competición</button>
+  return `<section class="view">${slug === "sel" ? `<button class="back" data-go="selecciones">← Selecciones</button>` : `<button class="back" data-go="comp" data-liga="${esc(slug)}">← Competición</button>`}
     <div class="panel lhead" id="cl-head"><div class="empty">Cargando…</div></div>
     <div class="mtabs vtabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" data-go="club" data-liga="${esc(slug)}" data-id="${esc(id)}" data-tab="${k}" data-keep aria-selected="${k === tab}">${n}</button>`).join("")}</div>
     <div id="cl-body"><div class="panel empty">Cargando…</div></div></section>`;
@@ -1840,10 +1894,14 @@ function schedRow(e, teamId) {
 async function vFillClub(slug, id, tab) {
   const head = document.getElementById("cl-head"), body = document.getElementById("cl-body"); if (!head) return;
   let past = null, fut = null, ros = null;
-  try { [past, fut] = await Promise.all([vget(`${ESPN}/${slug}/teams/${id}/schedule`).catch(() => null), vget(`${ESPN}/${slug}/teams/${id}/schedule?fixture=true`).catch(() => null)]); } catch (e) {}
+  // "all" trae los partidos de todas las competiciones del equipo (liga, copas, torneos internacionales)
+  try { [past, fut] = await Promise.all([vget(`${ESPN}/all/teams/${id}/schedule`).catch(() => null), vget(`${ESPN}/all/teams/${id}/schedule?fixture=true`).catch(() => null)]); } catch (e) {}
   if (R.v !== "club" || R.id !== id) return;
-  const t = (past || fut || {}).team || {}, logo = ((t.logos || [])[0] || {}).href || t.logo;
-  head.innerHTML = `${logo ? `<img class="cimg xl" src="${esc(logo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}<div><h1>${esc(t.displayName || "Equipo")}</h1><span class="muted">${esc(t.standingSummary || (VV.bySlug[slug] || {}).n || "")}</span></div>`;
+  const nat = slug === "sel", st = nat ? (await vSel(), VV.selById[id]) : null;
+  const t = (past || fut || {}).team || {}, logo = ((t.logos || [])[0] || {}).href || t.logo || (st && st.l);
+  const fav = nat && favSel().includes(id);
+  head.innerHTML = `${logo ? `<img class="cimg xl${nat ? " flagimg" : ""}" src="${esc(logo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}<div><h1>${esc(st ? st.n : t.displayName || "Equipo")}</h1><span class="muted">${esc(nat ? "Selección · " + ((VV.sel.conf[st && st.cf] || "").split(" (")[0]) : t.standingSummary || (VV.bySlug[slug] || {}).n || "")}</span></div>
+    ${nat ? `<button class="vstar big${fav ? " on" : ""}" data-fsel="${esc(id)}" aria-label="Seguir" style="margin-left:auto">${fav ? "★" : "☆"}</button>` : ""}`;
   if (tab === "partidos") {
     const pe = ((past || {}).events || []).filter(e => (((e.competitions || [])[0] || {}).status || {}).type?.state === "post").slice(-12).reverse();
     const fe = ((fut || {}).events || []).slice(0, 12);
@@ -1851,7 +1909,7 @@ async function vFillClub(slug, id, tab) {
       <div class="panel flush vcomp"><div class="vch"><b>Últimos resultados</b></div>${pe.length ? pe.map(e => schedRow(e, id)).join("") : `<div class="empty">Sin resultados.</div>`}</div></div>`;
   }
   if (tab === "plantel") {
-    try { ros = await vget(`${ESPN}/${slug}/teams/${id}/roster`); } catch (e) {}
+    try { ros = await vget(`${ESPN}/${slug === "sel" ? "fifa.friendly" : slug}/teams/${id}/roster`); } catch (e) {}
     if (R.v !== "club" || R.id !== id) return;
     const A = (ros && ros.athletes) || [], ord = { G: 0, D: 1, M: 2, F: 3 }, grp = { G: "Arqueros", D: "Defensas", M: "Mediocampistas", F: "Delanteros" };
     const by = {}; A.forEach(a => { const p = ((a.position || {}).abbreviation || "M")[0]; (by[p in ord ? p : "M"] ||= []).push(a); });
@@ -1955,7 +2013,9 @@ async function vFillMatch(force) {
   const H = vHeader(j), evs = vEvents(j, H), c = VV.byId[H.lid], comp = c ? c.n : H.league, m = vModel(id); VV.state = H.state;
   const goals = l => evs.filter(e => (e.kind === "goal" && e.lado === l) || (e.kind === "og" && e.lado && e.lado !== l)).map(e => `${esc((e.who[0] || "").split(" ").slice(-1)[0])} ${esc(e.min)}${e.kind === "og" ? " (ec)" : e.pen ? " (p)" : ""}`).join(", ");
   const status = H.state === "in" ? `<span class="vmin live big">${esc(/half|HT/i.test(H.detail) ? "Entretiempo" : H.clock || H.detail)}</span>` : H.state === "post" ? `<span class="vmin big">${esc(H.detail && H.detail !== "FT" ? H.detail : "Final")}</span>` : `<span class="vmin big">${esc(new Date(H.date).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))} · ${hhmm(H.date)}</span>`;
-  const tl = (t, cls) => H.slug && t.id ? `<button class="vhteam tbtn" data-go="club" data-liga="${esc(H.slug)}" data-id="${esc(t.id)}">${vLogo(t, "xl")}<b>${esc(t.short)}</b><small>${goals(cls)}</small></button>` : `<div class="vhteam">${vLogo(t, "xl")}<b>${esc(t.short)}</b><small>${goals(cls)}</small></div>`;
+  await vSel();
+  const tslug = t => VV.selById[t.id] ? "sel" : H.slug;
+  const tl = (t, cls) => tslug(t) && t.id ? `<button class="vhteam tbtn" data-go="club" data-liga="${esc(tslug(t))}" data-id="${esc(t.id)}">${vLogo(t, "xl")}<b>${esc(t.short)}</b><small>${goals(cls)}</small></button>` : `<div class="vhteam">${vLogo(t, "xl")}<b>${esc(t.short)}</b><small>${goals(cls)}</small></div>`;
   const f = followed()[id];
   head.innerHTML = `<div class="vhcomp">${H.slug ? `<button class="link" data-go="comp" data-liga="${esc(H.slug)}">${esc(comp)}</button>` : esc(comp)}${H.note ? ` · ${esc(H.note)}` : ""}</div>
     <div class="vhrow">${tl(H.h, "h")}
