@@ -485,9 +485,15 @@ def main():
         resultados = []
         for x in jug.sort_values("kickoff", ascending=False).itertuples():
             e = getattr(x, "eventos", None)
-            resultados.append(dict(id=x.id, kickoff=x.kickoff, home=x.home, away=x.away, hg=int(x.hg), ag=int(x.ag),
-                                   goles=[dict(lado=v["lado"], min=v["min"], jug=v["jug"], pen=v["pen"], og=v["og"])
-                                          for v in (e or []) if v["t"] == "G"]))
+            rr = dict(id=x.id, kickoff=x.kickoff, home=x.home, away=x.away, hg=int(x.hg), ag=int(x.ag),
+                      goles=[dict(lado=v["lado"], min=v["min"], jug=v["jug"], pen=v["pen"], og=v["og"])
+                             for v in (e or []) if v["t"] == "G"])
+            ch, ca = stat(x, "h", "wonCorners"), stat(x, "a", "wonCorners")
+            if ch == ch and ca == ca:
+                rr["c"] = [int(ch), int(ca)]
+            if eventos_completos(x):
+                rr["t"] = [int(cards(x, "h")), int(cards(x, "a"))]
+            resultados.append(rr)
         jugados_all.append(jug[["id", "hg", "ag"]])
 
         # portada: candidatos de esta liga

@@ -556,3 +556,37 @@ nav.main .dd-item:hover{background:rgba(61,139,255,.1);color:var(--ink)}
   .mtabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0}
   .mtabs button{padding:8px 2px;font-size:11px;letter-spacing:.02em}
 }
+
+/* ===================== v6: herramientas ===================== */
+.addsel{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:rgba(7,9,15,.5);color:var(--pitch);font-weight:700;font-size:17px;line-height:1;cursor:pointer}
+.addsel:hover{border-color:var(--pitch)}
+.addsel[aria-pressed="true"]{background:var(--pitch);color:#fff;border-color:var(--pitch);box-shadow:0 0 12px rgba(61,139,255,.45)}
+#combobar{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:25}
+.cb-in{display:flex;align-items:center;gap:14px;padding:10px 14px 10px 10px;border-radius:16px;border:1px solid rgba(61,139,255,.55);background:rgba(10,16,32,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:var(--ink);cursor:pointer;box-shadow:0 14px 40px rgba(0,0,0,.5),0 0 24px rgba(61,139,255,.25)}
+.cb-n{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--pitch);color:#fff;font-family:var(--f-display);font-weight:700;font-size:17px}
+.cb-t,.cb-p{display:flex;flex-direction:column;text-align:left;line-height:1.2}
+.cb-t small,.cb-p small{color:var(--muted);font-size:11.5px}
+.cb-p b{color:var(--good);font-size:18px}
+.cb-go{color:var(--pitch);font-weight:700;font-size:13px}
+.selrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.selrow:first-child{border-top:0}
+.sel-m{display:flex;flex-direction:column;min-width:0}
+.sel-m small{color:var(--muted);font-size:12px}
+.sel-p{color:var(--good);font-weight:600}
+.rm{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1}
+.rm:hover{color:var(--bad);border-color:var(--bad)}
+.oddin{display:flex;flex-direction:column;gap:5px;max-width:260px}
+.oddin input{font:inherit;font-family:var(--f-mono);font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+.oddin input:focus{outline:none;border-color:var(--pitch)}
+.combo-sum .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+.pick-c.ok{border-color:rgba(46,230,166,.45)} .pick-c.ko{border-color:rgba(255,92,122,.4)}
+.gs{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-weight:700;font-size:13px;background:rgba(148,163,184,.1);color:var(--faint)}
+.gs.ok{background:rgba(46,230,166,.15);color:var(--good)} .gs.ko{background:rgba(255,92,122,.13);color:var(--bad)}
+.mact{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+@media (max-width:760px){
+  #combobar{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+  .cb-in{width:100%;justify-content:space-between}
+  .tabbar{grid-template-columns:repeat(5,1fr)}
+  .tabbar button{font-size:10px}
+  .combo-sum .kpis{grid-template-columns:1fr}
+}

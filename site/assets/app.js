@@ -154,6 +154,8 @@ function fromHash() {
     case "registro": return { v: "registro", tab: p[1] };
     case "metodo": return { v: "metodo" };
     case "sobre": return { v: "sobre" };
+    case "combinada": return { v: "combinada" };
+    case "seguimiento": return { v: "seguimiento" };
     case "responsable": return { v: "responsable" };
     case "jugador": return { v: "jugador", liga: p[1], id: p[2] };
     case "comparar": return { v: "comparar", liga: D.ligas[p[1]] ? p[1] : first, team: p[2], id: p[3] };
@@ -181,13 +183,16 @@ function render() {
   timers.splice(0).forEach(clearInterval);
   const need = ["liga", "partido", "equipo", "jugador", "comparar"].includes(R.v) && R.liga && D.meta && D.meta[R.liga] && !D.ligas[R.liga] ? R.liga : null;
   if (need) { $app.innerHTML = skeleton(); ensure(need).then(() => render()); return; }
-  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo" }[R.v] || R.v);
+  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", combinada: "seguimiento" }[R.v] || R.v);
   document.querySelectorAll("[data-nav]").forEach(b => b.setAttribute("aria-current", b.dataset.nav === sec ? "page" : "false"));
   const f = { inicio: vInicio, liga: vLiga, partido: vPartido, equipo: vEquipo, registro: vRegistro, metodo: vMetodo,
-    sobre: vSobre, responsable: vResponsable, jugador: vJugador, comparar: vComparar }[R.v] || vInicio;
+    sobre: vSobre, responsable: vResponsable, jugador: vJugador, comparar: vComparar, combinada: vCombinada, seguimiento: vSeguimiento }[R.v] || vInicio;
   $app.innerHTML = staleBanner() + f();
   if (R.v === "partido") { if (R.tab === "mercados") bindOdds(); if (R.tab === "alineaciones") loadSummary(); }
   if (R.v === "comparar") bindCompare();
+  if (R.v === "combinada") bindCombinada();
+  if (R.v === "seguimiento") bindSeguimiento();
+  paintComboBar();
   bindCarousels();
   paintLive();
   paintCountdown();
@@ -631,9 +636,10 @@ function vPartido() {
   let mkt = "";
   if (cq) { const inv = [1 / cq.h, 1 / cq.d, 1 / cq.a], sm = inv[0] + inv[1] + inv[2];
     mkt = `<div class="mktrow"><span class="lbl">Mercado (${esc(cq.casa || "casas")}, sin margen)</span><span class="num">${pct(inv[0] / sm)} · ${pct(inv[1] / sm)} · ${pct(inv[2] / sm)}</span><span class="lbl">Modelo</span><span class="num">${pct(k.H)} · ${pct(k.D)} · ${pct(k.A)}</span></div>`; }
-  const mk = `<tr><th>Mercado</th><th style="text-align:right">Prob.</th><th style="text-align:right">Justa</th><th style="text-align:right">Tu cuota</th><th style="text-align:right">EV</th></tr>` +
-    groups.map(([g, rows]) => `<tr class="grp"><td colspan="5">${g}</td></tr>` + rows.map(([key, n, pr]) => `<tr><td>${esc(n)}</td><td class="n">${pct(pr, 1)}</td><td class="n">${dec(1 / pr)}</td>
-      <td class="n"><input class="odd" inputmode="decimal" aria-label="Cuota ${esc(n)}" data-k="${esc(key)}" data-p="${pr}" value="${st[key] ? String(st[key]).replace(".", ",") : ""}" placeholder="—"></td><td class="n" data-ev="${esc(key)}"></td></tr>`).join("")).join("");
+  const mk = `<tr><th>Mercado</th><th style="text-align:right">Prob.</th><th style="text-align:right">Justa</th><th style="text-align:right">Tu cuota</th><th style="text-align:right">EV</th><th><span class="sr">Combinada</span></th></tr>` +
+    groups.map(([g, rows]) => `<tr class="grp"><td colspan="6">${g}</td></tr>` + rows.map(([key, n, pr]) => `<tr><td>${esc(n)}</td><td class="n">${pct(pr, 1)}</td><td class="n">${dec(1 / pr)}</td>
+      <td class="n"><input class="odd" inputmode="decimal" aria-label="Cuota ${esc(n)}" data-k="${esc(key)}" data-p="${pr}" value="${st[key] ? String(st[key]).replace(".", ",") : ""}" placeholder="—"></td><td class="n" data-ev="${esc(key)}"></td>
+      <td class="n"><button class="addsel" data-sel="${esc(key)}" data-label="${esc(selLabel(g, n))}" data-jug="${key[0] === "G" ? esc(n.replace(/ \(.*\)$/, "")) : ""}" data-liga="${L.id}" data-mid="${esc(p.id)}" aria-pressed="${inCombo(p.id, key)}" title="Agregar a la combinada">+</button></td></tr>`).join("")).join("");
   const reg = D.registro && D.registro.filas && D.registro.filas.find(f => String(f.id) === String(p.id));
   const side = (s, t, cls) => `<div class="side ${cls}">${badge(L, t, "lg")}<button class="tn" data-go="equipo" data-liga="${L.id}" data-team="${esc(t)}">${esc(corto(L, t))}</button>
       <span class="xgv">${dec(cls === "l" ? lh : la)}</span><span class="lbl">goles esperados</span>
@@ -665,7 +671,8 @@ function vPartido() {
     <div class="panel stack"><h3>Mercados y valor</h3>
       ${mkt}
       <p class="note">${cq ? `Cuotas precargadas de ${esc(cq.casa || "ESPN")} (vía ESPN); puedes cambiarlas por las de tu casa. EV es el valor esperado por cada $1.` : "Escribe la cuota de tu casa de apuestas para ver el valor esperado (EV) por cada $1."} En el backtest, apostar solo por "valor" del modelo perdió plata.</p>
-      <div class="scroll"><table class="mk">${mk}</table></div></div>`;
+      <div class="scroll"><table class="mk">${mk}</table></div>
+      <p class="note">Toca <b>+</b> para armar una combinada con varios mercados o partidos y ver su probabilidad real.</p></div>`;
   if (tab === "alineaciones") body = `<div class="panel stack" id="lineups"><h3>Alineaciones</h3><p class="note">Buscando alineaciones…</p></div>`;
   if (tab === "historial") body = `
     <div class="panel stack"><h3>Últimos enfrentamientos</h3><div class="rlist">${h2h}</div></div>
@@ -679,6 +686,7 @@ function vPartido() {
     <div class="panel match">
       <div class="livebox" data-live-box="${esc(p.id)}" hidden></div>
       <div class="meta">${leagueMark(L, "sm")}<span>${esc(L.nombre)}</span><span>·</span><span>${new Date(p.kickoff).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })} ${hhmm(p.kickoff)}</span><span class="cdown" data-cd="${esc(p.kickoff)}"></span></div>
+      <div class="mact"><button class="btn ghost sm" data-share data-liga="${L.id}" data-mid="${esc(p.id)}">Compartir imagen</button><button class="btn ghost sm" data-ics="match" data-liga="${L.id}" data-mid="${esc(p.id)}">Agregar al calendario</button></div>
       <div class="face">${side(sh, p.home, "l")}<span class="vs">VS</span>${side(sa, p.away, "r")}</div>
       <div class="probs">
         <div class="pt h"><span class="lbl">${esc(H)}</span><span class="v">${pct(k.H, 1)}</span><div class="tr"><i style="width:${100 * k.H}%"></i></div></div>
@@ -716,7 +724,7 @@ function vEquipo() {
   const zs = s.zonas ? Object.entries(s.zonas).map(([cls, v]) => { const z = (L.zonas || []).find(z => z.cls === cls); return z ? kpi(cls === "desc" ? "" : "", cls === "desc" ? "Descenso" : z.nombre.replace(" (fase de grupos)", "").replace(" (previa)", ""), pct(v, 1), "") : ""; }).join("") : "";
   return `<section class="view" aria-labelledby="h-e">
     <button class="back" data-go="liga" data-liga="${L.id}" data-tab="resumen">← ${esc(L.nombre)}</button>
-    <div class="lhead panel">${badge(L, t, "xl")}<div><h1 id="h-e">${esc(corto(L, t))}</h1><span class="row" style="gap:8px;margin-top:6px">${starBtn("t", L.id + "|" + t, "Seguir este equipo")}<button class="btn ghost sm cmp-btn" data-go="comparar" data-liga="${L.id}" data-team="${esc(t)}">Comparar</button></span><span class="muted">${esc(L.nombre)}${s.pos ? ` · ${s.pos}º con ${s.pts} pts en ${s.pj} partidos` : ""}</span></div><span style="margin-left:auto">${formHtml(s.forma)}</span></div>
+    <div class="lhead panel">${badge(L, t, "xl")}<div><h1 id="h-e">${esc(corto(L, t))}</h1><span class="row" style="gap:8px;margin-top:6px">${starBtn("t", L.id + "|" + t, "Seguir este equipo")}<button class="btn ghost sm cmp-btn" data-go="comparar" data-liga="${L.id}" data-team="${esc(t)}">Comparar</button><button class="btn ghost sm" data-ics="team" data-liga="${L.id}" data-team="${esc(t)}">Partidos al calendario</button></span><span class="muted">${esc(L.nombre)}${s.pos ? ` · ${s.pos}º con ${s.pts} pts en ${s.pj} partidos` : ""}</span></div><span style="margin-left:auto">${formHtml(s.forma)}</span></div>
     <div class="kpis">${s.ataque ? kpi("m", "Ataque", dec(s.ataque), "1,00 = promedio liga") + kpi("", "Defensa", dec(s.defensa), "menos es mejor") : ""}${s.pts_esp != null ? kpi("", "Pts finales", dec(s.pts_esp, 1), "proyección") + kpi("k", "Campeón", pct(s.p_campeon, 1), "") : ""}${zs}</div>
     ${st.pj ? `<div class="panel stack"><h3>Estadísticas de la temporada</h3><div class="sgrid wide">
       ${[["Goles/PJ", dec(st.gf)], ["Recibe/PJ", dec(st.gc)], ["Tiros/PJ", dec(st.tiros, 1)], ["Al arco/PJ", dec(st.tiros_arco, 1)], ["Córners/PJ", dec(st.corners, 1)], ["Posesión", st.posesion != null ? dec(st.posesion, 0) + " %" : "—"],
@@ -1027,6 +1035,234 @@ function paintCountdown() {
   document.querySelectorAll("[data-cd]").forEach(el => { const t = countdown(el.dataset.cd); el.textContent = t; el.hidden = !t; });
 }
 setInterval(paintCountdown, 30000);
+
+
+/* ---------------- COMBINADA ---------------- */
+const COMBO_KEY = "bt_combo", PICKS_KEY = "bt_picks";
+let COMBO = [], PICKS = [];
+try { COMBO = JSON.parse(localStorage.getItem(COMBO_KEY) || "[]"); PICKS = JSON.parse(localStorage.getItem(PICKS_KEY) || "[]"); } catch (e) {}
+const saveCombo = () => { try { localStorage.setItem(COMBO_KEY, JSON.stringify(COMBO)); } catch (e) {} };
+const savePicks = () => { try { localStorage.setItem(PICKS_KEY, JSON.stringify(PICKS)); } catch (e) {} };
+const inCombo = (mid, key) => COMBO.some(x => String(x.mid) === String(mid) && x.key === key);
+document.addEventListener("click", e => {
+  const b = e.target.closest(".addsel"); if (!b) return;
+  e.stopPropagation();
+  const { sel: key, label, liga, mid, jug } = b.dataset;
+  const i = COMBO.findIndex(x => String(x.mid) === String(mid) && x.key === key);
+  if (i >= 0) COMBO.splice(i, 1);
+  else { const p = findMatch(liga, mid), L = D.ligas[liga];
+    COMBO.push({ liga, mid, key, label, home: p.home, away: p.away, kickoff: p.kickoff, jug: key[0] === "G" ? jug : undefined }); }
+  b.setAttribute("aria-pressed", String(i < 0));
+  saveCombo(); paintComboBar();
+});
+function selLabel(g, n) {
+  const pre = { "Doble oportunidad": "Doble oportunidad", "Goles": "Goles", "Ambos marcan": "Ambos marcan", "Córners (total)": "Córners", "Tarjetas (total)": "Tarjetas", "Marca en cualquier momento": "Marca" }[g];
+  return pre ? `${pre}: ${n}` : n;
+}
+// probabilidad de un mercado definido por el marcador final (i goles local, j visita)
+function scorePred(key) {
+  const ln = k => parseFloat(k.slice(1)) / 10;
+  switch (key) {
+    case "H": return (i, j) => i > j; case "D": return (i, j) => i === j; case "A": return (i, j) => i < j;
+    case "1X": return (i, j) => i >= j; case "X2": return (i, j) => i <= j; case "12": return (i, j) => i !== j;
+    case "BY": return (i, j) => i > 0 && j > 0; case "BN": return (i, j) => !(i > 0 && j > 0);
+  }
+  if (/^O\d\d$/.test(key)) return (i, j) => i + j > ln(key);
+  if (/^U\d\d$/.test(key)) return (i, j) => i + j < ln(key);
+  return null;
+}
+function otherProb(L, p, key) {
+  const ct = p.ch != null ? p.ch + p.ca : null, tt = p.th != null ? p.th + p.ta : null;
+  let m;
+  if ((m = key.match(/^C([OU])([\d.]+)$/)) && ct != null) return m[1] === "O" ? poisOver(+m[2], ct) : 1 - poisOver(+m[2], ct);
+  if ((m = key.match(/^T([OU])([\d.]+)$/)) && tt != null) return m[1] === "O" ? poisOver(+m[2], tt) : 1 - poisOver(+m[2], tt);
+  if (key[0] === "G") { const g = (p.goleadores || []).find(x => "G" + x.jid === key); return g ? g.p : null; }
+  return null;
+}
+function comboProb(sels) {
+  const groups = {};
+  sels.forEach(s => (groups[s.liga + "|" + s.mid] ||= []).push(s));
+  let prob = 1, indep = false, missing = false;
+  for (const g of Object.values(groups)) {
+    const L = D.ligas[g[0].liga], p = L && findMatch(g[0].liga, g[0].mid);
+    if (!p) { missing = true; continue; }
+    const preds = g.map(s => scorePred(s.key)).filter(Boolean), others = g.filter(s => !scorePred(s.key));
+    if (preds.length) { const { m } = matrix(L.modelo, p.home, p.away); let q = 0;
+      for (let i = 0; i <= MAXG; i++) for (let j = 0; j <= MAXG; j++) if (preds.every(f => f(i, j))) q += m[i][j];
+      prob *= q; }
+    others.forEach(s => { const q = otherProb(L, p, s.key); if (q == null) missing = true; else prob *= q; });
+    if (others.length && (preds.length || others.length > 1)) indep = true;
+  }
+  return { prob, indep, missing, partidos: Object.keys(groups).length };
+}
+function paintComboBar() {
+  let bar = document.getElementById("combobar");
+  if (!bar) { bar = document.createElement("div"); bar.id = "combobar"; document.body.appendChild(bar); }
+  if (!COMBO.length || R.v === "combinada") { bar.hidden = true; return; }
+  const c = comboProb(COMBO);
+  bar.hidden = false;
+  bar.innerHTML = `<button class="cb-in" data-go="combinada"><span class="cb-n">${COMBO.length}</span><span class="cb-t"><b>Combinada</b><small>${c.partidos} ${c.partidos === 1 ? "partido" : "partidos"}</small></span>
+    <span class="cb-p"><b class="num">${pct(c.prob, 1)}</b><small>cuota justa ${c.prob > 0 ? dec(1 / c.prob) : "—"}</small></span><span class="cb-go">Ver ›</span></button>`;
+}
+function selLine(s, extra = "") {
+  const L = D.ligas[s.liga] || D.meta[s.liga] || { equipos: {} };
+  return `<div class="selrow"><span class="sel-m"><b>${esc(s.label)}</b><small>${esc(corto(L, s.home))} vs ${esc(corto(L, s.away))} · ${esc(fecha(s.kickoff))} ${esc(hhmm(s.kickoff))}</small></span>${extra}</div>`;
+}
+function vCombinada() {
+  if (!COMBO.length) return `<section class="view narrow" aria-labelledby="h-cb"><h1 id="h-cb">Combinada</h1>
+    <div class="panel empty">Todavía no agregas mercados. Entra a un partido, abre la pestaña <b>Mercados</b> y toca <b>+</b> en los que quieras combinar.</div></section>`;
+  const c = comboProb(COMBO);
+  const rows = COMBO.map((s, i) => { const L = D.ligas[s.liga], p = L && findMatch(s.liga, s.mid);
+    const r1 = p ? comboProb([s]) : null, one = r1 && !r1.missing ? r1.prob : null;
+    return selLine(s, `<span class="num sel-p">${one != null ? pct(one, 1) : "—"}</span><button class="rm" data-rm="${i}" aria-label="Quitar">×</button>`); }).join("");
+  return `<section class="view narrow" aria-labelledby="h-cb">
+    <h1 id="h-cb">Combinada</h1>
+    <div class="panel stack">${rows}</div>
+    <div class="panel stack combo-sum">
+      <div class="kpis">${kpi("m", "Probabilidad de acertar todo", pct(c.prob, 2), c.indep ? "córners, tarjetas y goleadores se tratan como independientes" : "calculada con el marcador exacto")}${kpi("k", "Cuota justa", c.prob > 0 ? dec(1 / c.prob) : "—", "lo mínimo que debería pagar")}</div>
+      <label class="f oddin"><span class="lbl">Cuota que te ofrecen</span><input id="cb-odd" inputmode="decimal" placeholder="Ej: 5,40"></label>
+      <p id="cb-ev" class="note">Escribe la cuota para ver el valor esperado.</p>
+      <div class="row"><label class="f oddin"><span class="lbl">Monto (opcional)</span><input id="cb-amt" inputmode="numeric" placeholder="Ej: 1000"></label></div>
+      <div class="row"><button class="btn" id="cb-save">Guardar en Mi seguimiento</button><button class="btn ghost" id="cb-clear">Vaciar</button></div>
+      <p class="note">Cuando eliges varios mercados del mismo partido, la probabilidad se calcula con el marcador exacto, así que no se infla. Un modelo no garantiza nada: úsalo para medir, no para apostar más.</p>
+    </div></section>`;
+}
+function bindCombinada() {
+  document.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { COMBO.splice(+b.dataset.rm, 1); saveCombo(); go({ v: "combinada", keepScroll: true }); });
+  const odd = document.getElementById("cb-odd"), ev = document.getElementById("cb-ev");
+  if (!odd) return;
+  const c = comboProb(COMBO);
+  odd.oninput = () => { const o = parseFloat(odd.value.replace(",", "."));
+    ev.innerHTML = o > 1 ? `Valor esperado: <b class="${c.prob * o - 1 > 0 ? "good" : "bad"}">${c.prob * o - 1 > 0 ? "+" : "−"}${pct(Math.abs(c.prob * o - 1), 1)}</b> por cada $1.` : "Escribe la cuota para ver el valor esperado."; };
+  document.getElementById("cb-clear").onclick = () => { COMBO = []; saveCombo(); go({ v: "combinada" }); };
+  document.getElementById("cb-save").onclick = () => {
+    const o = parseFloat(odd.value.replace(",", ".")), amt = parseFloat((document.getElementById("cb-amt").value || "").replace(/\./g, "").replace(",", "."));
+    PICKS.unshift({ id: Date.now(), creado: new Date().toISOString(), sels: COMBO.slice(), p: c.prob, cuota: o > 1 ? o : null, monto: amt > 0 ? amt : null });
+    savePicks(); COMBO = []; saveCombo(); go({ v: "seguimiento" });
+  };
+}
+
+/* ---------------- MI SEGUIMIENTO ---------------- */
+function gradeSel(s) {
+  const L = D.ligas[s.liga]; if (!L) return "pend";
+  const x = L.resultados.find(r => String(r.id) === String(s.mid));
+  if (!x) return "pend";
+  const f = scorePred(s.key);
+  if (f) return f(x.hg, x.ag) ? "ok" : "ko";
+  let m;
+  if ((m = s.key.match(/^C([OU])([\d.]+)$/))) { if (!x.c) return "nv"; const t = x.c[0] + x.c[1]; return (m[1] === "O" ? t > +m[2] : t < +m[2]) ? "ok" : "ko"; }
+  if ((m = s.key.match(/^T([OU])([\d.]+)$/))) { if (!x.t) return "nv"; const t = x.t[0] + x.t[1]; return (m[1] === "O" ? t > +m[2] : t < +m[2]) ? "ok" : "ko"; }
+  if (s.key[0] === "G") return (x.goles || []).some(g => g.jug === s.jug && !g.og) ? "ok" : "ko";
+  return "nv";
+}
+function gradePick(pk) {
+  const g = pk.sels.map(gradeSel);
+  if (g.includes("ko")) return "ko";
+  if (g.includes("pend")) return "pend";
+  if (g.includes("nv")) return "nv";
+  return "ok";
+}
+function vSeguimiento() {
+  const all = PICKS.map(pk => ({ pk, st: gradePick(pk) }));
+  const done = all.filter(x => x.st === "ok" || x.st === "ko");
+  const wins = done.filter(x => x.st === "ok").length;
+  const money = done.filter(x => x.pk.cuota && x.pk.monto);
+  const staked = money.reduce((a, x) => a + x.pk.monto, 0);
+  const ret = money.reduce((a, x) => a + (x.st === "ok" ? x.pk.monto * x.pk.cuota : 0), 0);
+  const expect = done.reduce((a, x) => a + x.pk.p, 0);
+  const lab = { ok: ["Acertado", "good"], ko: ["Fallado", "bad"], pend: ["Pendiente", "faint"], nv: ["Sin verificar", "faint"] };
+  const rows = all.map(({ pk, st }, i) => `<div class="panel stack pick-c ${st}">
+      <div class="row" style="justify-content:space-between"><span class="lbl">${esc(new Date(pk.creado).toLocaleDateString("es-CL"))} · ${pk.sels.length === 1 ? "simple" : pk.sels.length + " selecciones"}</span>
+        <span class="row" style="gap:8px"><span class="${lab[st][1]}" style="font-weight:700">${lab[st][0]}</span><button class="rm" data-rmp="${i}" aria-label="Borrar">×</button></span></div>
+      ${pk.sels.map(s => selLine(s, `<span class="gs ${gradeSel(s)}">${{ ok: "✓", ko: "✗", pend: "·", nv: "?" }[gradeSel(s)]}</span>`)).join("")}
+      <div class="row note" style="gap:14px"><span>Probabilidad del modelo: <b>${pct(pk.p, 1)}</b></span>${pk.cuota ? `<span>Cuota: <b>${dec(pk.cuota)}</b></span>` : ""}${pk.monto ? `<span>Monto: <b>${Math.round(pk.monto).toLocaleString("es-CL")}</b></span>` : ""}</div>
+    </div>`).join("");
+  return `<section class="view narrow" aria-labelledby="h-sg">
+    <h1 id="h-sg">Mi seguimiento</h1>
+    <p class="muted">Tus pronósticos guardados en este navegador. Se califican solos cuando terminan los partidos. Sirve para medirte con datos reales.</p>
+    <div class="kpis">${kpi("m", "Pronósticos", PICKS.length, `${done.length} terminados`)}${kpi("", "Acierto", done.length ? pct(wins / done.length, 1) : "—", done.length ? `el modelo esperaba ${pct(expect / done.length, 1)}` : "")}
+      ${kpi("k", "Resultado", money.length ? `${ret - staked >= 0 ? "+" : "−"}${Math.round(Math.abs(ret - staked)).toLocaleString("es-CL")}` : "—", money.length ? `ROI ${pct((ret - staked) / staked, 1)} sobre ${Math.round(staked).toLocaleString("es-CL")}` : "anota cuota y monto para verlo")}</div>
+    ${rows || `<div class="panel empty">Aún no guardas pronósticos. Arma una combinada (o una sola selección) desde la pestaña Mercados de un partido y toca <b>Guardar en Mi seguimiento</b>.</div>`}
+    <p class="note">Se guarda solo en este navegador y dispositivo. Si apuestas, hazlo con un presupuesto que puedas perder. <button class="link" data-go="responsable">Juego responsable</button></p>
+  </section>`;
+}
+function bindSeguimiento() {
+  document.querySelectorAll("[data-rmp]").forEach(b => b.onclick = () => { PICKS.splice(+b.dataset.rmp, 1); savePicks(); go({ v: "seguimiento", keepScroll: true }); });
+}
+
+/* ---------------- CALENDARIO (.ics) ---------------- */
+function icsDate(iso) { return new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }
+function downloadIcs(ms, name) {
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Ballytics//ES", "CALSCALE:GREGORIAN"];
+  ms.forEach(({ p, L }) => {
+    const end = new Date(new Date(p.kickoff).getTime() + 2 * 3600e3).toISOString();
+    lines.push("BEGIN:VEVENT", `UID:${p.id}@ballytics`, `DTSTAMP:${icsDate(new Date().toISOString())}`, `DTSTART:${icsDate(p.kickoff)}`, `DTEND:${icsDate(end)}`,
+      `SUMMARY:${corto(L, p.home)} vs ${corto(L, p.away)} (${L.nombre})`.replace(/[,;]/g, " "),
+      `DESCRIPTION:Ballytics: ${corto(L, p.home)} ${pct(p.pH)} · empate ${pct(p.pD)} · ${corto(L, p.away)} ${pct(p.pA)}`.replace(/[,;]/g, " "), "END:VEVENT");
+  });
+  lines.push("END:VCALENDAR");
+  const blob = new Blob([lines.join("\r\n")], { type: "text/calendar" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-ics]"); if (!b) return;
+  const L = D.ligas[b.dataset.liga]; if (!L) return;
+  if (b.dataset.ics === "match") { const p = findMatch(L.id, b.dataset.mid); if (p) downloadIcs([{ p, L }], `${corto(L, p.home)}-${corto(L, p.away)}.ics`.replace(/\s+/g, "_")); }
+  else { const t = b.dataset.team; downloadIcs(L.partidos.filter(p => p.home === t || p.away === t).map(p => ({ p, L })), `${corto(L, t)}-partidos.ics`.replace(/\s+/g, "_")); }
+});
+
+/* ---------------- COMPARTIR (imagen) ---------------- */
+async function shareImage(L, p) {
+  const W = 1080, H = 1350, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const x = c.getContext("2d");
+  try { await document.fonts.ready; } catch (e) {}
+  const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, "#0f1a36"); g.addColorStop(.55, "#0a0f1e"); g.addColorStop(1, "#160f2e");
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const glow = (cx, cy, r, col) => { const rg = x.createRadialGradient(cx, cy, 0, cx, cy, r); rg.addColorStop(0, col); rg.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = rg; x.fillRect(0, 0, W, H); };
+  glow(160, 120, 560, "rgba(61,139,255,.35)"); glow(960, 1250, 600, "rgba(177,140,255,.28)");
+  const D1 = "'Chakra Petch', 'Arial Narrow', sans-serif", D2 = "'Manrope', system-ui, sans-serif", D3 = "'JetBrains Mono', monospace";
+  x.fillStyle = "#3d8bff"; x.beginPath(); x.roundRect(70, 70, 64, 64, 16); x.fill();
+  x.strokeStyle = "#fff"; x.lineWidth = 7; x.lineCap = "round"; x.lineJoin = "round"; x.beginPath(); x.moveTo(84, 118); x.lineTo(98, 98); x.lineTo(110, 106); x.lineTo(122, 86); x.stroke();
+  x.fillStyle = "#e8edf7"; x.font = `700 44px ${D1}`; x.textBaseline = "middle"; x.fillText("BALLYTICS", 156, 104);
+  x.fillStyle = "#8792a6"; x.font = `600 30px ${D1}`; x.textAlign = "right"; x.fillText(L.nombre.toUpperCase(), W - 70, 104); x.textAlign = "left";
+  x.fillStyle = "#c8d3ea"; x.font = `500 32px ${D2}`; x.textAlign = "center";
+  x.fillText(new Date(p.kickoff).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }) + " · " + hhmm(p.kickoff), W / 2, 230);
+  const crest = (cx, t) => { const i = info(L, t), col = i.color && /^[0-9a-f]{6}$/i.test(i.color) ? "#" + i.color : "#3d8bff";
+    x.fillStyle = col; x.beginPath(); x.roundRect(cx - 95, 300, 190, 190, 44); x.fill();
+    x.fillStyle = i.color && lum(i.color) > .62 ? "#07090f" : "#fff"; x.font = `700 64px ${D1}`; x.fillText((i.abr || t.slice(0, 3)).toUpperCase(), cx, 397);
+    x.fillStyle = "#e8edf7"; x.font = `700 46px ${D1}`; const n = corto(L, t).toUpperCase(); x.fillText(n.length > 16 ? n.slice(0, 15) + "…" : n, cx, 545); };
+  crest(270, p.home); crest(810, p.away);
+  x.fillStyle = "#8792a6"; x.font = `600 34px ${D1}`; x.fillText("VS", W / 2, 397);
+  x.font = `700 120px ${D1}`; x.fillStyle = "#3d8bff"; x.fillText(dec(p.lh, 1), 270, 670); x.fillStyle = "#b18cff"; x.fillText(dec(p.la, 1), 810, 670);
+  x.fillStyle = "#8792a6"; x.font = `600 26px ${D1}`; x.fillText("GOLES ESPERADOS", W / 2, 670);
+  const bx = 90, bw = W - 180, by = 790, bh = 34; let off = bx;
+  [[p.pH, "#3d8bff"], [p.pD, "#56627a"], [p.pA, "#b18cff"]].forEach(([v, col]) => { x.fillStyle = col; x.beginPath(); x.roundRect(off, by, bw * v - 6, bh, 10); x.fill(); off += bw * v; });
+  x.font = `600 40px ${D3}`; x.fillStyle = "#fff";
+  x.textAlign = "left"; x.fillText(pct(p.pH), bx, by + 90); x.textAlign = "center"; x.fillText(pct(p.pD), W / 2, by + 90); x.textAlign = "right"; x.fillText(pct(p.pA), W - bx, by + 90);
+  x.font = `500 28px ${D2}`; x.fillStyle = "#8792a6";
+  x.textAlign = "left"; x.fillText("Local", bx, by + 140); x.textAlign = "center"; x.fillText("Empate", W / 2, by + 140); x.textAlign = "right"; x.fillText("Visita", W - bx, by + 140);
+  const boxes = [["MÁS DE 2,5", pct(p.pO25)], ["AMBOS MARCAN", pct(p.pBTTS)], ["MARCADOR", p.top]];
+  boxes.forEach(([l, v], i) => { const w = (W - 180 - 40) / 3, xx = 90 + i * (w + 20);
+    x.fillStyle = "rgba(255,255,255,.05)"; x.strokeStyle = "rgba(148,163,184,.25)"; x.lineWidth = 2; x.beginPath(); x.roundRect(xx, 1030, w, 150, 22); x.fill(); x.stroke();
+    x.textAlign = "center"; x.fillStyle = "#8792a6"; x.font = `600 24px ${D1}`; x.fillText(l, xx + w / 2, 1075); x.fillStyle = "#ffb020"; x.font = `700 50px ${D1}`; x.fillText(v, xx + w / 2, 1135); });
+  x.fillStyle = "#5d677a"; x.font = `500 24px ${D2}`; x.textAlign = "center";
+  x.fillText("Probabilidades de un modelo estadístico. No son consejos de apuesta. +18", W / 2, 1255);
+  x.fillStyle = "#8792a6"; x.font = `600 26px ${D3}`; x.fillText(location.host + location.pathname.replace(/\/$/, ""), W / 2, 1295);
+  const blob = await new Promise(r => c.toBlob(r, "image/png"));
+  const fname = `ballytics-${corto(L, p.home)}-${corto(L, p.away)}.png`.replace(/\s+/g, "_");
+  const file = new File([blob], fname, { type: "image/png" });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: `${corto(L, p.home)} vs ${corto(L, p.away)}`, text: "Probabilidades en Ballytics", url: location.href }); return; } catch (e) { if (e.name === "AbortError") return; }
+  }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fname; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-share]"); if (!b) return;
+  const L = D.ligas[b.dataset.liga], p = L && findMatch(L.id, b.dataset.mid); if (!p) return;
+  b.disabled = true; shareImage(L, p).finally(() => { b.disabled = false; });
+});
 
 /* ---------------- arranque ---------------- */
 load().then(() => { R = fromHash(); render(); pollLive(); setInterval(pollLive, 60000);
