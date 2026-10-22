@@ -72,6 +72,26 @@ def _events(comp, hid, aid):
     return out
 
 
+def _american(ml):
+    v = _num(ml)
+    if v is None or v == 0:
+        return None
+    return round(1 + (v / 100 if v > 0 else 100 / -v), 3)
+
+
+def _odds(comp):
+    """Cuotas 1X2 (decimal) si ESPN las incluye. Vienen en formato americano."""
+    for o in comp.get("odds") or []:
+        if not isinstance(o, dict):
+            continue
+        h = _american((o.get("homeTeamOdds") or {}).get("moneyLine"))
+        a = _american((o.get("awayTeamOdds") or {}).get("moneyLine"))
+        d = _american((o.get("drawOdds") or {}).get("moneyLine"))
+        if h and a and d:
+            return {"h": h, "d": d, "a": a, "casa": ((o.get("provider") or {}).get("name"))}
+    return None
+
+
 def _all_stats(comp):
     out = {}
     for s in comp.get("statistics") or []:
@@ -108,6 +128,9 @@ def parse_events(data):
                 row[side + "_abr"] = t.get("abbreviation") or row[side][:3].upper()
                 row[side + "_color"] = t.get("color")
                 row[side + "_logo"] = _logo(t)
+            od = _odds(comp)
+            if od:
+                row["odds"] = od
             row["hg"] = _num(h.get("score")) if done else None
             row["ag"] = _num(a.get("score")) if done else None
             row["hst"] = _stat(h, "shotsOnTarget", "ST", "SOT") if done else None
@@ -164,6 +187,12 @@ def get_month(slug, ym, fresh):
         done = [e for e in data["events"] if ((e.get("status") or {}).get("type") or {}).get("completed")]
         with open(muestra, "w", encoding="utf-8") as f:  # un partido de ejemplo, para saber qué campos trae ESPN
             json.dump({"leagues": data.get("leagues", [])[:1], "events": (done or data["events"])[:1]}, f, ensure_ascii=False, indent=1)
+    prox = os.path.join(CACHE, "..", "espn_muestra_proximo.json")
+    if data and data.get("events") and not os.path.exists(prox):
+        pre = [e for e in data["events"] if ((e.get("status") or {}).get("type") or {}).get("state") == "pre"]
+        if pre:
+            with open(prox, "w", encoding="utf-8") as f:
+                json.dump(pre[0], f, ensure_ascii=False, indent=1)
     rows = parse_events(data)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(rows, f, ensure_ascii=False)
@@ -193,3 +222,51 @@ def meta(slug):
         with open(path, encoding="utf-8") as f:
             return json.load(f)
     return {}
+
+
+STANDINGS = "https://site.api.espn.com/apis/v2/sports/soccer/{slug}/standings"
+
+
+def _stats_map(entry):
+    out = {}
+    for st in entry.get("stats") or []:
+        k = st.get("name") or st.get("type")
+        v = st.get("value", st.get("displayValue"))
+        try:
+            out[k] = float(v)
+        except (TypeError, ValueError):
+            pass
+    return out
+
+
+def standings(slug):
+    """Tablas oficiales de ESPN. Devuelve [{nombre, filas:[...]}] o [] si no hay."""
+    try:
+        data = _fetch(STANDINGS.format(slug=slug))
+    except Exception as e:
+        print(f"  (sin tabla oficial {slug}: {e})")
+        return []
+    grupos = []
+
+    def walk(node, name):
+        st = node.get("standings") or {}
+        entries = st.get("entries") or []
+        if entries:
+            filas = []
+            for e in entries:
+                t = e.get("team") or {}
+                m = _stats_map(e)
+                filas.append(dict(equipo=t.get("displayName") or t.get("name"), pos=int(m.get("rank", 0) or 0),
+                                  pj=int(m.get("gamesPlayed", 0)), g=int(m.get("wins", 0)), e=int(m.get("ties", 0)),
+                                  p=int(m.get("losses", 0)), gf=int(m.get("pointsFor", 0)), gc=int(m.get("pointsAgainst", 0)),
+                                  pts=int(m.get("points", 0))))
+            filas.sort(key=lambda f: (f["pos"] or 999, -f["pts"]))
+            for i, f in enumerate(filas, 1):
+                f["pos"] = f["pos"] or i
+                f["dg"] = f["gf"] - f["gc"]
+            grupos.append(dict(nombre=node.get("name") or name or "", filas=filas))
+        for ch in node.get("children") or []:
+            walk(ch, ch.get("name") or name)
+
+    walk(data, data.get("name"))
+    return [g for g in grupos if g["filas"]]

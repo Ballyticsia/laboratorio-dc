@@ -2,14 +2,16 @@ name: Actualizar datos y publicar
 
 on:
   schedule:
-    # Tres veces al día (hora UTC). En Chile (UTC-3) son las 06:17, 12:17 y 18:17.
-    - cron: "17 9,15,21 * * *"
+    # Cada 2 horas (minuto 17). Así el registro guarda la predicción justo antes de cada partido
+    # y los resultados aparecen poco después de terminar.
+    - cron: "17 */2 * * *"
   workflow_dispatch: {}      # botón "Run workflow" para correrlo a mano
   push:
     branches: [main]         # también corre cuando subes cambios al código
 
 permissions:
   contents: write            # para guardar data/ en el repositorio
+  issues: write              # para avisar con un issue si la actualización falla
   pages: write               # para publicar el sitio
   id-token: write
 
@@ -58,3 +60,17 @@ jobs:
 
       - id: deploy
         uses: actions/deploy-pages@v4
+
+      - name: Avisar si falló
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          titulo="La actualización automática falló"
+          url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          abierto=$(gh issue list --repo "${{ github.repository }}" --state open --search "$titulo in:title" --json number --jq '.[0].number')
+          if [ -n "$abierto" ]; then
+            gh issue comment "$abierto" --repo "${{ github.repository }}" --body "Volvió a fallar: $url"
+          else
+            gh issue create --repo "${{ github.repository }}" --title "$titulo" --body "Revisa el paso en rojo de esta ejecución: $url. El sitio sigue mostrando los últimos datos buenos."
+          fi

@@ -30,7 +30,8 @@ SALIDA = os.path.join(RAIZ, "site", "data")
 REGISTRO = os.path.join(RAIZ, "data", "registro.csv")
 TEMPORADAS = 3
 SIMS = 10000
-DETALLE_DIAS = 21   # partidos con análisis completo (córners, tarjetas, goleadores, h2h)
+DETALLE_DIAS = 21
+HOME_L2 = 20.0      # localía propia de cada equipo, encogida hacia el promedio (backtest: log-loss 0,9948 → 0,9942)   # partidos con análisis completo (córners, tarjetas, goleadores, h2h)
 
 # zonas: (desde, hasta, etiqueta, clase CSS). "inicio": mes en que empieza la temporada.
 EUROPA = "Europa"
@@ -53,12 +54,13 @@ LIGAS = [
          zonas=[(1, 2, "Champions League", "cl"), (3, 3, "Champions (previa)", "cl"), (4, 4, "Europa League", "el"), (16, 16, "Promoción", "promo"), (17, 18, "Descenso", "desc")]),
     dict(id="chile", peso=0.9, nombre="Primera División", pais="Chile", region="Sudamérica", s1="chi.1", s2=[], inicio=1,
          zonas=[(1, 1, "Libertadores (fase de grupos)", "cl"), (2, 3, "Libertadores (previa)", "el"), (4, 7, "Sudamericana", "ecl"), (15, 16, "Descenso", "desc")]),
-    dict(id="argentina", peso=0.85, nombre="Liga Profesional", pais="Argentina", region="Sudamérica", s1="arg.1", s2=[], inicio=1, tabla=False),
+    dict(id="argentina", peso=0.85, nombre="Liga Profesional", pais="Argentina", region="Sudamérica", s1="arg.1", s2=[], inicio=1, tabla=False, oficial=True),
     dict(id="brasil", peso=0.85, nombre="Brasileirão", pais="Brasil", region="Sudamérica", s1="bra.1", s2=[], inicio=1,
          zonas=[(1, 4, "Libertadores (fase de grupos)", "cl"), (5, 6, "Libertadores (previa)", "el"), (7, 12, "Sudamericana", "ecl"), (17, 20, "Descenso", "desc")]),
-    dict(id="mls", peso=0.75, nombre="MLS", pais="Estados Unidos", region="Norteamérica", s1="usa.1", s2=[], inicio=1, tabla=False),
-    dict(id="champions", peso=1.2, nombre="Champions League", pais="UEFA", region="Copas", s1="uefa.champions", s2=["uefa.europa", "uefa.europa.conf"], inicio=7, tabla=False),
-    dict(id="libertadores", peso=1.0, nombre="Copa Libertadores", pais="CONMEBOL", region="Copas", s1="conmebol.libertadores", s2=["conmebol.sudamericana"], inicio=1, tabla=False),
+    dict(id="mls", peso=0.75, nombre="MLS", pais="Estados Unidos", region="Norteamérica", s1="usa.1", s2=[], inicio=1, tabla=False, oficial=True),
+    dict(id="champions", peso=1.2, nombre="Champions League", pais="UEFA", region="Copas", s1="uefa.champions", s2=["uefa.europa", "uefa.europa.conf", "eng.1", "esp.1", "ita.1", "ger.1", "fra.1", "por.1", "ned.1"], inicio=7, tabla=False, oficial=True,
+         zonas=[(1, 8, "Octavos de final", "cl"), (9, 24, "Playoff de octavos", "el"), (25, 36, "Eliminado", "desc")]),
+    dict(id="libertadores", peso=1.0, nombre="Copa Libertadores", pais="CONMEBOL", region="Copas", s1="conmebol.libertadores", s2=["conmebol.sudamericana", "arg.1", "bra.1", "chi.1"], inicio=1, tabla=False, oficial=True),
 ]
 
 
@@ -309,13 +311,17 @@ def side_model(played, today, col):
 
 # ---------------- registro público ----------------
 def ledger_update(pred_rows, jugados, now_iso):
-    cols = ["id", "liga", "kickoff", "home", "away", "lh", "la", "pH", "pD", "pA", "pO25", "pBTTS", "top", "predicho", "hg", "ag"]
+    cols = ["id", "liga", "kickoff", "home", "away", "lh", "la", "pH", "pD", "pA", "pO25", "pBTTS", "top", "predicho", "hg", "ag", "mH", "mD", "mA"]
     reg = pd.read_csv(REGISTRO, dtype={"id": str}) if os.path.exists(REGISTRO) else pd.DataFrame(columns=cols)
-    reg = reg.set_index("id", drop=False)
+    reg = reg.reindex(columns=cols).set_index("id", drop=False)
     for p in pred_rows:
         if p["id"] in reg.index and pd.notna(reg.at[p["id"], "hg"]):
             continue
         reg.loc[p["id"], cols[:14]] = [p[c] for c in cols[:13]] + [now_iso]
+        c = p.get("cuotas")
+        if c:
+            inv = np.array([1 / c["h"], 1 / c["d"], 1 / c["a"]])
+            reg.loc[p["id"], ["mH", "mD", "mA"]] = (inv / inv.sum()).round(4)
     res = jugados.set_index("id")
     for i in reg.index[reg.hg.isna()]:
         if i in res.index:
@@ -347,6 +353,28 @@ def ledger_summary(reg, base):
         g["hit"], g["dia"] = hit, g.kickoff.str[:10]
         acc = g.groupby("dia").hit.agg(["sum", "count"]).cumsum()
         out["serie"] = [dict(dia=d, acierto=r(s / c, 4), n=int(c)) for d, (s, c) in acc.iterrows()]
+        por_liga = []
+        for lg, gg in g.groupby("liga"):
+            kk = gg.res.map({"H": 0, "D": 1, "A": 2}).values
+            PP = gg[["pH", "pD", "pA"]].astype(float).values
+            por_liga.append(dict(liga=lg, n=int(len(gg)), acierto=r(gg.hit.mean()),
+                                 logloss=r(-np.log(np.clip(PP[np.arange(len(kk)), kk], 1e-9, None)).mean())))
+        out["por_liga"] = sorted(por_liga, key=lambda x: -x["n"])
+        conf = []
+        mxp = P.max(1)
+        for lo, hi, lab in [(0, .45, "Menos de 45 %"), (.45, .55, "45–55 %"), (.55, .65, "55–65 %"), (.65, 1.01, "Más de 65 %")]:
+            sel = (mxp >= lo) & (mxp < hi)
+            if sel.sum():
+                conf.append(dict(rango=lab, n=int(sel.sum()), prob=r(mxp[sel].mean()), acierto=r(hit[sel].mean())))
+        out["confianza"] = conf
+        gm = g.dropna(subset=["mH", "mD", "mA"])
+        if len(gm) >= 10:
+            km = gm.res.map({"H": 0, "D": 1, "A": 2}).values
+            Pm = gm[["pH", "pD", "pA"]].astype(float).values
+            Mm = gm[["mH", "mD", "mA"]].astype(float).values
+            out["vs_mercado"] = dict(n=int(len(gm)),
+                                     modelo=r(-np.log(np.clip(Pm[np.arange(len(km)), km], 1e-9, None)).mean()),
+                                     mercado=r(-np.log(np.clip(Mm[np.arange(len(km)), km], 1e-9, None)).mean()))
         probs, hits = P.ravel(), np.eye(3)[k].ravel()
         cal = []
         for lo in np.arange(0, 1, .1):
@@ -395,7 +423,7 @@ def main():
         extra = [datos.load(s, start, today, today) for s in L.get("s2", [])]
         both = pd.concat([d1] + [e for e in extra if not e.empty], ignore_index=True)
         played = both[(both.estado == "jugado") & both.hg.notna() & (both.date <= hoy)].drop_duplicates(["date", "home", "away"])
-        model = fit(played, today)
+        model = fit(played, today, home_l2=HOME_L2)
         mc, mt = side_model(played, today, "corners"), side_model(played, today, "tarjetas")
 
         cur = d1[d1.date >= cur_start]
@@ -441,6 +469,9 @@ def main():
             p = dict(id=x.id or f"{x.kickoff}-{x.home}", liga=L["id"], kickoff=x.kickoff, home=x.home, away=x.away,
                      estado=x.estado, lh=r(lh, 3), la=r(la, 3), pH=r(mk["H"]), pD=r(mk["D"]), pA=r(mk["A"]),
                      pO25=r(mk["O25"]), pBTTS=r(mk["BTTS"]), top=mk["top"])
+            od = getattr(x, "odds", None)
+            if isinstance(od, dict):
+                p["cuotas"] = od
             if x.date <= limite:
                 if mc:
                     p["ch"], p["ca"] = (r(v, 3) for v in mc.rates(x.home, x.away))
@@ -483,16 +514,17 @@ def main():
         for rr in rachas[:6]:
             portada["rachas"].append(dict(rr, liga=L["id"]))
 
+        grupos = datos.standings(L["s1"]) if L.get("oficial") else []
         meta = datos.meta(L["s1"])
         out = dict(id=L["id"], nombre=L["nombre"], pais=L["pais"], region=L["region"], logo=meta.get("logo"),
                    actualizado=now.isoformat(timespec="minutes"), datos_hasta=str(p1.date.max().date()) if len(p1) else None,
                    usa_tiros=model.usa_tiros, tabla_ok=tiene_tabla, zonas=[dict(desde=a, hasta=b, nombre=n, cls=c) for a, b, n, c in L.get("zonas", [])],
                    modelo=mj, modelo_corners=mc.to_json() if mc else None, modelo_tarjetas=mt.to_json() if mt else None,
-                   equipos=info, tabla=tabla, stats=stats_eq, rachas=rachas, goleadores=goleadores, amonestados=amonestados,
+                   slug=L["s1"], grupos=grupos, equipos=info, tabla=tabla, stats=stats_eq, rachas=rachas, goleadores=goleadores, amonestados=amonestados,
                    partidos=partidos, resultados=resultados)
         with open(os.path.join(SALIDA, f"{L['id']}.json"), "w", encoding="utf-8") as f:
             json.dump(clean(out), f, ensure_ascii=False, separators=(",", ":"))
-        indice.append(dict(id=L["id"], nombre=L["nombre"], pais=L["pais"], region=L["region"], logo=meta.get("logo"),
+        indice.append(dict(id=L["id"], slug=L["s1"], nombre=L["nombre"], pais=L["pais"], region=L["region"], logo=meta.get("logo"),
                            datos_hasta=out["datos_hasta"], proximos=len(partidos)))
         print(f"  {len(jug)} jugados · {len(partidos)} por jugar · datos hasta {out['datos_hasta']} · "
               f"córners {'sí' if mc else 'no'} · tarjetas {'sí' if mt else 'no'} · {len(goleadores)} goleadores", flush=True)

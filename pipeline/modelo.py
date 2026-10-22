@@ -21,8 +21,10 @@ L2 = 1.0
 MAX_GOALS = 10
 
 
-def fit(df, ref_date, xi=XI, alpha=ALPHA, l2=L2):
-    """df: columnas date, home, away, hg, ag, hst, ast (tiros al arco; pueden faltar)."""
+def fit(df, ref_date, xi=XI, alpha=ALPHA, l2=L2, home_l2=None):
+    """df: columnas date, home, away, hg, ag, hst, ast (tiros al arco; pueden faltar).
+    home_l2: si se indica, cada equipo tiene su propia ventaja de local (encogida hacia el promedio
+    con esa penalización L2); si es None, la localía es la misma para todos."""
     ref = np.datetime64(pd.Timestamp(ref_date).date(), "D")
     days = (ref - pd.to_datetime(df["date"]).values.astype("datetime64[D]")).astype(float)
     w = np.exp(-xi * days)
@@ -43,23 +45,32 @@ def fit(df, ref_date, xi=XI, alpha=ALPHA, l2=L2):
         ya[ok] = (1 - alpha) * ag[ok] + alpha * k * ast[ok]
     n, sw = len(teams), w.sum()
 
+    th = home_l2 is not None
+    k = 3 * n if th else 2 * n
+
     def nll(p):
-        mu, home, att, dfn = p[0], p[1], p[2:2 + n], p[2 + n:]
-        eh, ea = mu + home + att[h] - dfn[a], mu + att[a] - dfn[h]
+        mu, home, att, dfn = p[0], p[1], p[2:2 + n], p[2 + n:2 + 2 * n]
+        hv = p[2 + 2 * n:2 + 3 * n] if th else np.zeros(n)
+        eh, ea = mu + home + hv[h] + att[h] - dfn[a], mu + att[a] - dfn[h]
         lh, la = np.exp(eh), np.exp(ea)
         ll = np.sum(w * (yh * eh - lh + ya * ea - la)) - 0.5 * l2 * (att @ att + dfn @ dfn)
+        if th:
+            ll -= 0.5 * home_l2 * (hv @ hv)
         rh, ra = w * (yh - lh), w * (ya - la)
         g = np.empty_like(p)
         g[0], g[1] = rh.sum() + ra.sum(), rh.sum()
         g[2:2 + n] = np.bincount(h, rh, n) + np.bincount(a, ra, n) - l2 * att
-        g[2 + n:] = -np.bincount(a, rh, n) - np.bincount(h, ra, n) - l2 * dfn
+        g[2 + n:2 + 2 * n] = -np.bincount(a, rh, n) - np.bincount(h, ra, n) - l2 * dfn
+        if th:
+            g[2 + 2 * n:] = np.bincount(h, rh, n) - home_l2 * hv
         return -ll / sw, -g / sw
 
-    p0 = np.zeros(2 + 2 * n)
+    p0 = np.zeros(2 + k)
     p0[0] = np.log(max((yh * w).sum() / sw, 0.1))
     p = minimize(nll, p0, jac=True, method="L-BFGS-B").x
-    att, dfn = p[2:2 + n], p[2 + n:]
-    lh = np.exp(p[0] + p[1] + att[h] - dfn[a])
+    att, dfn = p[2:2 + n], p[2 + n:2 + 2 * n]
+    hv = p[2 + 2 * n:2 + 3 * n] if th else np.zeros(n)
+    lh = np.exp(p[0] + p[1] + hv[h] + att[h] - dfn[a])
     la = np.exp(p[0] + att[a] - dfn[h])
     hi, ai = hg.astype(int), ag.astype(int)
 
@@ -72,23 +83,29 @@ def fit(df, ref_date, xi=XI, alpha=ALPHA, l2=L2):
         return -np.sum(w * np.log(np.clip(t, 1e-10, None)))
 
     rho = minimize_scalar(nll_rho, bounds=(-0.25, 0.25), method="bounded").x
-    return Modelo(float(p[0]), float(p[1]), float(rho), dict(zip(teams, att)), dict(zip(teams, dfn)), usa_tiros)
+    return Modelo(float(p[0]), float(p[1]), float(rho), dict(zip(teams, att)), dict(zip(teams, dfn)), usa_tiros,
+                  dict(zip(teams, hv)) if th else None)
 
 
 class Modelo:
-    def __init__(self, mu, home, rho, att, dfn, usa_tiros=False):
+    def __init__(self, mu, home, rho, att, dfn, usa_tiros=False, hadv=None):
         self.mu, self.home, self.rho, self.att, self.dfn, self.usa_tiros = mu, home, rho, att, dfn, usa_tiros
+        self.hadv = hadv or {}
 
-    def rates(self, home, away):
-        return (float(np.exp(self.mu + self.home + self.att.get(home, 0) - self.dfn.get(away, 0))),
+    def rates(self, home, away, neutral=False):
+        hb = 0.0 if neutral else self.home + self.hadv.get(home, 0)
+        return (float(np.exp(self.mu + hb + self.att.get(home, 0) - self.dfn.get(away, 0))),
                 float(np.exp(self.mu + self.att.get(away, 0) - self.dfn.get(home, 0))))
 
-    def matrix(self, home, away):
-        return score_matrix(*self.rates(home, away), self.rho)
+    def matrix(self, home, away, neutral=False):
+        return score_matrix(*self.rates(home, away, neutral), self.rho)
 
     def to_json(self):
-        return {"mu": round(self.mu, 5), "home": round(self.home, 5), "rho": round(self.rho, 5),
-                "equipos": {t: [round(float(self.att[t]), 5), round(float(self.dfn[t]), 5)] for t in self.att}}
+        out = {"mu": round(self.mu, 5), "home": round(self.home, 5), "rho": round(self.rho, 5),
+               "equipos": {t: [round(float(self.att[t]), 5), round(float(self.dfn[t]), 5)] for t in self.att}}
+        if self.hadv:
+            out["local"] = {t: round(float(v), 5) for t, v in self.hadv.items() if abs(v) > 1e-4}
+        return out
 
 
 def score_matrix(lh, la, rho):
