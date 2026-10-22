@@ -76,15 +76,27 @@ function markets(m) {
 
 /* ---------------- datos ---------------- */
 async function getJSON(p) { const r = await fetch(p, { cache: "no-cache" }); if (!r.ok) throw new Error(p + " " + r.status); return r.json(); }
+const PEND = {};
+function ensure(id) {
+  return PEND[id] || (PEND[id] = getJSON(`data/${id}.json`).then(L => { D.ligas[id] = L; return L; }).catch(() => null));
+}
 async function load() {
   D.indice = await getJSON("data/indice.json");
-  const ls = await Promise.all(D.indice.ligas.map(l => getJSON(`data/${l.id}.json`).catch(() => null)));
-  ls.forEach(L => { if (L) D.ligas[L.id] = L; });
+  D.meta = {}; D.indice.ligas.forEach(l => D.meta[l.id] = l);
+  // primero lo que se ve en pantalla; el resto se carga en segundo plano
+  const h = (location.hash || "#/").slice(2).split("/");
+  const prio = new Set((D.indice.portada && D.indice.portada.partidos || []).map(x => x.liga));
+  (D.indice.portada && D.indice.portada.jugadores || []).slice(0, 2).forEach(x => prio.add(x.liga));
+  prio.add(D.indice.ligas[0].id);
+  if (["liga", "partido", "equipo", "jugador", "comparar", "partidos"].includes(h[0]) && D.meta[h[1]]) { prio.clear(); prio.add(h[1]); }
+  D.indice.ligas.forEach(l => ensure(l.id));
+  D.all = Promise.all(D.indice.ligas.map(l => ensure(l.id))).then(() => { D.allLoaded = true; });
+  await Promise.all([...prio].map(ensure));
   [D.registro, D.metodo] = await Promise.all([getJSON("data/registro.json").catch(() => null), getJSON("data/metodologia.json").catch(() => null)]);
   document.getElementById("foot-upd").innerHTML = `<span class="dot"></span>Actualizado ${new Date(D.indice.actualizado).toLocaleDateString("es-CL")} ${hhmm(D.indice.actualizado)}`;
   buildMenu();
 }
-const ligasIds = () => Object.keys(D.ligas);
+const ligasIds = () => D.indice ? D.indice.ligas.map(l => l.id).filter(id => D.ligas[id]) : [];
 const allMatches = () => ligasIds().flatMap(id => D.ligas[id].partidos.map(p => ({ ...p, L: D.ligas[id] })));
 const findMatch = (liga, id) => { const L = D.ligas[liga]; return L && L.partidos.find(p => String(p.id) === String(id)); };
 const statOf = (L, t) => (L.stats || []).find(s => s.equipo === t) || {};
@@ -94,7 +106,7 @@ const strength = (L, t) => { const s = rowOf(L, t); return (s.ataque || 1) / (s.
 /* ---------------- menú y búsqueda ---------------- */
 function buildMenu() {
   const groups = {};
-  D.indice.ligas.forEach(l => { if (D.ligas[l.id]) (groups[l.region] ||= []).push(D.ligas[l.id]); });
+  D.indice.ligas.forEach(l => (groups[l.region] ||= []).push(l));
   const m = document.getElementById("dd-menu");
   m.innerHTML = Object.entries(groups).map(([g, ls]) => `<div class="dd-col"><span class="lbl">${esc(g)}</span>` +
     ls.map(L => `<button class="dd-item" data-go="liga" data-liga="${L.id}" data-tab="resumen">${leagueMark(L)}<span>${esc(L.nombre)}<small>${esc(L.pais)}</small></span></button>`).join("") + `</div>`).join("");
@@ -104,8 +116,9 @@ function buildMenu() {
   document.addEventListener("click", e => { if (!e.target.closest(".dd-menu") && !e.target.closest(".dd-toggle")) setOpen(false); });
   document.addEventListener("keydown", e => { if (e.key === "Escape") { setOpen(false); document.getElementById("sres").hidden = true; } });
   const q = document.getElementById("q"), res = document.getElementById("sres");
-  const teams = ligasIds().flatMap(id => D.ligas[id].tabla.map(s => ({ L: D.ligas[id], t: s.equipo })))
-    .concat(ligasIds().filter(id => !D.ligas[id].tabla.length).flatMap(id => Object.keys(D.ligas[id].equipos).map(t => ({ L: D.ligas[id], t }))));
+  let teams = [];
+  const indexTeams = () => { teams = ligasIds().flatMap(id => Object.keys(D.ligas[id].equipos).map(t => ({ L: D.ligas[id], t }))); };
+  indexTeams(); D.all.then(indexTeams);
   const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   q.addEventListener("input", () => {
     const v = norm(q.value.trim());
@@ -123,7 +136,7 @@ function buildMenu() {
 /* ---------------- rutas ---------------- */
 function toHash(r) {
   if (r.v === "liga") return `#/liga/${r.liga}/${r.tab || "resumen"}`;
-  if (r.v === "partido") return `#/partido/${r.liga}/${encodeURIComponent(r.id)}`;
+  if (r.v === "partido") return `#/partido/${r.liga}/${encodeURIComponent(r.id)}${r.tab && r.tab !== "resumen" ? "/" + r.tab : ""}`;
   if (r.v === "equipo") return `#/equipo/${r.liga}/${encodeURIComponent(r.team)}`;
   if (r.v === "registro" && r.tab) return `#/registro/${r.tab}`;
   if (r.v === "jugador") return `#/jugador/${r.liga}/${encodeURIComponent(r.id)}`;
@@ -136,7 +149,7 @@ function fromHash() {
   const first = ligasIds()[0];
   switch (p[0]) {
     case "liga": return { v: "liga", liga: D.ligas[p[1]] ? p[1] : first, tab: p[2] || "resumen" };
-    case "partido": return { v: "partido", liga: p[1], id: p[2] };
+    case "partido": return { v: "partido", liga: p[1], id: p[2], tab: p[3] || "resumen" };
     case "equipo": return { v: "equipo", liga: p[1], team: p[2] };
     case "registro": return { v: "registro", tab: p[1] };
     case "metodo": return { v: "metodo" };
@@ -159,22 +172,25 @@ window.addEventListener("hashchange", () => { if (skipHash) { skipHash = false; 
 document.addEventListener("click", e => {
   const el = e.target.closest("[data-go]"); if (!el) return;
   const v = el.dataset.go;
-  go({ v, liga: el.dataset.liga || (v === "inicio" ? "todas" : undefined), id: el.dataset.id, team: el.dataset.team, tab: el.dataset.tab,
-       wk: el.dataset.wk, sort: el.dataset.sort, keepScroll: el.hasAttribute("data-keep") });
+  go({ v, liga: el.dataset.liga || (v === "inicio" ? (R.v === "inicio" ? R.liga : "todas") || "todas" : undefined), id: el.dataset.id, team: el.dataset.team, tab: el.dataset.tab,
+       wk: el.dataset.wk, sort: el.dataset.sort, dia: el.dataset.dia || (v === "inicio" && R.v === "inicio" ? R.dia : undefined), keepScroll: el.hasAttribute("data-keep") });
   if (el.classList.contains("lpick")) { const g = document.querySelector(".lgrid"); if (g) window.scrollTo({ top: g.getBoundingClientRect().top + window.scrollY - 90 }); }
 });
 
 function render() {
   timers.splice(0).forEach(clearInterval);
+  const need = ["liga", "partido", "equipo", "jugador", "comparar"].includes(R.v) && R.liga && D.meta && D.meta[R.liga] && !D.ligas[R.liga] ? R.liga : null;
+  if (need) { $app.innerHTML = skeleton(); ensure(need).then(() => render()); return; }
   const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo" }[R.v] || R.v);
   document.querySelectorAll("[data-nav]").forEach(b => b.setAttribute("aria-current", b.dataset.nav === sec ? "page" : "false"));
   const f = { inicio: vInicio, liga: vLiga, partido: vPartido, equipo: vEquipo, registro: vRegistro, metodo: vMetodo,
     sobre: vSobre, responsable: vResponsable, jugador: vJugador, comparar: vComparar }[R.v] || vInicio;
   $app.innerHTML = staleBanner() + f();
-  if (R.v === "partido") { bindOdds(); loadSummary(); }
+  if (R.v === "partido") { if (R.tab === "mercados") bindOdds(); if (R.tab === "alineaciones") loadSummary(); }
   if (R.v === "comparar") bindCompare();
   bindCarousels();
   paintLive();
+  paintCountdown();
 }
 
 /* ---------------- componentes ---------------- */
@@ -184,11 +200,11 @@ const bar3 = (h, d, a) => `<span class="bars"><i style="width:${100 * h}%"></i><
 function zoneOf(L, pos) { return (L.zonas || []).find(z => pos >= z.desde && pos <= z.hasta); }
 function posTag(L, pos) { const z = zoneOf(L, pos); return `<span class="pos ${z ? "z-" + z.cls : ""}" ${z ? `title="${esc(z.nombre)}"` : ""}>${pos}</span>`; }
 
-function matchRow(p, showLeague) {
+function matchRow(p, showLeague, isFav) {
   const L = p.L || D.ligas[p.liga], fav = p.pH >= p.pA ? "h" : "a";
   const pick = p.pH >= p.pD && p.pH >= p.pA ? "1" : p.pA >= p.pD ? "2" : "X";
-  return `<button class="mrow" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}">
-    <span class="t" data-live-t="${esc(p.id)}">${p.estado === "en_vivo" ? `<span class="livetag">EN VIVO</span>` : hhmm(p.kickoff)}${showLeague ? `<span class="lg">${esc(L.nombre)}</span>` : ""}</span>
+  return `<button class="mrow ${isFav ? "isfav" : ""}" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}">
+    <span class="t" data-live-t="${esc(p.id)}">${p.estado === "en_vivo" ? `<span class="livetag">EN VIVO</span>` : hhmm(p.kickoff)}${new Date(p.kickoff).getTime() - Date.now() < 3 * 3600e3 ? `<span class="cdown sm" data-cd="${esc(p.kickoff)}"></span>` : ""}${showLeague ? `<span class="lg">${esc(L.nombre)}</span>` : ""}</span>
     <span class="teams">
       <span class="tline">${badge(L, p.home)}<span class="n ${fav === "h" ? "fav" : "und"}">${esc(corto(L, p.home))}</span></span>
       <span class="tline">${badge(L, p.away)}<span class="n ${fav === "a" ? "fav" : "und"}">${esc(corto(L, p.away))}</span></span>
@@ -237,6 +253,88 @@ function bindCarousels() {
     if (!reduce) timers.push(setInterval(() => { if (!paused && !document.hidden) show(i + 1); }, c.dataset.car === "hero" ? 7000 : 9000));
   });
 }
+
+/* ---------------- días ---------------- */
+function dayList(sel) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = [...Array(8).keys()].map(i => isoDay(new Date(today.getTime() + (i - 1) * DAYMS)));
+  const inSel = id => sel === "todas" || id === sel;
+  const byDay = {};
+  days.forEach(k => byDay[k] = { res: [], fx: [] });
+  ligasIds().filter(inSel).forEach(id => {
+    const L = D.ligas[id];
+    L.resultados.forEach(x => { const k = dayKey(x.kickoff); if (byDay[k]) byDay[k].res.push({ ...x, L }); });
+    L.partidos.forEach(p => { const k = dayKey(p.kickoff); if (byDay[k] && !byDay[k].res.some(x => String(x.id) === String(p.id))) byDay[k].fx.push({ ...p, L }); });
+  });
+  const cnt = k => byDay[k].res.length + byDay[k].fx.length;
+  let dia = R.dia && byDay[R.dia] ? R.dia : null;
+  if (!dia) dia = days.slice(1).find(k => byDay[k].fx.length) || days[1];
+  const short = k => { const lab = dayLabel(k); if (["Hoy", "Mañana", "Ayer"].includes(lab)) return lab;
+    const [y, m, d] = k.split("-").map(Number); const dt = new Date(y, m - 1, d); return dt.toLocaleDateString("es-CL", { weekday: "short" }).replace(".", ""); };
+  const dnum = k => k.split("-")[2].replace(/^0/, "");
+  const strip = `<div class="days" role="tablist" aria-label="Día">${days.map(k => `<button role="tab" class="dbtn" data-go="inicio" data-dia="${k}" data-liga="${sel}" data-keep aria-selected="${k === dia}"><span class="dn">${esc(short(k))}</span><b>${dnum(k)}</b><small>${cnt(k) || "–"}</small></button>`).join("")}</div>`;
+  const items = [...byDay[dia].res.map(x => ({ t: x.kickoff, x, r: true })), ...byDay[dia].fx.map(p => ({ t: p.kickoff, x: p }))];
+  const fav = it => isFavT(it.x.L.id, it.x.home) || isFavT(it.x.L.id, it.x.away) || isFavL(it.x.L.id);
+  items.sort((a, b) => (fav(b) - fav(a)) || a.t.localeCompare(b.t));
+  const rows = items.map(it => it.r ? resRow(it.x, sel === "todas", fav(it)) : matchRow(it.x, sel === "todas", fav(it))).join("");
+  const more = !D.allLoaded ? `<div class="skel-row"><span class="skel" style="width:40%"></span></div>` : "";
+  return `${strip}<div class="panel flush daypanel">${rows || `<div class="empty">No hay partidos ${dayLabel(dia) === "Hoy" ? "hoy" : "este día"}${sel !== "todas" ? " en esta liga" : ""}.</div>`}${more}</div>`;
+}
+function resRow(x, showLeague, fav) {
+  const L = x.L, hw = x.hg > x.ag, aw = x.ag > x.hg;
+  return `<div class="mrow res ${fav ? "isfav" : ""}">
+    <span class="t"><span class="fttag">Final</span>${showLeague ? `<span class="lg">${esc(L.nombre)}</span>` : ""}</span>
+    <span class="teams">
+      <button class="tline" data-go="equipo" data-liga="${L.id}" data-team="${esc(x.home)}">${badge(L, x.home)}<span class="n ${hw ? "fav" : "und"}">${esc(corto(L, x.home))}</span></button>
+      <button class="tline" data-go="equipo" data-liga="${L.id}" data-team="${esc(x.away)}">${badge(L, x.away)}<span class="n ${aw ? "fav" : "und"}">${esc(corto(L, x.away))}</span></button>
+    </span>
+    <span class="rscore num"><b class="${hw ? "w" : ""}">${x.hg}</b><b class="${aw ? "w" : ""}">${x.ag}</b></span>
+    <span class="pick"><span class="l">${(x.goles || []).length ? esc(x.goles.map(g => (g.jug || "").split(" ").slice(-1)[0]).slice(0, 3).join(", ")) : ""}</span></span>
+  </div>`;
+}
+
+/* ---------------- favoritos ---------------- */
+const FAV_KEY = "bt_favs";
+let FAVS = { t: [], l: [] };
+try { FAVS = Object.assign(FAVS, JSON.parse(localStorage.getItem(FAV_KEY) || "{}")); } catch (e) {}
+const isFavT = (liga, t) => FAVS.t.includes(liga + "|" + t);
+const isFavL = liga => FAVS.l.includes(liga);
+function toggleFav(kind, key) {
+  const arr = FAVS[kind], i = arr.indexOf(key);
+  if (i >= 0) arr.splice(i, 1); else arr.push(key);
+  try { localStorage.setItem(FAV_KEY, JSON.stringify(FAVS)); } catch (e) {}
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-fav]"); if (!b) return;
+  e.stopPropagation();
+  toggleFav(b.dataset.fav, b.dataset.key);
+  const on = FAVS[b.dataset.fav].includes(b.dataset.key);
+  b.setAttribute("aria-pressed", String(on));
+  b.querySelector("span").textContent = on ? "Siguiendo" : "Seguir";
+});
+const starBtn = (kind, key, label) => { const on = FAVS[kind].includes(key);
+  return `<button class="star" data-fav="${kind}" data-key="${esc(key)}" aria-pressed="${on}" title="${esc(label)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span>${on ? "Siguiendo" : "Seguir"}</span></button>`; };
+function misPartidos() {
+  if (!FAVS.t.length && !FAVS.l.length)
+    return `<div class="hint"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span>Sigue a tus equipos y ligas con el botón <b>Seguir</b> para ver aquí sus próximos partidos.</span></div>`;
+  const now = Date.now();
+  const ms = ligasIds().flatMap(id => D.ligas[id].partidos.filter(p => new Date(p.kickoff).getTime() >= now - 2 * 3600e3 &&
+      (isFavL(id) || isFavT(id, p.home) || isFavT(id, p.away))).map(p => ({ ...p, L: D.ligas[id] })))
+    .sort((a, b) => a.kickoff.localeCompare(b.kickoff));
+  const seen = new Set(), uniq = ms.filter(p => !seen.has(p.id) && seen.add(p.id)).slice(0, 6);
+  const teams = FAVS.t.map(k => { const [liga, ...t] = k.split("|"); return { L: D.ligas[liga] || D.meta[liga], t: t.join("|") }; }).filter(x => x.L && x.L.equipos);
+  return `<section class="panel stack mine"><div class="row" style="justify-content:space-between"><h3>Mis partidos</h3>
+      <div class="chips mini">${teams.map(x => `<button class="chip-btn tchip" data-go="equipo" data-liga="${x.L.id}" data-team="${esc(x.t)}">${badge(x.L, x.t)}${esc(corto(x.L, x.t))}</button>`).join("")}</div></div>
+    ${uniq.length ? `<div class="mine-list">${uniq.map(p => matchRow(p, true, true)).join("")}</div>` : `<p class="note">Tus equipos no tienen partidos programados por ahora.</p>`}</section>`;
+}
+
+/* ---------------- esqueletos ---------------- */
+function skeleton() {
+  const line = w => `<span class="skel" style="width:${w}"></span>`;
+  return `<section class="view"><div class="panel skel-box" style="height:220px"></div>
+    <div class="cards">${[1, 2, 3].map(() => `<div class="panel stack">${line("40%")}${line("90%")}${line("75%")}${line("60%")}</div>`).join("")}</div></section>`;
+}
+
 /* ---------------- INICIO ---------------- */
 let homeLiga = null;
 function vInicio() {
@@ -249,7 +347,7 @@ function vInicio() {
   const hero = heroMs.map(p => {
     const L = p.L, sh = rowOf(L, p.home), sa = rowOf(L, p.away);
     return `<div class="hero-in">
-      <div class="hero-top">${leagueMark(L, "sm")}<span>${esc(L.nombre)}</span><span class="faint">·</span><span>${esc(cuando(p.kickoff))}</span></div>
+      <div class="hero-top">${leagueMark(L, "sm")}<span>${esc(L.nombre)}</span><span class="faint">·</span><span>${esc(cuando(p.kickoff))}</span><span class="cdown" data-cd="${esc(p.kickoff)}"></span></div>
       <div class="hero-face">
         <button class="ht" data-go="equipo" data-liga="${L.id}" data-team="${esc(p.home)}">${badge(L, p.home, "xl")}<b>${esc(corto(L, p.home))}</b>${formHtml(sh.forma)}</button>
         <div class="hero-mid"><span class="xg num">${dec(p.lh, 1)} <span class="faint">–</span> ${dec(p.la, 1)}</span><span class="lbl">goles esperados</span></div>
@@ -329,18 +427,17 @@ function vInicio() {
   const perf = g && g.n ? `<div class="kpis two">${kpi("m", "Acierto 1X2", pct(g.acierto_1x2), `${g.n} partidos`)}${kpi("", "Log-loss", dec(g.logloss, 3), `ingenuo ${dec(g.logloss_ingenuo, 3)}`)}</div>${spark(g.serie)}`
     : `<p class="note">Cada predicción queda guardada antes del partido y se califica después. El registro se llena con los primeros resultados.</p>`;
 
-  // lista de todos los partidos
-  const sel = R.liga || "todas", lim = now + 7 * DAYMS;
-  const ms = allMatches().filter(p => (sel === "todas" || p.L.id === sel) && new Date(p.kickoff).getTime() <= lim && new Date(p.kickoff).getTime() >= now - 3 * 3600e3).sort((a, b) => a.kickoff.localeCompare(b.kickoff));
-  const groups = {}; ms.forEach(p => (groups[dayKey(p.kickoff)] ||= []).push(p));
-  const list = Object.keys(groups).length ? Object.entries(groups).map(([k, arr]) => `<div class="day">${esc(dayLabel(k))}</div>` + arr.map(p => matchRow(p, sel === "todas")).join("")).join("")
-    : `<div class="empty">No hay partidos en los próximos 7 días${sel !== "todas" ? " para esta liga" : ""}.</div>`;
+  // partidos por día
+  const sel = R.liga || "todas";
+  const list = dayList(sel);
   const chips = `<div class="lgrid" role="group" aria-label="Filtrar por liga"><button class="lpick all" data-go="inicio" data-liga="todas" data-keep aria-pressed="${sel === "todas"}" title="Todas las ligas"><span class="lmark">★</span><span>Todas</span></button>` +
-    ligasIds().map(id => `<button class="lpick" data-go="inicio" data-liga="${id}" data-keep aria-pressed="${sel === id}" title="${esc(D.ligas[id].nombre)}">${leagueMark(D.ligas[id])}<span>${esc(D.ligas[id].nombre)}</span></button>`).join("") + `</div>`;
+    D.indice.ligas.map(l => `<button class="lpick" data-go="inicio" data-liga="${l.id}" data-keep aria-pressed="${sel === l.id}" title="${esc(l.nombre)}">${leagueMark(l)}<span>${esc(l.nombre)}</span></button>`).join("") + `</div>`;
+  const mine = misPartidos();
 
   return `<section class="view" aria-labelledby="h-inicio">
     <h1 id="h-inicio" class="sr">Ballytics: probabilidades de fútbol</h1>
     <div class="hero panel">${carousel("hero", hero, "Partidos destacados")}</div>
+    ${mine}
     <div class="cards">
       ${card("Jugador destacado", carousel("jug", jug, "Jugadores destacados"), `<span class="tag">Goleadores</span>`, "accent")}
       ${card("Equipo en forma", carousel("eq", eqs, "Equipos en forma"), `<span class="tag">Últimos 5</span>`)}
@@ -352,9 +449,9 @@ function vInicio() {
       ${card("Rachas activas", `<div class="slist">${rach}</div>`)}
       ${card("Rendimiento del modelo", `${perf}<button class="link" data-go="registro">Ver registro →</button>`, `<span class="tag">Público</span>`)}
     </div>
-    <div class="row" style="justify-content:space-between"><h2>Todos los partidos de la semana</h2><span class="note">Elige una liga</span></div>
+    <div class="row" id="partidos" style="justify-content:space-between"><h2>Partidos</h2><span class="note">Elige el día y la liga</span></div>
+    ${list}
     ${chips}
-    <div class="panel flush">${list}</div>
   </section>`;
 }
 function spark(serie) {
@@ -377,7 +474,7 @@ function vLiga() {
   const tab = tabs.some(t => t[0] === R.tab) ? R.tab : "resumen";
   const body = ({ resumen: lResumen, tabla: lTabla, partidos: lPartidos, estadisticas: lStats, jugadores: lJug, rachas: lRachas, corners: lCorners, proyeccion: lProy, fuerza: lFuerza }[tab])(L);
   return `<section class="view" aria-labelledby="h-liga">
-    <div class="lhead panel">${leagueMark(L, "xl")}<div><h1 id="h-liga">${esc(L.nombre)}</h1><span class="muted">${esc(L.pais)} · datos hasta ${L.datos_hasta ? fecha(L.datos_hasta + "T12:00") : "—"}</span></div></div>
+    <div class="lhead panel">${leagueMark(L, "xl")}<div><h1 id="h-liga">${esc(L.nombre)}</h1><span class="muted">${esc(L.pais)} · datos hasta ${L.datos_hasta ? fecha(L.datos_hasta + "T12:00") : "—"}</span></div><span class="lh-act">${starBtn("l", L.id, "Seguir esta liga")}</span></div>
     <div class="tabs2 wide" role="group" aria-label="Sección">${tabs.map(([k, n]) => `<button data-go="liga" data-liga="${L.id}" data-tab="${k}" aria-pressed="${k === tab}">${n}</button>`).join("")}</div>
     ${body}</section>`;
 }
@@ -548,12 +645,40 @@ function vPartido() {
       return `<div class="cmp"><span class="num">${f(a)}</span><span class="cl"><i style="width:${100 * a / t}%"></i></span><span class="lbl">${n}</span><span class="cr"><i style="width:${100 * b / t}%"></i></span><span class="num">${f(b)}</span></div>`; }).join("");
   const scorers = (p.goleadores || []).length ? (p.goleadores || []).map(g => `<div class="srow" data-go="jugador" data-liga="${L.id}" data-id="${esc(g.jid)}">${badge(L, g.lado === "h" ? p.home : p.away)}<span><b>${esc(g.jugador)}</b><small>${g.goles} goles en la temporada</small></span><span class="sn num">${pct(g.p)}</span></div>`).join("") : `<p class="note">Sin goleadores registrados todavía.</p>`;
   const h2h = (p.h2h || []).length ? p.h2h.map(x => resultRow(L, x)).join("") : `<p class="note">No se enfrentaron en las últimas temporadas.</p>`;
+  const tabs = [["resumen", "Resumen"], ["mercados", "Mercados"], ["alineaciones", "Alineaciones"], ["historial", "Historial"]];
+  const tab = tabs.some(t => t[0] === R.tab) ? R.tab : "resumen";
+  const tabBar = `<div class="mtabs" role="tablist">${tabs.map(([key, n]) => `<button role="tab" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}" data-tab="${key}" data-keep aria-selected="${key === tab}">${n}</button>`).join("")}</div>`;
+  const bar = `<div class="mbar"><div class="mbar-in">
+      <span class="mb-t">${badge(L, p.home)}<b>${esc(H)}</b></span>
+      <span class="mb-c"><span class="mb-live" data-live-mini="${esc(p.id)}">${pct(k.H)} · ${pct(k.D)} · ${pct(k.A)}</span><small>${esc(cuando(p.kickoff))}</small></span>
+      <span class="mb-t r"><b>${esc(A)}</b>${badge(L, p.away)}</span></div>${tabBar}</div>`;
+  const recent = t => L.resultados.filter(x => x.home === t || x.away === t).slice(0, 5);
+  let body = "";
+  if (tab === "resumen") body = `
+    <div class="panel stack previa"><h3>Previa</h3>${previa(L, p, k, ct, tt)}</div>
+    <div class="grid2">
+      <div class="panel stack"><h3>Marcador exacto</h3><div class="scroll"><table class="heat">${heat}</table></div><p class="note">Filas: goles de ${esc(H)}. Columnas: goles de ${esc(A)}.</p></div>
+      ${cmp ? `<div class="panel stack"><h3>Comparación de la temporada</h3><div class="cmph"><span>${badge(L, p.home)} ${esc(H)}</span><span>${esc(A)} ${badge(L, p.away)}</span></div>${cmp}</div>` : ""}
+    </div>
+    <div class="panel stack"><h3>Goleadores probables</h3><div class="slist">${scorers}</div><p class="note">Probabilidad de marcar según sus goles en la temporada y los goles esperados de su equipo.</p></div>`;
+  if (tab === "mercados") body = `
+    <div class="panel stack"><h3>Mercados y valor</h3>
+      ${mkt}
+      <p class="note">${cq ? `Cuotas precargadas de ${esc(cq.casa || "ESPN")} (vía ESPN); puedes cambiarlas por las de tu casa. EV es el valor esperado por cada $1.` : "Escribe la cuota de tu casa de apuestas para ver el valor esperado (EV) por cada $1."} En el backtest, apostar solo por "valor" del modelo perdió plata.</p>
+      <div class="scroll"><table class="mk">${mk}</table></div></div>`;
+  if (tab === "alineaciones") body = `<div class="panel stack" id="lineups"><h3>Alineaciones</h3><p class="note">Buscando alineaciones…</p></div>`;
+  if (tab === "historial") body = `
+    <div class="panel stack"><h3>Últimos enfrentamientos</h3><div class="rlist">${h2h}</div></div>
+    <div class="grid2">
+      <div class="panel flush"><div class="ph"><h3>Últimos partidos de ${esc(H)}</h3>${formHtml(sh.forma)}</div><div class="rlist">${recent(p.home).map(x => resultRow(L, x)).join("") || `<div class="empty">Sin partidos.</div>`}</div></div>
+      <div class="panel flush"><div class="ph"><h3>Últimos partidos de ${esc(A)}</h3>${formHtml(sa.forma)}</div><div class="rlist">${recent(p.away).map(x => resultRow(L, x)).join("") || `<div class="empty">Sin partidos.</div>`}</div></div>
+    </div>`;
   return `<section class="view" aria-labelledby="h-p">
     <button class="back" data-go="liga" data-liga="${L.id}" data-tab="partidos">← ${esc(L.nombre)}</button>
     <h1 id="h-p" class="sr">${esc(H)} vs ${esc(A)}</h1>
     <div class="panel match">
       <div class="livebox" data-live-box="${esc(p.id)}" hidden></div>
-      <div class="meta">${leagueMark(L, "sm")}<span>${esc(L.nombre)}</span><span>·</span><span>${new Date(p.kickoff).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })} ${hhmm(p.kickoff)}</span>${p.estado === "en_vivo" ? `<span class="bad">EN VIVO</span>` : ""}</div>
+      <div class="meta">${leagueMark(L, "sm")}<span>${esc(L.nombre)}</span><span>·</span><span>${new Date(p.kickoff).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })} ${hhmm(p.kickoff)}</span><span class="cdown" data-cd="${esc(p.kickoff)}"></span></div>
       <div class="face">${side(sh, p.home, "l")}<span class="vs">VS</span>${side(sa, p.away, "r")}</div>
       <div class="probs">
         <div class="pt h"><span class="lbl">${esc(H)}</span><span class="v">${pct(k.H, 1)}</span><div class="tr"><i style="width:${100 * k.H}%"></i></div></div>
@@ -561,22 +686,12 @@ function vPartido() {
         <div class="pt a"><span class="lbl">${esc(A)}</span><span class="v">${pct(k.A, 1)}</span><div class="tr"><i style="width:${100 * k.A}%"></i></div></div>
       </div>
       <div class="kpis mini">${kpi("", "Más de 2,5 goles", pct(k.O25), "")}${kpi("", "Ambos marcan", pct(k.B), "")}${ct != null ? kpi("", "Córners esperados", dec(ct, 1), `${dec(p.ch, 1)} – ${dec(p.ca, 1)}`) : ""}${tt != null ? kpi("", "Tarjetas esperadas", dec(tt, 1), `${dec(p.th, 1)} – ${dec(p.ta, 1)}`) : ""}</div>
-      ${mkt}
+      ${tab !== "mercados" ? mkt : ""}
       ${reg ? `<p class="note" style="margin-top:14px">Predicción guardada en el registro público el ${fecha(reg.predicho)}; se califica al terminar el partido.</p>` : ""}
     </div>
-    <div class="panel stack previa"><h3>Previa</h3>${previa(L, p, k, ct, tt)}</div>
-    <div class="grid2">
-      <div class="stack">
-        <div class="panel stack" id="lineups"><h3>Alineaciones</h3><p class="note">Buscando alineaciones…</p></div>
-        <div class="panel stack"><h3>Marcador exacto</h3><div class="scroll"><table class="heat">${heat}</table></div><p class="note">Filas: goles de ${esc(H)}. Columnas: goles de ${esc(A)}.</p></div>
-        ${cmp ? `<div class="panel stack"><h3>Comparación de la temporada</h3><div class="cmph"><span>${badge(L, p.home)} ${esc(H)}</span><span>${esc(A)} ${badge(L, p.away)}</span></div>${cmp}</div>` : ""}
-        <div class="panel stack"><h3>Goleadores probables</h3><div class="slist">${scorers}</div><p class="note">Probabilidad de marcar según sus goles en la temporada y los goles esperados de su equipo.</p></div>
-        <div class="panel stack"><h3>Últimos enfrentamientos</h3><div class="rlist">${h2h}</div></div>
-      </div>
-      <div class="panel stack"><h3>Mercados y valor</h3>
-        <p class="note">${cq ? `Cuotas precargadas de ${esc(cq.casa || "ESPN")} (vía ESPN); puedes cambiarlas por las de tu casa. EV es el valor esperado por cada $1.` : "Escribe la cuota de tu casa de apuestas para ver el valor esperado (EV) por cada $1."} En el backtest, apostar solo por "valor" del modelo perdió plata.</p>
-        <div class="scroll"><table class="mk">${mk}</table></div></div>
-    </div></section>`;
+    ${bar}
+    ${body}
+  </section>`;
 }
 function bindOdds() {
   const st = ODDS[R.id] || {};
@@ -601,7 +716,7 @@ function vEquipo() {
   const zs = s.zonas ? Object.entries(s.zonas).map(([cls, v]) => { const z = (L.zonas || []).find(z => z.cls === cls); return z ? kpi(cls === "desc" ? "" : "", cls === "desc" ? "Descenso" : z.nombre.replace(" (fase de grupos)", "").replace(" (previa)", ""), pct(v, 1), "") : ""; }).join("") : "";
   return `<section class="view" aria-labelledby="h-e">
     <button class="back" data-go="liga" data-liga="${L.id}" data-tab="resumen">← ${esc(L.nombre)}</button>
-    <div class="lhead panel">${badge(L, t, "xl")}<div><h1 id="h-e">${esc(corto(L, t))}</h1><button class="btn ghost sm cmp-btn" data-go="comparar" data-liga="${L.id}" data-team="${esc(t)}">Comparar con otro equipo</button><span class="muted">${esc(L.nombre)}${s.pos ? ` · ${s.pos}º con ${s.pts} pts en ${s.pj} partidos` : ""}</span></div><span style="margin-left:auto">${formHtml(s.forma)}</span></div>
+    <div class="lhead panel">${badge(L, t, "xl")}<div><h1 id="h-e">${esc(corto(L, t))}</h1><span class="row" style="gap:8px;margin-top:6px">${starBtn("t", L.id + "|" + t, "Seguir este equipo")}<button class="btn ghost sm cmp-btn" data-go="comparar" data-liga="${L.id}" data-team="${esc(t)}">Comparar</button></span><span class="muted">${esc(L.nombre)}${s.pos ? ` · ${s.pos}º con ${s.pts} pts en ${s.pj} partidos` : ""}</span></div><span style="margin-left:auto">${formHtml(s.forma)}</span></div>
     <div class="kpis">${s.ataque ? kpi("m", "Ataque", dec(s.ataque), "1,00 = promedio liga") + kpi("", "Defensa", dec(s.defensa), "menos es mejor") : ""}${s.pts_esp != null ? kpi("", "Pts finales", dec(s.pts_esp, 1), "proyección") + kpi("k", "Campeón", pct(s.p_campeon, 1), "") : ""}${zs}</div>
     ${st.pj ? `<div class="panel stack"><h3>Estadísticas de la temporada</h3><div class="sgrid wide">
       ${[["Goles/PJ", dec(st.gf)], ["Recibe/PJ", dec(st.gc)], ["Tiros/PJ", dec(st.tiros, 1)], ["Al arco/PJ", dec(st.tiros_arco, 1)], ["Córners/PJ", dec(st.corners, 1)], ["Posesión", st.posesion != null ? dec(st.posesion, 0) + " %" : "—"],
@@ -723,6 +838,10 @@ function paintLive() {
   document.querySelectorAll("[data-live-s]").forEach(el => {
     const L = LIVE[el.dataset.liveS]; if (!L || L.state === "pre") return;
     el.innerHTML = `<span class="s live-score ${L.state === "in" ? "on" : ""}">${esc(L.hg)}–${esc(L.ag)}</span><span class="l">${L.state === "in" ? "en vivo" : "final"}</span>`;
+  });
+  document.querySelectorAll("[data-live-mini]").forEach(el => {
+    const L = LIVE[el.dataset.liveMini]; if (!L || L.state === "pre") return;
+    el.innerHTML = `<span class="${L.state === "in" ? "livetag" : "fttag"}">${L.state === "in" ? esc(L.clock) : "Final"}</span> <b class="num">${esc(L.hg)} – ${esc(L.ag)}</b>`;
   });
   document.querySelectorAll("[data-live-box]").forEach(el => {
     const L = LIVE[el.dataset.liveBox];
@@ -895,7 +1014,22 @@ function vResponsable() {
     </div></section>`;
 }
 
+
+/* ---------------- cuenta regresiva ---------------- */
+function countdown(iso) {
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0 || ms > 3 * DAYMS) return "";
+  const h = Math.floor(ms / 3600e3), m = Math.floor((ms % 3600e3) / 60e3);
+  if (h >= 24) return `en ${Math.floor(h / 24)} d ${h % 24} h`;
+  return h ? `en ${h} h ${m} min` : `en ${m} min`;
+}
+function paintCountdown() {
+  document.querySelectorAll("[data-cd]").forEach(el => { const t = countdown(el.dataset.cd); el.textContent = t; el.hidden = !t; });
+}
+setInterval(paintCountdown, 30000);
+
 /* ---------------- arranque ---------------- */
-load().then(() => { R = fromHash(); render(); pollLive(); setInterval(pollLive, 60000); })
+load().then(() => { R = fromHash(); render(); pollLive(); setInterval(pollLive, 60000);
+  D.all.then(() => { if (R.v === "inicio" || R.v === "registro") { const y = window.scrollY; render(); window.scrollTo(0, y); } }); })
   .catch(err => { $app.innerHTML = `<div class="panel empty">No pude cargar los datos (${esc(err.message)}). Si abriste el archivo directo desde tu computador, el navegador bloquea la lectura: usa la versión publicada.</div>`; });
 })();
