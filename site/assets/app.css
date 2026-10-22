@@ -890,3 +890,9 @@ svg .dotg:hover .pt{fill:var(--card)}
 .vhcomp .link{font:inherit;color:var(--muted);letter-spacing:inherit;text-transform:inherit;padding:0}
 .lhead .cimg.xl,.lhead .cflag.xl{flex:none}
 @media (max-width:760px){.vrow{grid-template-columns:44px minmax(0,1fr) 28px}.vmodel{display:none}.vcgrid{grid-template-columns:1fr}.vcountry .vcgrid{padding-left:0}.vhub button{padding:10px 8px;font-size:12px}}
+/* menú en pantallas medianas (iPad): íconos sin texto en las secciones secundarias */
+@media (max-width:1180px) and (min-width:761px){
+  .nav-i[data-nav="seguimiento"] span,.nav-i[data-nav="registro"] span{display:none}
+  .search{max-width:220px}
+}
+@media (max-width:960px) and (min-width:761px){.nav-i[data-nav="inicio"] span{display:none}.search{max-width:170px}}
