@@ -691,6 +691,7 @@ function vPartido() {
   const recent = t => L.resultados.filter(x => x.home === t || x.away === t).slice(0, 5);
   let body = "";
   if (tab === "resumen") body = `
+    ${bajasPanel(L, p)}
     <div class="panel stack previa"><h3>Previa</h3>${previa(L, p, k, ct, tt)}</div>
     <div class="grid2">
       <div class="panel stack"><h3>Marcador exacto</h3><div class="scroll"><table class="heat">${heat}</table></div><p class="note">Filas: goles de ${esc(H)}. Columnas: goles de ${esc(A)}.</p></div>
@@ -707,7 +708,7 @@ function vPartido() {
       <p class="note">${cq ? `Cuotas precargadas de ${esc(cq.casa || "ESPN")} (vía ESPN); puedes cambiarlas por las de tu casa. EV es el valor esperado por cada $1.` : "Escribe la cuota de tu casa de apuestas para ver el valor esperado (EV) por cada $1."} En el backtest, apostar solo por "valor" del modelo perdió plata.</p>
       <div class="scroll"><table class="mk">${mk}</table></div>
       <p class="note">Toca <b>+</b> para armar una combinada con varios mercados o partidos y ver su probabilidad real.</p></div>`;
-  if (tab === "alineaciones") body = `<div class="panel stack" id="lineups"><h3>Alineaciones</h3><p class="note">Buscando alineaciones…</p></div>`;
+  if (tab === "alineaciones") body = `${bajasPanel(L, p)}<div class="panel stack" id="lineups"><h3>Alineaciones</h3><p class="note">Buscando alineaciones…</p></div>`;
   if (tab === "historial") body = `
     <div class="panel stack"><h3>Últimos enfrentamientos</h3><div class="rlist">${h2h}</div></div>
     <div class="grid2">
@@ -728,6 +729,7 @@ function vPartido() {
         <div class="pt a"><span class="lbl">${esc(A)}</span><span class="v">${pct(k.A, 1)}</span><div class="tr"><i style="width:${100 * k.A}%"></i></div></div>
       </div>
       <div class="kpis mini">${kpi("", "Más de 2,5 goles", pct(k.O25), "")}${kpi("", "Ambos marcan", pct(k.B), "")}${ct != null ? kpi("", "Córners esperados", dec(ct, 1), `${dec(p.ch, 1)} – ${dec(p.ca, 1)}`) : ""}${tt != null ? kpi("", "Tarjetas esperadas", dec(tt, 1), `${dec(p.th, 1)} – ${dec(p.ta, 1)}`) : ""}</div>
+      ${p.ajuste ? `<div class="mktrow adj"><span class="lbl">Con las bajas ${help("Probabilidades recalculadas descontando a los goleadores lesionados o suspendidos. El registro público guarda la versión sin ajuste.")}</span><span class="num">${pct(p.ajuste.pH)} · ${pct(p.ajuste.pD)} · ${pct(p.ajuste.pA)}</span><span class="lbl">Sin ajuste</span><span class="num">${pct(k.H)} · ${pct(k.D)} · ${pct(k.A)}</span></div>` : ""}
       ${tab !== "mercados" ? mkt : ""}
       ${reg ? `<p class="note" style="margin-top:14px">Predicción guardada en el registro público el ${fecha(reg.predicho)}; se califica al terminar el partido.</p>` : ""}
     </div>
@@ -1051,6 +1053,25 @@ async function loadSummary() {
   } catch (e) { if (R.v === "partido" && R.id === want) box.innerHTML = fail; }
 }
 
+
+/* ---------------- BAJAS (API-Football) ---------------- */
+function bajasPanel(L, p) {
+  const b = p.bajas;
+  if (!b) return D.indice && D.indice.api_football && D.indice.api_football.activa && new Date(p.kickoff).getTime() - Date.now() < 3 * DAYMS
+    ? `<div class="panel stack"><h3>Bajas</h3><p class="note">Sin lesionados ni suspendidos informados para este partido.</p></div>` : "";
+  const tipo = t => t === "Missing Fixture" ? `<span class="bt out">Baja</span>` : `<span class="bt dud">Duda</span>`;
+  const motivo = m => ({ "Injury": "Lesión", "Knee Injury": "Lesión de rodilla", "Muscle Injury": "Lesión muscular", "Hamstring Injury": "Isquiotibiales", "Ankle Injury": "Lesión de tobillo",
+    "Suspended": "Suspendido", "Red Card": "Tarjeta roja", "Yellow Cards": "Acumulación de amarillas", "Illness": "Enfermedad", "Calf Injury": "Gemelo", "Groin Injury": "Ingle",
+    "Back Injury": "Espalda", "Foot Injury": "Pie", "Thigh Injury": "Muslo", "Shoulder Injury": "Hombro", "Hip Injury": "Cadera", "Broken Leg": "Fractura de pierna",
+    "Concussion": "Conmoción", "Inactive": "Inactivo", "Coach's decision": "Decisión técnica", "International duty": "Selección", "Knock": "Golpe" }[m] || m || "");
+  const col = (lado, t) => `<div class="bj-col"><div class="lu-h">${badge(L, t)}<b>${esc(corto(L, t))}</b></div>${(b[lado] || []).length ? b[lado].map(x =>
+      `<div class="bj-row">${tipo(x.tipo)}<span class="bj-n"><b>${esc(x.jug)}</b><small>${esc(motivo(x.motivo))}${x.goles ? ` · ${x.goles} ${x.goles === 1 ? "gol" : "goles"} en la temporada` : ""}</small></span></div>`).join("")
+    : `<p class="note">Sin bajas informadas.</p>`}</div>`;
+  return `<div class="panel stack"><h3>Bajas ${help("Lesionados y suspendidos informados por API-Football. «Baja» = no juega; «Duda» = puede no jugar. Si falta un goleador, el modelo ajusta sus goles esperados.")}</h3>
+    <div class="lineups">${col("h", p.home)}${col("a", p.away)}</div>
+    ${p.ajuste ? `<p class="note">Por los goleadores ausentes, el modelo ajusta los goles esperados a <b>${dec(p.ajuste.lh, 2)} – ${dec(p.ajuste.la, 2)}</b>.</p>` : ""}</div>`;
+}
+
 /* ---------------- previa automática ---------------- */
 function previa(L, p, k, ct, tt) {
   const H = corto(L, p.home), A = corto(L, p.away), sh = rowOf(L, p.home), sa = rowOf(L, p.away), s1 = statOf(L, p.home), s2 = statOf(L, p.away);
@@ -1069,9 +1090,11 @@ function previa(L, p, k, ct, tt) {
     : `Más de 2,5 goles tiene ${pct(k.O25)} y que marquen ambos, ${pct(k.B)}.`);
   const g = [...(p.goleadores || [])].filter(x => x.p).sort((a, b) => b.p - a.p)[0];
   if (g) out.push(`El jugador con más opciones de marcar es ${g.jugador} (${pct(g.p)}), con ${g.goles} goles en la temporada.`);
+  const imp = ["h", "a"].flatMap(l => ((p.bajas || {})[l] || []).filter(x => x.tipo === "Missing Fixture" && x.goles >= 2).map(x => `${x.jug} (${l === "h" ? H : A}, ${x.goles} goles)`));
+  if (imp.length) out.push(`Bajas importantes: ${imp.join(", ")}.`);
   if ((p.h2h || []).length) { const x = p.h2h[0]; out.push(`El último cruce terminó ${corto(L, x.home)} ${x.hg}–${x.ag} ${corto(L, x.away)}.`); }
   if (ct != null) out.push(`Córners esperados: ${dec(ct, 1)}${tt != null ? `. Tarjetas esperadas: ${dec(tt, 1)}` : ""}.`);
-  return `<p class="previa-t">${out.map(esc).join(" ")}</p><p class="note">Texto generado automáticamente con los números del modelo. No considera lesiones, suspensiones ni alineaciones.</p>`;
+  return `<p class="previa-t">${out.map(esc).join(" ")}</p><p class="note">Texto generado automáticamente con los números del modelo. ${p.bajas ? "Incluye las bajas informadas; no considera alineaciones ni rotaciones." : "No considera lesiones, suspensiones ni alineaciones."}</p>`;
 }
 
 /* ---------------- aviso de datos viejos ---------------- */

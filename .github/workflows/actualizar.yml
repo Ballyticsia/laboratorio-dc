@@ -37,6 +37,9 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Bajar datos y reajustar el modelo
+        env:
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+          API_FOOTBALL_MIN_HORAS: "6"   # con el plan gratis (100 consultas/día); con Pro se puede bajar a 2
         run: python pipeline/generar.py
 
       - name: Guardar datos y registro en el repositorio

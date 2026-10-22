@@ -23,7 +23,8 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
 import datos  # noqa: E402
-from modelo import XI, ALPHA, fit, markets  # noqa: E402
+import lesiones  # noqa: E402
+from modelo import XI, ALPHA, fit, markets, score_matrix  # noqa: E402
 
 RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SALIDA = os.path.join(RAIZ, "site", "data")
@@ -417,6 +418,8 @@ def main():
     except (OSError, ValueError):
         hist = {}
     stamp = now.strftime("%Y-%m-%dT%H:%MZ")
+    bajas = lesiones.cargar()
+    pendientes = []
     portada = dict(partidos=[], jugadores=[], equipos=[], rachas=[])
     for L in LIGAS:
         if args.ligas and L["id"] not in args.ligas:
@@ -543,8 +546,7 @@ def main():
                    modelo=mj, modelo_corners=mc.to_json() if mc else None, modelo_tarjetas=mt.to_json() if mt else None,
                    slug=L["s1"], grupos=grupos, equipos=info, tabla=tabla, stats=stats_eq, rachas=rachas, goleadores=goleadores, amonestados=amonestados,
                    partidos=partidos, resultados=resultados)
-        with open(os.path.join(SALIDA, f"{L['id']}.json"), "w", encoding="utf-8") as f:
-            json.dump(clean(out), f, ensure_ascii=False, separators=(",", ":"))
+        pendientes.append((L, out, dict(model=model, goles=goles_cnt, team_goals=team_goals, name_of=name_of)))
         indice.append(dict(id=L["id"], slug=L["s1"], nombre=L["nombre"], pais=L["pais"], region=L["region"], logo=meta.get("logo"),
                            datos_hasta=out["datos_hasta"], proximos=len(partidos)))
         print(f"  {len(jug)} jugados · {len(partidos)} por jugar · datos hasta {out['datos_hasta']} · "
@@ -564,12 +566,48 @@ def main():
     with open(os.path.join(SALIDA, "registro.json"), "w", encoding="utf-8") as f:
         json.dump(ledger_summary(reg, base), f, ensure_ascii=False, separators=(",", ":"))
 
+    # bajas (API-Football): se asignan con todos los partidos de todas las ligas a la vista
+    if bajas:
+        cand = [(f"{L['id']}|{i}", p["kickoff"], p["home"], p["away"]) for L, out, _ in pendientes
+                for i, p in enumerate(out["partidos"]) if "goleadores" in p]
+        asign = lesiones.asignar(bajas, cand)
+        n_aj = 0
+        for L, out, ctx in pendientes:
+            for i, p in enumerate(out["partidos"]):
+                bj = asign.get(f"{L['id']}|{i}")
+                if not bj:
+                    continue
+                share = {}
+                for lado, team in (("h", p["home"]), ("a", p["away"])):
+                    tot, perdido = max(ctx["team_goals"].get(team, 0), 1), 0
+                    for b in bj[lado]:
+                        g = sum(n for (jid, t), n in ctx["goles"].items() if t == team and lesiones.jugador_igual(b["jug"], ctx["name_of"].get(jid, "")))
+                        b["goles"] = g
+                        if b.get("tipo") == "Missing Fixture":
+                            perdido += g
+                    share[lado] = min(perdido / tot, 0.6)
+                p["bajas"] = bj
+                if share["h"] > 0 or share["a"] > 0:
+                    # cada gol "perdido" se compensa en parte con el reemplazo: se descuenta el 40 %
+                    lh2, la2 = p["lh"] * (1 - 0.4 * share["h"]), p["la"] * (1 - 0.4 * share["a"])
+                    mk2 = markets(score_matrix(lh2, la2, ctx["model"].rho))
+                    p["ajuste"] = dict(lh=r(lh2, 3), la=r(la2, 3), pH=r(mk2["H"]), pD=r(mk2["D"]), pA=r(mk2["A"]),
+                                       pO25=r(mk2["O25"]), pBTTS=r(mk2["BTTS"]), top=mk2["top"])
+                    n_aj += 1
+        lesiones.ESTADO["partidos_con_bajas"] = len(asign)
+        lesiones.ESTADO["partidos_ajustados"] = n_aj
+        print(f"  Bajas asignadas a {len(asign)} partidos · {n_aj} con ajuste por goleadores ausentes")
+    for L, out, _ in pendientes:
+        with open(os.path.join(SALIDA, f"{L['id']}.json"), "w", encoding="utf-8") as f:
+            json.dump(clean(out), f, ensure_ascii=False, separators=(",", ":"))
+    lesiones.guardar_estado()
     portada["partidos"] = sorted(portada["partidos"], key=lambda p: -p["peso"])[:6]
     portada["jugadores"] = sorted(portada["jugadores"], key=lambda p: -p["p"])[:6]
     portada["equipos"] = sorted(portada["equipos"], key=lambda p: (-p["puntos5"], p["pos"]))[:6]
     portada["rachas"] = sorted(portada["rachas"], key=lambda p: -p["n"])[:8]
     with open(os.path.join(SALIDA, "indice.json"), "w", encoding="utf-8") as f:
-        json.dump(clean(dict(actualizado=now.isoformat(timespec="minutes"), xi=XI, alpha=ALPHA, ligas=indice, portada=portada)),
+        json.dump(clean(dict(actualizado=now.isoformat(timespec="minutes"), xi=XI, alpha=ALPHA, ligas=indice, portada=portada,
+                             api_football=dict(activa=lesiones.ESTADO["activa"], bajas=len(bajas), restantes=lesiones.ESTADO["restantes"]))),
                   f, ensure_ascii=False, separators=(",", ":"))
     print("Listo: datos en site/data/")
 

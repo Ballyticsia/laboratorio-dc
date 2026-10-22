@@ -70,6 +70,13 @@ Luego abre `http://localhost:8000` en el navegador. Abrir `index.html` con doble
 | `data/cache_espn/` | Meses ya descargados de ESPN. |
 | `.github/workflows/actualizar.yml` | El robot: horario, pasos y publicación. |
 
+## API-Football (lesiones y suspensiones)
+El robot usa la clave guardada en **Settings → Secrets and variables → Actions** con el nombre `API_FOOTBALL_KEY`.
+- Con el plan gratis (100 consultas al día) consulta las bajas de hoy y los dos días siguientes cada 6 horas (unas 12 consultas al día).
+- Con el plan Pro se puede bajar `API_FOOTBALL_MIN_HORAS` a `2` en `.github/workflows/actualizar.yml`.
+- El estado de la conexión (consultas usadas, restantes y errores) queda en `data/api_football/estado.json`.
+- Si la clave falta o la API falla, el sitio sigue funcionando sin bajas.
+
 ## Cambiar cosas
 - **Horario:** la línea `cron` del workflow (está en hora UTC; Chile es UTC-3).
 - **Ligas:** la lista `LIGAS` en `pipeline/generar.py` (códigos de ESPN como `eng.1`, `esp.1`, `por.1`, `ned.1`, `arg.1`, `chi.1`).
