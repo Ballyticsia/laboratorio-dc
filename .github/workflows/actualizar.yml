@@ -39,8 +39,8 @@ jobs:
       - name: Bajar datos y reajustar el modelo
         env:
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
-          API_FOOTBALL_MIN_HORAS: "6"
-          API_FOOTBALL_DIAS: "2"       # el plan gratis solo permite de ayer a mañana; con Pro puede ser 3 o más   # con el plan gratis (100 consultas/día); con Pro se puede bajar a 2
+          API_FOOTBALL_MIN_HORAS: "6"   # plan gratis (100 consultas/día); con Pro se puede bajar a 2
+          API_FOOTBALL_DIAS: "2"        # plan gratis: solo de ayer a mañana; con Pro puede ser 3
         run: python pipeline/generar.py
 
       - name: Guardar datos y registro en el repositorio
