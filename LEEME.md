@@ -86,8 +86,8 @@ El robot usa la clave guardada en **Settings → Secrets and variables → Actio
 ## The Odds API (Pinnacle y otras casas)
 Secreto `ODDS_API_KEY`. Con el plan gratis (500 créditos al mes) cada liga se actualiza más o menos una vez al día, solo si juega en las próximas 36 horas, y se guarda una reserva para no quedarse sin créditos. El estado queda en `data/odds_api/estado.json`. Sin clave se usan las cuotas de ESPN (DraftKings).
 
-## xG (Understat)
-`pipeline/backtest_xg.py` (workflow "Backtest de xG", mensual o a mano) compara el modelo con y sin goles esperados. El robot usa xG solo si `data/backtest_xg.json` dice `"usar": true`.
+## xG (goles esperados)
+El robot guarda el xG de los partidos terminados desde las estadísticas de API-Football (`data/xg/partidos.json`); como el plan gratis solo deja consultar de ayer a mañana, la historia se arma día a día. `pipeline/backtest_xg.py` (workflow "Backtest de xG", mensual o a mano) compara el modelo con y sin xG, y el robot lo usa solo si `data/backtest_xg.json` dice `"usar": true`. Understat no se usa porque no permite descargas automáticas.
 
 ## Cambiar cosas
 - **Horario:** la línea `cron` del workflow (está en hora UTC; Chile es UTC-3).

@@ -434,6 +434,7 @@ def main():
         hist = {}
     stamp = now.strftime("%Y-%m-%dT%H:%MZ")
     bajas = lesiones.cargar()
+    xg.recolectar()
     try:   # xG solo si el backtest mensual (pipeline/backtest_xg.py) mostró que mejora
         with open(os.path.join(RAIZ, "data", "backtest_xg.json"), encoding="utf-8") as fx:
             XGC = json.load(fx)

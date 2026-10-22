@@ -1,68 +1,94 @@
-"""Goles esperados (xG) por partido desde Understat, para las cinco grandes ligas.
+"""Goles esperados (xG) por partido desde API-Football (estadísticas de cada partido).
 
-- Una consulta por liga y temporada; las temporadas pasadas quedan guardadas para siempre
-  en data/cache_xg y la actual se vuelve a pedir cada MIN_HORAS horas.
-- Los nombres de Understat se cruzan con los de ESPN por fecha y parecido de nombres.
-- Si Understat no responde, el modelo funciona igual que antes (goles y tiros al arco).
+- Understat no permite descargas automáticas (robots.txt), así que no se usa.
+- Con la clave API_FOOTBALL_KEY, en cada corrida (como mucho cada MIN_HORAS horas) se piden los
+  partidos de ayer y hoy (/fixtures?date=…) y, para los terminados de las ligas con xG, sus
+  estadísticas (/fixtures/statistics), que incluyen "expected_goals". Se guardan en data/xg/partidos.json.
+- El plan gratis solo deja consultar de ayer a mañana, así que la historia se arma día a día.
+- Se cuida el límite diario: se deja una reserva para las bajas.
 """
-import codecs
 import json
 import os
-import re
 import urllib.error
-import urllib.request
 from datetime import datetime, timedelta, timezone
-
-import pandas as pd
 
 import lesiones
 
-CARPETA = os.path.join(os.path.dirname(__file__), "..", "data", "cache_xg")
-MIN_HORAS = float(os.environ.get("XG_MIN_HORAS", "12"))
-LIGAS = {"eng.1": "EPL", "esp.1": "La_liga", "ger.1": "Bundesliga", "ita.1": "Serie_A", "fra.1": "Ligue_1"}
-UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-ESTADO = {"errores": [], "consultas": 0}
-
-lesiones.ALIAS.update({"rasenballsport leipzig": "rb leipzig", "borussia m gladbach": "borussia monchengladbach",
-                       "parma calcio 1913": "parma", "verona": "hellas verona", "paris saint germain": "paris saint germain",
-                       "wolverhampton wanderers": "wolverhampton wanderers", "athletic club": "athletic bilbao"})
-
-
-def _http(url, ajax=False):
-    h = {"User-Agent": UA, "Accept": "application/json, text/html;q=0.9", "Referer": "https://understat.com/"}
-    if ajax:
-        h["X-Requested-With"] = "XMLHttpRequest"
-    with urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=40) as r:
-        ESTADO["consultas"] += 1
-        return r.read().decode("utf-8", "replace")
+CARPETA = os.path.join(os.path.dirname(__file__), "..", "data", "xg")
+ARCHIVO = os.path.join(CARPETA, "partidos.json")
+MIN_HORAS = float(os.environ.get("XG_MIN_HORAS", "6"))
+MAX_POR_CORRIDA = int(os.environ.get("XG_MAX_POR_CORRIDA", "15"))
+RESERVA = int(os.environ.get("XG_RESERVA", "25"))   # consultas diarias que se dejan libres
+# liga de ESPN -> id de liga en API-Football
+LIGAS = {"eng.1": 39, "esp.1": 140, "ita.1": 135, "ger.1": 78, "fra.1": 61, "eng.2": 40, "uefa.champions": 2, "uefa.europa": 3}
+ESTADO = {"errores": [], "nuevos": 0, "guardados": 0}
+TERMINADO = {"FT", "AET", "PEN"}
 
 
-def _descargar(liga, temporada):
-    # formato actual (datos por AJAX) y, si falla, el antiguo (JSON dentro de la página)
+def _leer():
     try:
-        d = json.loads(_http(f"https://understat.com/getLeagueData/{liga}/{temporada}", ajax=True))
-        if isinstance(d, dict) and isinstance(d.get("dates"), list):
-            return d["dates"]
-    except (urllib.error.URLError, OSError, ValueError):
-        pass
-    html = _http(f"https://understat.com/league/{liga}/{temporada}")
-    m = re.search(r"datesData\s*=\s*JSON\.parse\('(.*?)'\)", html)
-    if not m:
-        raise ValueError("no encontré datesData")
-    return json.loads(codecs.decode(m.group(1), "unicode_escape"))
+        with open(ARCHIVO, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {"pedido": None, "partidos": []}
 
 
-def _partidos(raw):
-    out = []
-    for x in raw:
-        if not x.get("isResult"):
-            continue
+def recolectar():
+    """Agrega el xG de los partidos terminados de ayer y hoy (si hay clave y consultas)."""
+    if not os.environ.get("API_FOOTBALL_KEY", "").strip():
+        return 0
+    data = _leer()
+    ahora = datetime.now(timezone.utc)
+    if data.get("pedido") and (ahora - datetime.fromisoformat(data["pedido"])) < timedelta(hours=MIN_HORAS):
+        ESTADO["guardados"] = len(data["partidos"])
+        return 0
+    hechos = {x["fid"] for x in data["partidos"] if x.get("fid")}
+    ids = set(LIGAS.values())
+    pend = []
+    for dia in ((ahora - timedelta(days=1)).date().isoformat(), ahora.date().isoformat()):
         try:
-            out.append(dict(fecha=str(x["datetime"])[:10], home=x["h"]["title"], away=x["a"]["title"],
-                            xgh=round(float(x["xG"]["h"]), 3), xga=round(float(x["xG"]["a"]), 3)))
-        except (KeyError, TypeError, ValueError):
+            r = lesiones._get(f"/fixtures?date={dia}")
+        except (urllib.error.URLError, OSError, ValueError) as e:
+            ESTADO["errores"].append(f"fixtures {dia}: {e}")
             continue
-    return out
+        if r.get("errors"):
+            ESTADO["errores"].append(f"fixtures {dia}: {r['errors']}")
+            continue
+        for it in r.get("response", []):
+            fx, lg, tm = it.get("fixture") or {}, it.get("league") or {}, it.get("teams") or {}
+            if lg.get("id") in ids and (fx.get("status") or {}).get("short") in TERMINADO and fx.get("id") not in hechos:
+                hechos.add(fx["id"])
+                pend.append(dict(fid=fx["id"], fecha=str(fx.get("date"))[:10], liga=lg["id"],
+                                 home=(tm.get("home") or {}).get("name"), away=(tm.get("away") or {}).get("name")))
+    for x in pend[:MAX_POR_CORRIDA]:
+        if lesiones.ESTADO.get("restantes") is not None and lesiones.ESTADO["restantes"] <= RESERVA:
+            break
+        try:
+            r = lesiones._get(f"/fixtures/statistics?fixture={x['fid']}")
+        except (urllib.error.URLError, OSError, ValueError) as e:
+            ESTADO["errores"].append(f"stats {x['fid']}: {e}")
+            continue
+        xg = []
+        for t in r.get("response", []):
+            v = next((s.get("value") for s in t.get("statistics") or [] if s.get("type") == "expected_goals"), None)
+            try:
+                xg.append(float(v))
+            except (TypeError, ValueError):
+                xg.append(None)
+        if len(xg) == 2 and None not in xg:
+            data["partidos"].append(dict(x, xgh=xg[0], xga=xg[1]))
+            ESTADO["nuevos"] += 1
+        else:
+            data["partidos"].append(dict(x, xgh=None, xga=None))   # sin xG: no se vuelve a pedir
+    if len(pend) <= MAX_POR_CORRIDA:
+        data["pedido"] = ahora.isoformat(timespec="minutes")   # si quedaron pendientes, se sigue en la próxima corrida
+    os.makedirs(CARPETA, exist_ok=True)
+    with open(ARCHIVO, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
+    ESTADO["guardados"] = len(data["partidos"])
+    print(f"  xG (API-Football): {ESTADO['nuevos']} partidos nuevos · {ESTADO['guardados']} guardados"
+          + (f" · errores: {ESTADO['errores'][:3]}" if ESTADO["errores"] else ""))
+    return ESTADO["nuevos"]
 
 
 def temporada_de(d):
@@ -71,35 +97,13 @@ def temporada_de(d):
 
 
 def cargar(slug, desde, hasta):
-    """Lista de partidos con xG de la liga entre dos fechas (o [] si no hay)."""
-    liga = LIGAS.get(slug)
-    if not liga:
+    """Partidos guardados con xG de la liga entre dos fechas (o [] si no hay)."""
+    lid = LIGAS.get(slug)
+    if not lid:
         return []
-    os.makedirs(CARPETA, exist_ok=True)
-    actual = temporada_de(datetime.now(timezone.utc).date())
-    filas = []
-    for t in range(temporada_de(desde), temporada_de(hasta) + 1):
-        path = os.path.join(CARPETA, f"{liga}_{t}.json")
-        viejo = None
-        if os.path.exists(path):
-            try:
-                with open(path, encoding="utf-8") as f:
-                    viejo = json.load(f)
-            except (OSError, ValueError):
-                viejo = None
-        fresco = viejo and (t < actual or (datetime.now(timezone.utc) - datetime.fromisoformat(viejo["pedido"])) < timedelta(hours=MIN_HORAS))
-        if fresco:
-            filas += viejo["partidos"]
-            continue
-        try:
-            ps = _partidos(_descargar(liga, t))
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump({"pedido": datetime.now(timezone.utc).isoformat(timespec="minutes"), "partidos": ps}, f, ensure_ascii=False, separators=(",", ":"))
-            filas += ps
-        except (urllib.error.URLError, OSError, ValueError) as e:
-            ESTADO["errores"].append(f"{liga} {t}: {e}")
-            filas += (viejo or {}).get("partidos", [])
-    return filas
+    d0, d1 = str(desde)[:10], str(hasta)[:10]
+    return [dict(fecha=x["fecha"], home=x["home"], away=x["away"], xgh=x["xgh"], xga=x["xga"]) for x in _leer()["partidos"]
+            if x.get("liga") == lid and x.get("xgh") is not None and d0 <= x["fecha"] <= d1]
 
 
 def unir(df, filas):

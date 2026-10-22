@@ -1,4 +1,5 @@
 """¿Mejora el modelo si usa goles esperados (xG)? Backtest walk-forward de los últimos 12 meses.
+Usa el xG que el robot va guardando desde API-Football (data/xg/partidos.json).
 
 Cada semana se reajusta el modelo solo con partidos anteriores y se predicen los de esa semana,
 con distintos pesos de xG. Resultado en data/backtest_xg.json; generar.py usa xG solo si mejora.
