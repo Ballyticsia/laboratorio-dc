@@ -589,6 +589,10 @@ function lProy(L) {
     `</tbody></table></div><p class="note">10.000 simulaciones del resto de la temporada con el modelo actual.</p>`;
 }
 function lFuerza(L) {
+  const sc = scatterAD(L);
+  return (sc ? `<div class="panel stack"><h3>Ataque contra defensa</h3>${sc}</div>` : "") + lFuerzaTabla(L);
+}
+function lFuerzaTabla(L) {
   const t = [...L.tabla].sort((a, b) => (b.ataque / b.defensa) - (a.ataque / a.defensa));
   const mx = Math.max(...t.map(s => s.ataque / s.defensa));
   return `<div class="panel flush scroll"><table class="t"><thead><tr><th>#</th><th>Equipo</th><th class="n">Ataque</th><th class="n">Defensa</th><th>Fuerza global</th></tr></thead><tbody>` +
@@ -666,6 +670,10 @@ function vPartido() {
       <div class="panel stack"><h3>Marcador exacto</h3><div class="scroll"><table class="heat">${heat}</table></div><p class="note">Filas: goles de ${esc(H)}. Columnas: goles de ${esc(A)}.</p></div>
       ${cmp ? `<div class="panel stack"><h3>Comparación de la temporada</h3><div class="cmph"><span>${badge(L, p.home)} ${esc(H)}</span><span>${esc(A)} ${badge(L, p.away)}</span></div>${cmp}</div>` : ""}
     </div>
+    <div class="grid2">
+      <div class="panel stack"><h3>Goles totales</h3>${goalsDist(m)}</div>
+      <div class="panel stack"><h3>Cómo cambió la probabilidad</h3>${histChart(L, p)}</div>
+    </div>
     <div class="panel stack"><h3>Goleadores probables</h3><div class="slist">${scorers}</div><p class="note">Probabilidad de marcar según sus goles en la temporada y los goles esperados de su equipo.</p></div>`;
   if (tab === "mercados") body = `
     <div class="panel stack"><h3>Mercados y valor</h3>
@@ -730,6 +738,10 @@ function vEquipo() {
       ${[["Goles/PJ", dec(st.gf)], ["Recibe/PJ", dec(st.gc)], ["Tiros/PJ", dec(st.tiros, 1)], ["Al arco/PJ", dec(st.tiros_arco, 1)], ["Córners/PJ", dec(st.corners, 1)], ["Posesión", st.posesion != null ? dec(st.posesion, 0) + " %" : "—"],
          ["Tarjetas/PJ", dec(st.tarjetas, 1)], ["Faltas/PJ", dec(st.faltas, 1)], ["Ambos marcan", pct(st.ambos)], ["+2,5 goles", pct(st.over25)], ["Vallas invictas", st.vallas], ["Sin marcar", st.sin_marcar]]
         .map(([n, v]) => `<div><span class="lbl">${n}</span><b class="num">${v}</b></div>`).join("")}</div></div>` : ""}
+    <div class="grid2">
+      ${L.tabla_ok ? `<div class="panel stack"><h3>Posición en la tabla</h3>${posChart(L, t)}</div>` : ""}
+      <div class="panel stack"><h3>Goles por partido</h3>${goalsChart(L, t)}</div>
+    </div>
     <div class="grid2">
       <div class="stack">
         <div class="panel flush"><div class="ph"><h3>Próximos partidos</h3></div>${prox.map(p => matchRow(p, false)).join("") || `<div class="empty">Sin partidos programados.</div>`}</div>
@@ -812,6 +824,101 @@ function vMetodo() {
     <p class="note">Fuente de datos: marcadores públicos de ESPN. El código es abierto y el sitio se actualiza solo con GitHub Actions.</p></section>`;
 }
 
+
+
+/* ---------------- GRÁFICOS ---------------- */
+function niceTicks(lo, hi, n = 4) {
+  const raw = (hi - lo) / n || 1, p10 = Math.pow(10, Math.floor(Math.log10(raw))), step = [1, 2, 2.5, 5, 10].map(m => m * p10).find(x => x >= raw);
+  const out = []; for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(6)); return out;
+}
+// evolución de la posición de un equipo partido a partido
+function positionSeries(L, team) {
+  const res = [...L.resultados].sort((a, b) => a.kickoff.localeCompare(b.kickoff));
+  const teams = new Set(L.tabla.map(s => s.equipo));
+  const pts = {}, gd = {}, gf = {}; teams.forEach(t => { pts[t] = 0; gd[t] = 0; gf[t] = 0; });
+  const out = [];
+  res.forEach(x => {
+    [[x.home, x.hg, x.ag], [x.away, x.ag, x.hg]].forEach(([t, a, b]) => { if (!(t in pts)) return; pts[t] += a > b ? 3 : a === b ? 1 : 0; gd[t] += a - b; gf[t] += a; });
+    if (x.home === team || x.away === team) {
+      const order = [...teams].sort((a, b) => pts[b] - pts[a] || gd[b] - gd[a] || gf[b] - gf[a] || a.localeCompare(b));
+      out.push({ pos: order.indexOf(team) + 1, k: x.kickoff, rival: x.home === team ? x.away : x.home, gf: x.home === team ? x.hg : x.ag, gc: x.home === team ? x.ag : x.hg });
+    }
+  });
+  return { serie: out, n: teams.size };
+}
+function posChart(L, team) {
+  const { serie, n } = positionSeries(L, team);
+  if (serie.length < 2) return `<p class="note">Faltan partidos para dibujar la evolución.</p>`;
+  const W = 560, H = 200, pl = 34, pr = 12, pt = 12, pb = 26;
+  const x = i => pl + i * (W - pl - pr) / (serie.length - 1), y = v => pt + (v - 1) * (H - pt - pb) / Math.max(n - 1, 1);
+  let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Posición en la tabla por partido">`;
+  (L.zonas || []).forEach(z => { g += `<rect x="${pl}" y="${y(z.desde) - 3}" width="${W - pl - pr}" height="${Math.max(y(z.hasta) - y(z.desde) + 6, 4)}" class="zband z-${z.cls}"/>`; });
+  [1, Math.ceil(n / 2), n].forEach(v => g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${pl - 6}" y="${y(v) + 4}" text-anchor="end">${v}º</text>`);
+  g += `<polyline fill="none" class="ln" points="${serie.map((s, i) => `${x(i)},${y(s.pos)}`).join(" ")}"/>`;
+  serie.forEach((s, i) => g += `<circle cx="${x(i)}" cy="${y(s.pos)}" r="${i === serie.length - 1 ? 5 : 3}" class="${s.gf > s.gc ? "pw" : s.gf === s.gc ? "pd" : "pl"}"><title>${fecha(s.k)} vs ${corto(L, s.rival)} ${s.gf}–${s.gc} · ${s.pos}º</title></circle>`);
+  g += `<text x="${pl}" y="${H - 6}">${fecha(serie[0].k)}</text><text x="${W - pr}" y="${H - 6}" text-anchor="end">${fecha(serie[serie.length - 1].k)}</text></svg>`;
+  return g + `<p class="note">Cada punto es un partido: verde ganó, gris empató, rojo perdió. Las franjas marcan las zonas de la tabla.</p>`;
+}
+// goles a favor y en contra de los últimos partidos
+function goalsChart(L, team) {
+  const ms = L.resultados.filter(x => x.home === team || x.away === team).slice(0, 12).reverse();
+  if (!ms.length) return `<p class="note">Sin partidos jugados.</p>`;
+  const W = 560, H = 190, pl = 8, pr = 8, mid = 92, u = 18, bw = Math.min(26, (W - pl - pr) / ms.length - 6);
+  const mx = Math.max(3, ...ms.map(x => Math.max(x.hg, x.ag)));
+  const sc = v => v * Math.min(u, 74 / mx);
+  let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Goles a favor y en contra">`;
+  g += `<line x1="${pl}" x2="${W - pr}" y1="${mid}" y2="${mid}" class="axis"/>`;
+  ms.forEach((x, i) => {
+    const home = x.home === team, f = home ? x.hg : x.ag, c = home ? x.ag : x.hg, cx = pl + 4 + i * (W - pl - pr) / ms.length;
+    g += `<rect x="${cx}" y="${mid - sc(f)}" width="${bw}" height="${sc(f)}" rx="3" class="gfbar"><title>${fecha(x.kickoff)} vs ${corto(L, home ? x.away : x.home)} ${f}–${c}</title></rect>`;
+    g += `<rect x="${cx}" y="${mid}" width="${bw}" height="${sc(c)}" rx="3" class="gcbar"/>`;
+    g += `<text x="${cx + bw / 2}" y="${H - 6}" text-anchor="middle">${esc((info(L, home ? x.away : x.home).abr || "").slice(0, 3))}</text>`;
+  });
+  return g + `</svg><div class="row note"><span><i class="lg-dot lh"></i>Goles a favor (arriba)</span><span><i class="lg-dot la"></i>Goles en contra (abajo)</span></div>`;
+}
+// distribución de goles totales del partido
+function goalsDist(m) {
+  const tot = Array(8).fill(0);
+  for (let i = 0; i <= MAXG; i++) for (let j = 0; j <= MAXG; j++) tot[Math.min(i + j, 7)] += m[i][j];
+  const W = 420, H = 170, pb = 24, pt = 18, bw = (W - 20) / 8 - 8, mx = Math.max(...tot);
+  let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Probabilidad de goles totales">`;
+  tot.forEach((v, k) => { const h = (H - pb - pt) * v / mx, x = 10 + k * ((W - 20) / 8) + 4;
+    g += `<rect x="${x}" y="${H - pb - h}" width="${bw}" height="${h}" rx="4" class="${k >= 3 ? "gfbar" : "gdbar"}"/><text x="${x + bw / 2}" y="${H - pb - h - 5}" text-anchor="middle">${Math.round(100 * v)}%</text><text x="${x + bw / 2}" y="${H - 6}" text-anchor="middle">${k === 7 ? "7+" : k}</text>`; });
+  return g + `</svg><p class="note">Goles totales del partido. En azul, los resultados con más de 2,5 goles.</p>`;
+}
+// cómo cambió la probabilidad desde que el modelo empezó a seguir el partido
+function histChart(L, p) {
+  const h = p.hist || [];
+  if (h.length < 2) return `<p class="note">El modelo se reajusta cada 2 horas. Cuando cambien las probabilidades de este partido verás aquí cómo se movieron.</p>`;
+  const W = 420, H = 170, pl = 34, pr = 10, pt = 10, pb = 22;
+  const t0 = new Date(h[0][0]).getTime(), t1 = new Date(h[h.length - 1][0]).getTime() || t0 + 1;
+  const all = h.flatMap(r => [r[1], r[2], r[3]]), lo = Math.max(0, Math.min(...all) - .04), hi = Math.min(1, Math.max(...all) + .04);
+  const x = t => pl + (new Date(t).getTime() - t0) * (W - pl - pr) / ((t1 - t0) || 1), y = v => pt + (hi - v) * (H - pt - pb) / (hi - lo);
+  let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Cambio de probabilidades">`;
+  niceTicks(lo, hi, 3).forEach(v => g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${pl - 5}" y="${y(v) + 4}" text-anchor="end">${Math.round(v * 100)}%</text>`);
+  [[1, "lh"], [2, "ld"], [3, "la"]].forEach(([k, cls]) => g += `<polyline fill="none" class="${cls}" points="${h.map(r => `${x(r[0])},${y(r[k])}`).join(" ")}"/>`);
+  g += `<text x="${pl}" y="${H - 5}">${fecha(h[0][0])}</text><text x="${W - pr}" y="${H - 5}" text-anchor="end">${fecha(h[h.length - 1][0])}</text></svg>`;
+  return g + `<div class="row note"><span><i class="lg-dot lh"></i>${esc(corto(L, p.home))}</span><span><i class="lg-dot ld"></i>Empate</span><span><i class="lg-dot la"></i>${esc(corto(L, p.away))}</span></div>`;
+}
+// mapa de ataque vs defensa de la liga
+function scatterAD(L) {
+  const t = L.tabla.filter(s => s.ataque && s.defensa);
+  if (t.length < 3) return "";
+  const W = 960, H = 440, pl = 44, pr = 16, pt = 18, pb = 36;
+  const xs = t.map(s => s.ataque), ys = t.map(s => s.defensa);
+  const x0 = Math.min(...xs) - .05, x1 = Math.max(...xs) + .05, y0 = Math.min(...ys) - .05, y1 = Math.max(...ys) + .05;
+  const X = v => pl + (v - x0) * (W - pl - pr) / (x1 - x0), Y = v => pt + (v - y0) * (H - pt - pb) / (y1 - y0);
+  let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Ataque contra defensa">`;
+  g += `<rect x="${X(1)}" y="${pt}" width="${W - pr - X(1)}" height="${Y(1) - pt}" class="quad"/>`;
+  g += `<line x1="${X(1)}" x2="${X(1)}" y1="${pt}" y2="${H - pb}" class="axis"/><line x1="${pl}" x2="${W - pr}" y1="${Y(1)}" y2="${Y(1)}" class="axis"/>`;
+  niceTicks(x0, x1, 4).forEach(v => g += `<text x="${X(v)}" y="${H - pb + 16}" text-anchor="middle">${dec(v, 1)}</text>`);
+  niceTicks(y0, y1, 4).forEach(v => g += `<text x="${pl - 6}" y="${Y(v) + 4}" text-anchor="end">${dec(v, 1)}</text>`);
+  t.forEach(s => { const ab = esc((info(L, s.equipo).abr || s.equipo.slice(0, 3)).toUpperCase());
+    g += `<g class="dotg" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}"><circle cx="${X(s.ataque)}" cy="${Y(s.defensa)}" r="5" class="pt"/><text x="${X(s.ataque)}" y="${Y(s.defensa) - 8}" text-anchor="middle" class="ptl">${ab}</text><title>${esc(corto(L, s.equipo))}: ataque ${dec(s.ataque)}, defensa ${dec(s.defensa)}</title></g>`; });
+  g += `<text x="${W - pr}" y="${H - 4}" text-anchor="end">más ataque →</text><text x="${pl}" y="${pt + 10}" class="ptl">↑ mejor defensa</text>`;
+  g += `<text x="${W - pr - 6}" y="${pt + 14}" text-anchor="end" class="qlab">Fuertes en todo</text></svg>`;
+  return g + `<p class="note">Ataque: goles que marca frente a una defensa promedio. Defensa: goles que recibe (más arriba, recibe menos). Toca un equipo para ver su página.</p>`;
+}
 
 /* ---------------- EN VIVO (directo desde ESPN en el navegador) ---------------- */
 const LIVE = {};

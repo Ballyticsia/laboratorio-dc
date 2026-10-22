@@ -590,3 +590,20 @@ nav.main .dd-item:hover{background:rgba(61,139,255,.1);color:var(--ink)}
   .tabbar button{font-size:10px}
   .combo-sum .kpis{grid-template-columns:1fr}
 }
+
+/* ===================== v7: gráficos ===================== */
+svg .grid{stroke:var(--line);stroke-width:1}
+svg .axis{stroke:var(--muted);stroke-width:1;opacity:.6}
+svg .ln{stroke:var(--pitch);stroke-width:2.2}
+svg .pw{fill:var(--good)} svg .pd{fill:#8a95a8} svg .pl{fill:var(--bad)}
+svg .zband{opacity:.13;fill:var(--z,#3d8bff)}
+svg .gfbar{fill:var(--pitch)} svg .gcbar{fill:var(--away);opacity:.75} svg .gdbar{fill:#56627a}
+svg .lh{stroke:var(--pitch);stroke-width:2.2} svg .ld{stroke:#8a95a8;stroke-width:2} svg .la{stroke:var(--away);stroke-width:2.2}
+svg .quad{fill:rgba(46,230,166,.06)}
+svg .pt{fill:var(--pitch);stroke:var(--panel);stroke-width:1.5}
+svg .ptl{fill:var(--ink);font-size:10.5px;font-family:var(--f-display);font-weight:600}
+svg .qlab{fill:var(--good);font-size:11px}
+svg .dotg{cursor:pointer}
+svg .dotg:hover .pt{fill:var(--card)}
+.lg-dot{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.lg-dot.lh{background:var(--pitch)} .lg-dot.ld{background:#8a95a8} .lg-dot.la{background:var(--away)}

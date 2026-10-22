@@ -28,6 +28,7 @@ from modelo import XI, ALPHA, fit, markets  # noqa: E402
 RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SALIDA = os.path.join(RAIZ, "site", "data")
 REGISTRO = os.path.join(RAIZ, "data", "registro.csv")
+HISTORIAL = os.path.join(RAIZ, "data", "historial.json")
 TEMPORADAS = 3
 SIMS = 10000
 DETALLE_DIAS = 21
@@ -410,6 +411,12 @@ def main():
     now_ts = pd.Timestamp(now).tz_localize(None)
 
     indice, preds_reg, jugados_all, base_cnt = [], [], [], Counter()
+    try:
+        with open(HISTORIAL, encoding="utf-8") as f:
+            hist = json.load(f)
+    except (OSError, ValueError):
+        hist = {}
+    stamp = now.strftime("%Y-%m-%dT%H:%MZ")
     portada = dict(partidos=[], jugadores=[], equipos=[], rachas=[])
     for L in LIGAS:
         if args.ligas and L["id"] not in args.ligas:
@@ -479,6 +486,14 @@ def main():
                     p["th"], p["ta"] = (r(v, 3) for v in mt.rates(x.home, x.away))
                 p["goleadores"] = [dict(s, jugador=name_of.get(s["jid"], "")) for s in scorer_probs(model, x.home, x.away, goles_cnt, team_goals)]
                 p["h2h"] = h2h(both, x.home, x.away)
+            if x.estado == "pendiente":
+                h = hist.setdefault(str(p["id"]), {"k": p["kickoff"], "s": []})
+                last = h["s"][-1] if h["s"] else None
+                if not last or max(abs(last[1] - p["pH"]), abs(last[2] - p["pD"]), abs(last[3] - p["pA"])) >= 0.004:
+                    h["s"].append([stamp, p["pH"], p["pD"], p["pA"]])
+                    h["s"] = h["s"][-40:]
+                if len(h["s"]) >= 2:
+                    p["hist"] = h["s"][-24:]
             partidos.append(p)
             if x.estado == "pendiente" and pd.Timestamp(x.kickoff).tz_localize(None) > now_ts and x.date <= hoy + pd.Timedelta(days=8):
                 preds_reg.append(p)
@@ -540,6 +555,10 @@ def main():
         sys.exit(1)
     tot = sum(base_cnt.values()) or 1
     base = {k: base_cnt[k] / tot for k in ("H", "D", "A")}
+    limite_hist = (now_ts - pd.Timedelta(days=3)).isoformat()
+    hist = {k: v for k, v in hist.items() if v.get("k", "") >= limite_hist}
+    with open(HISTORIAL, "w", encoding="utf-8") as f:
+        json.dump(hist, f, separators=(",", ":"))
     jug_df = pd.concat(jugados_all, ignore_index=True) if jugados_all else pd.DataFrame(columns=["id", "hg", "ag"])
     reg = ledger_update(preds_reg, jug_df, now.isoformat(timespec="minutes"))
     with open(os.path.join(SALIDA, "registro.json"), "w", encoding="utf-8") as f:
