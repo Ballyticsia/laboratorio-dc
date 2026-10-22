@@ -48,6 +48,30 @@ def _logo(team):
     return team.get("logo")
 
 
+def _events(comp, hid, aid):
+    """Goles y tarjetas con jugador y minuto (lista 'details' de ESPN)."""
+    out = []
+    for d in comp.get("details") or []:
+        tid = str((d.get("team") or {}).get("id", ""))
+        lado = "h" if tid == hid else ("a" if tid == aid else None)
+        if not lado or d.get("shootout"):
+            continue
+        if d.get("scoringPlay"):
+            t = "G"
+        elif d.get("redCard"):
+            t = "R"
+        elif d.get("yellowCard"):
+            t = "Y"
+        else:
+            continue
+        ath = (d.get("athletesInvolved") or [{}])[0]
+        minuto = _num((d.get("clock") or {}).get("value"))
+        out.append({"t": t, "lado": lado, "min": int(minuto // 60) + 1 if minuto is not None else None,
+                    "jug": ath.get("displayName"), "jid": str(ath.get("id") or ""),
+                    "pen": bool(d.get("penaltyKick")), "og": bool(d.get("ownGoal"))})
+    return out
+
+
 def _all_stats(comp):
     out = {}
     for s in comp.get("statistics") or []:
@@ -88,8 +112,9 @@ def parse_events(data):
             row["ag"] = _num(a.get("score")) if done else None
             row["hst"] = _stat(h, "shotsOnTarget", "ST", "SOT") if done else None
             row["ast"] = _stat(a, "shotsOnTarget", "ST", "SOT") if done else None
-            if done:  # todas las estadísticas que ESPN publique (córners, tarjetas, posesión…)
+            if done:  # todas las estadísticas que ESPN publique (córners, faltas, posesión…)
                 row["hstats"], row["astats"] = _all_stats(h), _all_stats(a)
+                row["eventos"] = _events(comp, str(h.get("id")), str(a.get("id")))
             rows.append(row)
         except (KeyError, TypeError, IndexError):
             continue
@@ -109,7 +134,7 @@ def _fetch(url):
 
 def get_month(slug, ym, fresh):
     os.makedirs(CACHE, exist_ok=True)
-    path = os.path.join(CACHE, f"v2_{slug}_{ym}.json")
+    path = os.path.join(CACHE, f"v3_{slug}_{ym}.json")
     if os.path.exists(path) and not fresh:
         with open(path, encoding="utf-8") as f:
             return json.load(f)
@@ -129,6 +154,11 @@ def get_month(slug, ym, fresh):
     if DEBUG:
         with open(os.path.join(CACHE, "..", "espn_ejemplo.json"), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=1)
+    lg = (data or {}).get("leagues") or []
+    if lg:
+        meta = {"nombre": lg[0].get("name"), "logo": ((lg[0].get("logos") or [{}])[0]).get("href")}
+        with open(os.path.join(CACHE, f"meta_{slug}.json"), "w", encoding="utf-8") as f:
+            json.dump(meta, f, ensure_ascii=False)
     muestra = os.path.join(CACHE, "..", "espn_muestra.json")
     if not os.path.exists(muestra) and data and data.get("events"):
         done = [e for e in data["events"] if ((e.get("status") or {}).get("type") or {}).get("completed")]
@@ -155,3 +185,11 @@ def load(slug, start, end, today):
         df[c] = pd.to_numeric(df[c], errors="coerce").astype(float)
     df["date"] = pd.to_datetime(df["date"])
     return df.drop_duplicates(["date", "home", "away"]).sort_values("kickoff").reset_index(drop=True)
+
+
+def meta(slug):
+    path = os.path.join(CACHE, f"meta_{slug}.json")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    return {}

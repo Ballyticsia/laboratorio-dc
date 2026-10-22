@@ -2,13 +2,14 @@
 
 Sitio de probabilidades de fútbol con un modelo Dixon-Coles abierto. Se actualiza solo tres veces al día con GitHub Actions y se publica gratis en GitHub Pages.
 
-- **Partidos de la semana** con probabilidades 1X2, marcador más probable y goles esperados.
-- **Página por partido:** marcador exacto, mercados, cuota justa y calculadora de valor esperado.
-- **Ligas:** tabla, proyección de fin de temporada (10.000 simulaciones), fuerza de los equipos, calendario y resultados.
+- **Portada tipo panel:** partido destacado, jugador destacado, equipo en forma, proyección de partido, ranking de fuerza, tabla, próximos partidos, trío más probable, rachas y rendimiento del modelo.
+- **Página por partido:** goles esperados, marcador exacto, comparación de la temporada, goleadores probables, últimos enfrentamientos y mercados (1X2, goles, ambos marcan, córners, tarjetas, goleador) con calculadora de valor esperado.
+- **Ligas:** resumen, tabla con zonas, partidos por semana, estadísticas de equipos, goleadores y amonestados, rachas, córners y tarjetas, proyección de fin de temporada (10.000 simulaciones) y fuerza.
+- **Equipos:** estadísticas, próximos partidos, resultados con goleadores y rachas.
 - **Registro público:** cada predicción se guarda antes del partido y se califica después.
 - **Cómo funciona:** el método y el backtest contra las cuotas de mercado.
 
-Ligas: Premier League, LaLiga, Serie A, Bundesliga y Ligue 1. Datos: marcadores públicos de ESPN.
+Ligas: Premier League, LaLiga, Serie A, Bundesliga, Ligue 1, Championship, Primeira Liga, Eredivisie, Primera División de Chile, Liga Profesional Argentina, Brasileirão, MLS, Champions League y Copa Libertadores. Datos: marcadores públicos de ESPN.
 
 ---
 

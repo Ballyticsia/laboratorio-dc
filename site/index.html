@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Ballytics</title>
-<meta name="description" content="Probabilidades de fútbol con un modelo Dixon-Coles abierto: partidos, tablas proyectadas y un registro público de cada predicción.">
+<meta name="description" content="Probabilidades de fútbol con un modelo Dixon-Coles abierto: partidos, estadísticas, rachas, goleadores, córners, tarjetas y un registro público de cada predicción.">
 <meta name="theme-color" content="#07090f">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233d8bff'/%3E%3Cpath d='M6 23 L13 14 L18 18 L26 8' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="assets/app.css?v=3">
+<link rel="stylesheet" href="assets/app.css?v=4">
 </head>
 <body>
 <div class="top gut">
@@ -19,11 +19,19 @@
       <b>Ballytics</b>
     </button>
     <nav class="main" aria-label="Secciones">
-      <button data-go="inicio">Partidos</button>
-      <button data-go="liga">Ligas</button>
+      <button data-go="inicio">Inicio</button>
+      <div class="dd">
+        <button id="dd-btn" aria-expanded="false" aria-controls="dd-menu">Ligas <span aria-hidden="true">▾</span></button>
+        <div class="dd-menu" id="dd-menu" hidden></div>
+      </div>
       <button data-go="registro">Registro</button>
-      <button data-go="metodo">Cómo funciona</button>
+      <button data-go="metodo"><span class="hide-m">Cómo funciona</span><span class="only-m">Método</span></button>
     </nav>
+    <div class="search">
+      <label for="q" class="sr">Buscar equipos</label>
+      <input id="q" type="search" placeholder="Buscar equipo…" autocomplete="off">
+      <div class="sres" id="sres" hidden></div>
+    </div>
   </div>
 </div>
 <main class="gut"><div class="wrap" id="app"><div class="empty">Cargando datos…</div></div></main>
@@ -31,6 +39,6 @@
   <span id="foot-upd"></span>
   <span>Probabilidades de un modelo estadístico, no consejos de apuesta. +18. Juega con responsabilidad.</span>
 </footer></div>
-<script src="assets/app.js?v=3"></script>
+<script src="assets/app.js?v=4"></script>
 </body>
 </html>

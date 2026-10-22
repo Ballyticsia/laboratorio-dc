@@ -4,40 +4,53 @@
 const D = { ligas: {} };
 const $app = document.getElementById("app");
 const MAXG = 10;
-const ODDS = {};                       // cuotas que escribe el usuario, por partido
-let R = { v: "inicio", liga: "todas" }; // ruta actual
+const ODDS = {};
+let R = { v: "inicio" };
+const timers = [];
 
 /* ---------------- utilidades ---------------- */
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const pct = (x, d = 0) => x == null ? "—" : (100 * x).toFixed(d).replace(".", ",") + " %";
-const dec = (x, d = 2) => x == null ? "—" : Number(x).toFixed(d).replace(".", ",");
+const pct = (x, d = 0) => x == null || isNaN(x) ? "—" : (100 * x).toFixed(d).replace(".", ",") + " %";
+const dec = (x, d = 2) => x == null || isNaN(x) ? "—" : Number(x).toFixed(d).replace(".", ",");
 const sgn = x => (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x);
 const DAYMS = 864e5;
-function dayKey(iso) { const d = new Date(iso); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+const isoDay = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+const dayKey = iso => isoDay(new Date(iso));
 function dayLabel(key) {
-  const t = new Date(); const k0 = dayKey(t.toISOString()), k1 = dayKey(new Date(t.getTime() + DAYMS).toISOString());
-  if (key === k0) return "Hoy"; if (key === k1) return "Mañana";
+  const t = new Date();
+  if (key === isoDay(t)) return "Hoy";
+  if (key === isoDay(new Date(t.getTime() + DAYMS))) return "Mañana";
+  if (key === isoDay(new Date(t.getTime() - DAYMS))) return "Ayer";
   const [y, m, d] = key.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "short" });
 }
 const hhmm = iso => new Date(iso).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const fecha = iso => new Date(iso).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" });
+const cuando = iso => `${dayLabel(dayKey(iso))} · ${hhmm(iso)}`;
+function weekStart(iso) { const d = new Date(iso); const w = (d.getDay() + 6) % 7; d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - w); return isoDay(d); }
 function hashColor(s) { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return `hsl(${h % 360} 45% 38%)`; }
-function lum(hex) { const n = parseInt(hex, 16); const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; return (0.299 * r + 0.587 * g + 0.114 * b) / 255; }
+function lum(hex) { const n = parseInt(hex, 16); return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; }
+const pts5 = f => (f || []).reduce((s, c) => s + ({ G: 3, E: 1, P: 0 }[c] || 0), 0);
 
-function info(L, t) { return (L.equipos && L.equipos[t]) || {}; }
+function info(L, t) { return (L && L.equipos && L.equipos[t]) || {}; }
 const corto = (L, t) => info(L, t).corto || t;
-function badge(L, t, lg = false) {
+function badge(L, t, size = "") {
   const i = info(L, t), c = i.color && /^[0-9a-f]{6}$/i.test(i.color) ? i.color : null;
   const bg = c ? "#" + c : hashColor(t), fg = c && lum(c) > 0.62 ? "#07090f" : "#fff";
   const ab = (i.abr || t.replace(/[^A-Za-zÀ-ÿ ]/g, "").split(" ").map(w => w[0]).join("").slice(0, 3)).toUpperCase();
   const logo = typeof i.logo === "string" && /^https:\/\//.test(i.logo) ? i.logo : null;
   const img = logo ? `<img class="crest" src="${esc(logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove('logo');this.remove()">` : "";
-  return `<span class="badge${lg ? " lg" : ""}${logo ? " logo" : ""}" style="background:${bg};color:${fg}" aria-hidden="true">${esc(ab)}${img}</span>`;
+  return `<span class="badge ${size}${logo ? " logo" : ""}" style="background:${bg};color:${fg}" aria-hidden="true">${esc(ab)}${img}</span>`;
+}
+function leagueMark(L, size = "") {
+  const logo = L.logo && /^https:\/\//.test(L.logo) ? L.logo : null;
+  const ab = L.nombre.split(" ").map(w => w[0]).join("").slice(0, 3).toUpperCase();
+  return `<span class="lmark ${size}${logo ? " logo" : ""}" aria-hidden="true">${esc(ab)}${logo ? `<img src="${esc(logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove('logo');this.remove()">` : ""}</span>`;
 }
 
 /* ---------------- modelo (igual que en Python) ---------------- */
 function pois(k, l) { let p = Math.exp(-l); for (let i = 1; i <= k; i++) p *= l / i; return p; }
+const poisOver = (line, l) => { let c = 0; for (let k = 0; k <= Math.floor(line); k++) c += pois(k, l); return 1 - c; };
 function rates(M, h, a) {
   const [ah, dh] = M.equipos[h] || [0, 0], [aa, da] = M.equipos[a] || [0, 0];
   return [Math.exp(M.mu + M.home + ah - da), Math.exp(M.mu + aa - dh)];
@@ -67,26 +80,58 @@ async function load() {
   const ls = await Promise.all(D.indice.ligas.map(l => getJSON(`data/${l.id}.json`).catch(() => null)));
   ls.forEach(L => { if (L) D.ligas[L.id] = L; });
   [D.registro, D.metodo] = await Promise.all([getJSON("data/registro.json").catch(() => null), getJSON("data/metodologia.json").catch(() => null)]);
-  const u = new Date(D.indice.actualizado);
-  document.getElementById("foot-upd").innerHTML = `<span class="dot"></span>Actualizado ${u.toLocaleDateString("es-CL")} ${hhmm(D.indice.actualizado)}`;
+  document.getElementById("foot-upd").innerHTML = `<span class="dot"></span>Actualizado ${new Date(D.indice.actualizado).toLocaleDateString("es-CL")} ${hhmm(D.indice.actualizado)}`;
+  buildMenu();
 }
 const ligasIds = () => Object.keys(D.ligas);
 const allMatches = () => ligasIds().flatMap(id => D.ligas[id].partidos.map(p => ({ ...p, L: D.ligas[id] })));
-function findMatch(liga, id) { const L = D.ligas[liga]; return L && L.partidos.find(p => String(p.id) === String(id)); }
+const findMatch = (liga, id) => { const L = D.ligas[liga]; return L && L.partidos.find(p => String(p.id) === String(id)); };
+const statOf = (L, t) => (L.stats || []).find(s => s.equipo === t) || {};
+const rowOf = (L, t) => (L.tabla || []).find(s => s.equipo === t) || {};
+const strength = (L, t) => { const s = rowOf(L, t); return (s.ataque || 1) / (s.defensa || 1); };
+
+/* ---------------- menú y búsqueda ---------------- */
+function buildMenu() {
+  const groups = {};
+  D.indice.ligas.forEach(l => { if (D.ligas[l.id]) (groups[l.region] ||= []).push(D.ligas[l.id]); });
+  const m = document.getElementById("dd-menu");
+  m.innerHTML = Object.entries(groups).map(([g, ls]) => `<div class="dd-col"><span class="lbl">${esc(g)}</span>` +
+    ls.map(L => `<button class="dd-item" data-go="liga" data-liga="${L.id}" data-tab="resumen">${leagueMark(L)}<span>${esc(L.nombre)}<small>${esc(L.pais)}</small></span></button>`).join("") + `</div>`).join("");
+  const btn = document.getElementById("dd-btn");
+  btn.onclick = e => { e.stopPropagation(); const open = m.hidden; m.hidden = !open; btn.setAttribute("aria-expanded", String(open)); };
+  document.addEventListener("click", e => { if (!e.target.closest(".dd")) { m.hidden = true; btn.setAttribute("aria-expanded", "false"); } });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { m.hidden = true; btn.setAttribute("aria-expanded", "false"); document.getElementById("sres").hidden = true; } });
+  const q = document.getElementById("q"), res = document.getElementById("sres");
+  const teams = ligasIds().flatMap(id => D.ligas[id].tabla.map(s => ({ L: D.ligas[id], t: s.equipo })))
+    .concat(ligasIds().filter(id => !D.ligas[id].tabla.length).flatMap(id => Object.keys(D.ligas[id].equipos).map(t => ({ L: D.ligas[id], t }))));
+  const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  q.addEventListener("input", () => {
+    const v = norm(q.value.trim());
+    if (v.length < 2) { res.hidden = true; return; }
+    const hits = teams.filter(x => norm(x.t).includes(v) || norm(corto(x.L, x.t)).includes(v)).slice(0, 8);
+    res.innerHTML = hits.length ? hits.map(x => `<button class="dd-item" data-go="equipo" data-liga="${x.L.id}" data-team="${esc(x.t)}">${badge(x.L, x.t)}<span>${esc(corto(x.L, x.t))}<small>${esc(x.L.nombre)}</small></span></button>`).join("")
+      : `<p class="note" style="padding:10px">Sin resultados.</p>`;
+    res.hidden = false;
+  });
+  document.addEventListener("click", e => { if (!e.target.closest(".search")) res.hidden = true; });
+  res.addEventListener("click", () => { res.hidden = true; q.value = ""; });
+  m.addEventListener("click", () => { m.hidden = true; });
+}
 
 /* ---------------- rutas ---------------- */
 function toHash(r) {
-  if (r.v === "liga") return `#/liga/${r.liga}/${r.tab || "tabla"}`;
+  if (r.v === "liga") return `#/liga/${r.liga}/${r.tab || "resumen"}`;
   if (r.v === "partido") return `#/partido/${r.liga}/${encodeURIComponent(r.id)}`;
   if (r.v === "equipo") return `#/equipo/${r.liga}/${encodeURIComponent(r.team)}`;
+  if (r.v === "registro" && r.tab) return `#/registro/${r.tab}`;
   if (r.v === "inicio") return r.liga && r.liga !== "todas" ? `#/partidos/${r.liga}` : "#/";
-  return r.v === "registro" && r.tab ? `#/registro/${r.tab}` : `#/${r.v}`;
+  return `#/${r.v}`;
 }
 function fromHash() {
   const p = (location.hash || "#/").slice(2).split("/").map(decodeURIComponent);
   const first = ligasIds()[0];
   switch (p[0]) {
-    case "liga": return { v: "liga", liga: D.ligas[p[1]] ? p[1] : first, tab: p[2] || "tabla" };
+    case "liga": return { v: "liga", liga: D.ligas[p[1]] ? p[1] : first, tab: p[2] || "resumen" };
     case "partido": return { v: "partido", liga: p[1], id: p[2] };
     case "equipo": return { v: "equipo", liga: p[1], team: p[2] };
     case "registro": return { v: "registro", tab: p[1] };
@@ -97,31 +142,36 @@ function fromHash() {
 }
 let skipHash = false;
 function go(r, push = true) {
+  const keep = r.keepScroll;
   R = r; render();
   if (push) { const h = toHash(r); if (location.hash !== h) { skipHash = true; try { location.hash = h; } catch (e) {} } }
-  window.scrollTo({ top: 0 });
+  if (!keep) window.scrollTo({ top: 0 });
 }
 window.addEventListener("hashchange", () => { if (skipHash) { skipHash = false; return; } R = fromHash(); render(); });
 document.addEventListener("click", e => {
   const el = e.target.closest("[data-go]"); if (!el) return;
   const v = el.dataset.go;
-  if (v === "liga" && !el.dataset.liga) return go({ v: "liga", liga: R.liga && R.liga !== "todas" && D.ligas[R.liga] ? R.liga : ligasIds()[0], tab: "tabla" });
-  go({ v, liga: el.dataset.liga || (v === "inicio" ? "todas" : undefined), id: el.dataset.id, team: el.dataset.team, tab: el.dataset.tab });
+  go({ v, liga: el.dataset.liga || (v === "inicio" ? "todas" : undefined), id: el.dataset.id, team: el.dataset.team, tab: el.dataset.tab,
+       wk: el.dataset.wk, sort: el.dataset.sort, keepScroll: el.hasAttribute("data-keep") });
 });
 
 function render() {
-  document.querySelectorAll("nav.main button").forEach(b => b.setAttribute("aria-current", b.dataset.go === ({ partido: "inicio", equipo: "liga" }[R.v] || R.v) ? "page" : "false"));
+  timers.splice(0).forEach(clearInterval);
+  document.querySelectorAll("nav.main > button").forEach(b => b.setAttribute("aria-current", b.dataset.go === ({ partido: "inicio", equipo: "inicio", liga: "x" }[R.v] || R.v) ? "page" : "false"));
+  document.getElementById("dd-btn").setAttribute("aria-current", R.v === "liga" ? "page" : "false");
   const f = { inicio: vInicio, liga: vLiga, partido: vPartido, equipo: vEquipo, registro: vRegistro, metodo: vMetodo }[R.v] || vInicio;
   $app.innerHTML = f();
   if (R.v === "partido") bindOdds();
+  bindCarousels();
 }
 
 /* ---------------- componentes ---------------- */
-function chips(sel, v, extra = true) {
-  const ids = ligasIds();
-  return `<div class="chips" role="group" aria-label="Liga">${extra ? `<button class="chip-btn" data-go="${v}" data-liga="todas" aria-pressed="${sel === "todas"}">Todas</button>` : ""}` +
-    ids.map(id => `<button class="chip-btn" data-go="${v}" data-liga="${id}" data-tab="${R.tab || ""}" aria-pressed="${sel === id}">${esc(D.ligas[id].nombre)}</button>`).join("") + `</div>`;
-}
+const formHtml = f => `<span class="form">${(f || []).map(x => `<i class="${x}">${x}</i>`).join("")}</span>`;
+const kpi = (cls, l, v, s) => `<div class="kpi ${cls}"><span class="lbl">${l}</span><span class="v num">${v}</span>${s ? `<span class="s">${s}</span>` : ""}</div>`;
+const bar3 = (h, d, a) => `<span class="bars"><i style="width:${100 * h}%"></i><i style="width:${100 * d}%"></i><i style="width:${100 * a}%"></i></span>`;
+function zoneOf(L, pos) { return (L.zonas || []).find(z => pos >= z.desde && pos <= z.hasta); }
+function posTag(L, pos) { const z = zoneOf(L, pos); return `<span class="pos ${z ? "z-" + z.cls : ""}" ${z ? `title="${esc(z.nombre)}"` : ""}>${pos}</span>`; }
+
 function matchRow(p, showLeague) {
   const L = p.L || D.ligas[p.liga], fav = p.pH >= p.pA ? "h" : "a";
   const pick = p.pH >= p.pD && p.pH >= p.pA ? "1" : p.pA >= p.pD ? "2" : "X";
@@ -131,166 +181,395 @@ function matchRow(p, showLeague) {
       <span class="tline">${badge(L, p.home)}<span class="n ${fav === "h" ? "fav" : "und"}">${esc(corto(L, p.home))}</span></span>
       <span class="tline">${badge(L, p.away)}<span class="n ${fav === "a" ? "fav" : "und"}">${esc(corto(L, p.away))}</span></span>
     </span>
-    <span class="p3"><span class="bars"><i style="width:${100 * p.pH}%"></i><i style="width:${100 * p.pD}%"></i><i style="width:${100 * p.pA}%"></i></span>
-      <span class="nums"><span><b>${pct(p.pH)}</b></span><span>${pct(p.pD)}</span><span><b>${pct(p.pA)}</b></span></span></span>
+    <span class="p3">${bar3(p.pH, p.pD, p.pA)}<span class="nums"><span><b>${pct(p.pH)}</b></span><span>${pct(p.pD)}</span><span><b>${pct(p.pA)}</b></span></span></span>
     <span class="pick"><span class="s">${esc(p.top)}</span><span class="l">Pick ${pick}</span></span>
   </button>`;
 }
-function miniTable(L, n = 6) {
-  return `<table class="t"><thead><tr><th>#</th><th>Equipo</th><th class="n">PJ</th><th class="n">Pts</th></tr></thead><tbody>` +
-    L.tabla.slice(0, n).map(s => `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}"><td>${posTag(L, s.pos)}</td><td class="team">${badge(L, s.equipo)}${esc(corto(L, s.equipo))}</td><td class="n">${s.pj}</td><td class="n"><b>${s.pts}</b></td></tr>`).join("") +
-    `</tbody></table>`;
+function resultRow(L, x) {
+  return `<div class="rrow"><span class="num muted">${fecha(x.kickoff)}</span>
+    <span class="rt r">${esc(corto(L, x.home))}${badge(L, x.home)}</span>
+    <b class="score num">${x.hg} – ${x.ag}</b>
+    <span class="rt">${badge(L, x.away)}${esc(corto(L, x.away))}</span></div>`;
 }
-function posTag(L, pos) { const n = L.tabla.length; return `<span class="pos ${pos <= L.top ? "top" : pos > n - L.desc ? "desc" : ""}">${pos}</span>`; }
-const formHtml = f => `<span class="form">${(f || []).map(x => `<i class="${x}">${x}</i>`).join("")}</span>`;
-const kpi = (cls, l, v, s) => `<div class="kpi ${cls}"><span class="lbl">${l}</span><span class="v num">${v}</span>${s ? `<span class="s">${s}</span>` : ""}</div>`;
-
-/* ---------------- vistas ---------------- */
+function card(title, body, extra = "", cls = "") {
+  return `<article class="panel wcard ${cls}"><header class="wh"><h3>${title}</h3>${extra}</header>${body}</article>`;
+}
+function carousel(id, slides, label) {
+  if (!slides.length) return `<p class="note">Sin datos todavía.</p>`;
+  return `<div class="car" data-car="${id}" aria-roledescription="carrusel" aria-label="${esc(label)}">
+    <div class="car-track">${slides.map((s, i) => `<div class="car-slide" ${i ? "hidden" : ""}>${s}</div>`).join("")}</div>
+    ${slides.length > 1 ? `<div class="car-dots">${slides.map((_, i) => `<button aria-label="Ver ${i + 1} de ${slides.length}" aria-pressed="${i === 0}" data-i="${i}"></button>`).join("")}</div>` : ""}
+  </div>`;
+}
+function bindCarousels() {
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.querySelectorAll(".car").forEach(c => {
+    const slides = [...c.querySelectorAll(".car-slide")], dots = [...c.querySelectorAll(".car-dots button")];
+    if (slides.length < 2) return;
+    let i = 0, paused = false;
+    const show = k => { i = (k + slides.length) % slides.length; slides.forEach((s, j) => s.hidden = j !== i); dots.forEach((d, j) => d.setAttribute("aria-pressed", String(j === i))); };
+    dots.forEach(d => d.addEventListener("click", e => { e.stopPropagation(); show(+d.dataset.i); paused = true; }));
+    c.addEventListener("mouseenter", () => paused = true);
+    c.addEventListener("mouseleave", () => paused = false);
+    c.addEventListener("focusin", () => paused = true);
+    if (!reduce) timers.push(setInterval(() => { if (!paused && !document.hidden) show(i + 1); }, c.dataset.car === "hero" ? 7000 : 9000));
+  });
+}
+/* ---------------- INICIO ---------------- */
+let homeLiga = null;
 function vInicio() {
-  const sel = R.liga || "todas";
-  const now = Date.now(), lim = now + 7 * DAYMS;
-  const ms = allMatches().filter(p => (sel === "todas" || p.L.id === sel) && new Date(p.kickoff).getTime() <= lim && new Date(p.kickoff).getTime() >= now - 3 * 3600e3)
-    .sort((a, b) => a.kickoff.localeCompare(b.kickoff));
+  const P = D.indice.portada || {}, now = Date.now();
+  const hl = D.ligas[homeLiga] && D.ligas[homeLiga].tabla_ok ? homeLiga : (ligasIds().find(id => D.ligas[id].tabla_ok) || ligasIds()[0]);
+  const HL = D.ligas[hl];
+
+  // hero
+  const heroMs = (P.partidos || []).map(x => ({ ...findMatch(x.liga, x.id), L: D.ligas[x.liga] })).filter(p => p.id);
+  const hero = heroMs.map(p => {
+    const L = p.L, sh = rowOf(L, p.home), sa = rowOf(L, p.away);
+    return `<div class="hero-in">
+      <div class="hero-top">${leagueMark(L, "sm")}<span>${esc(L.nombre)}</span><span class="faint">·</span><span>${esc(cuando(p.kickoff))}</span></div>
+      <div class="hero-face">
+        <button class="ht" data-go="equipo" data-liga="${L.id}" data-team="${esc(p.home)}">${badge(L, p.home, "xl")}<b>${esc(corto(L, p.home))}</b>${formHtml(sh.forma)}</button>
+        <div class="hero-mid"><span class="xg num">${dec(p.lh, 1)} <span class="faint">–</span> ${dec(p.la, 1)}</span><span class="lbl">goles esperados</span></div>
+        <button class="ht" data-go="equipo" data-liga="${L.id}" data-team="${esc(p.away)}">${badge(L, p.away, "xl")}<b>${esc(corto(L, p.away))}</b>${formHtml(sa.forma)}</button>
+      </div>
+      <div class="hero-p">${bar3(p.pH, p.pD, p.pA)}<div class="nums"><span><b>${pct(p.pH)}</b> local</span><span>${pct(p.pD)} empate</span><span>visita <b>${pct(p.pA)}</b></span></div></div>
+      <div class="row hero-cta"><button class="btn" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}">Ver análisis</button><button class="btn ghost" data-go="liga" data-liga="${L.id}" data-tab="partidos">Partidos de ${esc(L.nombre)}</button></div>
+    </div>`;
+  });
+
+  // jugador destacado
+  const jug = (P.jugadores || []).map(j => {
+    const L = D.ligas[j.liga], p = findMatch(j.liga, j.partido); if (!L || !p) return "";
+    const rival = p.home === j.equipo ? p.away : p.home;
+    return `<div class="fp">
+      <div class="fp-head">${badge(L, j.equipo, "lg")}<div><b class="fp-name">${esc(j.jugador)}</b><span class="muted">${esc(corto(L, j.equipo))} · ${esc(L.nombre)}</span></div></div>
+      <div class="fp-big"><span class="lbl">Probabilidad de marcar</span><span class="v num">${pct(j.p)}</span><span class="muted">vs ${esc(corto(L, rival))} · ${esc(cuando(p.kickoff))}</span></div>
+      <div class="fp-stats"><span><b class="num">${j.goles}</b> goles en la temporada</span><span class="l5">${(j.ult5 || []).map(g => `<i class="${g ? "on" : ""}">${g || "·"}</i>`).join("")}<small>últimos 5</small></span></div>
+      <button class="btn ghost sm" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}">Ver partido</button></div>`;
+  }).filter(Boolean);
+
+  // equipo en forma
+  const eqs = (P.equipos || []).map(e => {
+    const L = D.ligas[e.liga]; if (!L) return "";
+    const s = rowOf(L, e.equipo), st = statOf(L, e.equipo);
+    return `<div class="fp">
+      <div class="fp-head">${badge(L, e.equipo, "lg")}<div><b class="fp-name">${esc(corto(L, e.equipo))}</b><span class="muted">${esc(L.nombre)} · ${s.pos}º con ${s.pts} pts</span></div></div>
+      <div class="row" style="justify-content:space-between"><span class="lbl">Últimos 5</span>${formHtml(s.forma)}</div>
+      <div class="sgrid">
+        <div><span class="lbl">Goles/PJ</span><b class="num">${dec(st.gf)}</b></div><div><span class="lbl">Recibe/PJ</span><b class="num">${dec(st.gc)}</b></div>
+        <div><span class="lbl">Tiros al arco</span><b class="num">${dec(st.tiros_arco, 1)}</b></div><div><span class="lbl">Córners</span><b class="num">${dec(st.corners, 1)}</b></div>
+        <div><span class="lbl">Posesión</span><b class="num">${st.posesion != null ? dec(st.posesion, 0) + " %" : "—"}</b></div><div><span class="lbl">Tarjetas</span><b class="num">${dec(st.tarjetas, 1)}</b></div>
+      </div>
+      <button class="btn ghost sm" data-go="equipo" data-liga="${L.id}" data-team="${esc(e.equipo)}">Ver equipo</button></div>`;
+  }).filter(Boolean);
+
+  // proyección del partido destacado
+  const fx = heroMs[0];
+  let proy = `<p class="note">Sin partidos próximos.</p>`;
+  if (fx) {
+    const L = fx.L, mk = markets(matrix(L.modelo, fx.home, fx.away).m);
+    const ct = fx.ch != null ? fx.ch + fx.ca : null, tt = fx.th != null ? fx.th + fx.ta : null;
+    proy = `<div class="proj">
+      <div class="proj-t">${badge(L, fx.home)}<b>${esc(corto(L, fx.home))}</b><span class="num xg2">${dec(fx.lh, 1)}</span><span class="faint">–</span><span class="num xg2">${dec(fx.la, 1)}</span><b>${esc(corto(L, fx.away))}</b>${badge(L, fx.away)}</div>
+      <div class="p3">${bar3(mk.H, mk.D, mk.A)}</div>
+      <div class="oddsrow">${[["1", mk.H], ["X", mk.D], ["2", mk.A]].map(([k, v]) => `<div><span class="lbl">${k}</span><b class="num">${dec(1 / v)}</b><small>${pct(v)}</small></div>`).join("")}</div>
+      <div class="oddsrow">${[["+2,5 goles", mk.O25], ["Ambos marcan", mk.B]].map(([k, v]) => `<div><span class="lbl">${k}</span><b class="num">${dec(1 / v)}</b><small>${pct(v)}</small></div>`).join("")}
+        ${ct != null ? `<div><span class="lbl">Córners</span><b class="num">${dec(ct, 1)}</b><small>esperados</small></div>` : ""}${tt != null ? `<div><span class="lbl">Tarjetas</span><b class="num">${dec(tt, 1)}</b><small>esperadas</small></div>` : ""}</div>
+      <p class="note">Cuota justa = 1 / probabilidad, sin margen de casa.</p></div>`;
+  }
+
+  // ranking de fuerza y tabla (por liga)
+  const rk = [...HL.tabla].sort((a, b) => b.ataque / b.defensa - a.ataque / a.defensa).slice(0, 7);
+  const rank = `<table class="t compact"><thead><tr><th>#</th><th>Equipo</th><th class="n">Atq</th><th class="n">Def</th><th class="n">Global</th></tr></thead><tbody>` +
+    rk.map((s, i) => `<tr class="click" data-go="equipo" data-liga="${HL.id}" data-team="${esc(s.equipo)}"><td><span class="pos">${i + 1}</span></td><td class="team">${badge(HL, s.equipo)}${esc(corto(HL, s.equipo))}</td><td class="n">${dec(s.ataque)}</td><td class="n">${dec(s.defensa)}</td><td class="n"><b>${sgn(Math.round((s.ataque / s.defensa - 1) * 100))}</b></td></tr>`).join("") + `</tbody></table>`;
+  const tabla = `<table class="t compact"><thead><tr><th>#</th><th>Equipo</th><th class="n">PJ</th><th class="n">DG</th><th class="n">Pts</th></tr></thead><tbody>` +
+    HL.tabla.slice(0, 8).map(s => `<tr class="click" data-go="equipo" data-liga="${HL.id}" data-team="${esc(s.equipo)}"><td>${posTag(HL, s.pos)}</td><td class="team">${badge(HL, s.equipo)}${esc(corto(HL, s.equipo))}</td><td class="n">${s.pj}</td><td class="n">${sgn(s.dg)}</td><td class="n"><b>${s.pts}</b></td></tr>`).join("") + `</tbody></table>`;
+  const sw = `<div class="chips mini" role="group" aria-label="Liga">${ligasIds().filter(id => D.ligas[id].tabla_ok).map(id => `<button class="chip-btn" data-hl="${id}" data-go="inicio" data-liga="${R.liga || "todas"}" data-keep aria-pressed="${id === hl}">${esc(D.ligas[id].nombre)}</button>`).join("")}</div>`;
+
+  // próximos y trío
+  const soon = allMatches().filter(p => new Date(p.kickoff).getTime() >= now).sort((a, b) => a.kickoff.localeCompare(b.kickoff)).slice(0, 6);
+  const prox = soon.map(p => `<button class="nrow" data-go="partido" data-liga="${p.L.id}" data-id="${esc(p.id)}"><span class="lbl">${esc(p.L.nombre)} · ${esc(cuando(p.kickoff))}</span>
+     <span class="tline">${badge(p.L, p.home)}<span class="n">${esc(corto(p.L, p.home))}</span><span class="faint">vs</span><span class="n">${esc(corto(p.L, p.away))}</span>${badge(p.L, p.away)}</span></button>`).join("");
+  const wk = allMatches().filter(p => { const t = new Date(p.kickoff).getTime(); return t >= now && t <= now + 7 * DAYMS; })
+    .map(p => { const ks = [["H", p.pH, p.home], ["A", p.pA, p.away]].sort((a, b) => b[1] - a[1])[0]; return { p, k: ks[0], pr: ks[1], t: ks[2] }; })
+    .sort((a, b) => b.pr - a.pr).slice(0, 3);
+  const comb = wk.reduce((s, x) => s * x.pr, 1);
+  const trio = wk.length ? wk.map(x => `<button class="leg" data-go="partido" data-liga="${x.p.L.id}" data-id="${esc(x.p.id)}">${badge(x.p.L, x.t)}<span><b>${esc(corto(x.p.L, x.t))}</b> gana<small>${esc(corto(x.p.L, x.p.home))} vs ${esc(corto(x.p.L, x.p.away))} · ${esc(cuando(x.p.kickoff))}</small></span><span class="num pr">${pct(x.pr)}</span></button>`).join("") +
+    `<div class="trio-tot"><span>Las tres juntas</span><b class="num">${pct(comb, 1)}</b><span class="muted">cuota justa <b class="num">${dec(1 / comb)}</b></span></div>` : `<p class="note">Sin partidos esta semana.</p>`;
+
+  // rachas
+  const rach = (P.rachas || []).map(s => { const L = D.ligas[s.liga]; return L ? `<button class="srow" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}">${badge(L, s.equipo)}<span><b>${esc(corto(L, s.equipo))}</b><small>${esc(s.texto)}</small></span><span class="sn num">${s.n}</span></button>` : ""; }).join("") || `<p class="note">Sin rachas destacadas.</p>`;
+
+  // rendimiento del modelo
+  const g = D.registro;
+  const perf = g && g.n ? `<div class="kpis two">${kpi("m", "Acierto 1X2", pct(g.acierto_1x2), `${g.n} partidos`)}${kpi("", "Log-loss", dec(g.logloss, 3), `ingenuo ${dec(g.logloss_ingenuo, 3)}`)}</div>${spark(g.serie)}`
+    : `<p class="note">Cada predicción queda guardada antes del partido y se califica después. El registro se llena con los primeros resultados.</p>`;
+
+  // lista de todos los partidos
+  const sel = R.liga || "todas", lim = now + 7 * DAYMS;
+  const ms = allMatches().filter(p => (sel === "todas" || p.L.id === sel) && new Date(p.kickoff).getTime() <= lim && new Date(p.kickoff).getTime() >= now - 3 * 3600e3).sort((a, b) => a.kickoff.localeCompare(b.kickoff));
   const groups = {}; ms.forEach(p => (groups[dayKey(p.kickoff)] ||= []).push(p));
   const list = Object.keys(groups).length ? Object.entries(groups).map(([k, arr]) => `<div class="day">${esc(dayLabel(k))}</div>` + arr.map(p => matchRow(p, sel === "todas")).join("")).join("")
     : `<div class="empty">No hay partidos en los próximos 7 días${sel !== "todas" ? " para esta liga" : ""}.</div>`;
-  const reg = D.registro;
-  const claros = allMatches().filter(p => new Date(p.kickoff).getTime() <= lim && new Date(p.kickoff).getTime() >= now).map(p => ({ p, m: Math.max(p.pH, p.pA) })).sort((a, b) => b.m - a.m).slice(0, 5);
-  const Lmini = D.ligas[sel] || D.ligas[ligasIds()[0]];
+  const chips = `<div class="chips" role="group" aria-label="Liga"><button class="chip-btn" data-go="inicio" data-liga="todas" data-keep aria-pressed="${sel === "todas"}">Todas</button>` +
+    ligasIds().map(id => `<button class="chip-btn" data-go="inicio" data-liga="${id}" data-keep aria-pressed="${sel === id}">${esc(D.ligas[id].nombre)}</button>`).join("") + `</div>`;
+
   return `<section class="view" aria-labelledby="h-inicio">
-    <div class="row" style="justify-content:space-between"><h1 id="h-inicio">Partidos de la semana</h1></div>
-    ${chips(sel, "inicio")}
-    <div class="layout">
-      <div class="panel flush">${list}</div>
-      <aside class="stack">
-        <div class="panel stack">
-          <div class="row" style="justify-content:space-between"><h3>Registro del modelo</h3><button class="back" data-go="registro">Ver todo</button></div>
-          ${reg && reg.n ? `<div class="kpis">${kpi("m", "Acierto 1X2", pct(reg.acierto_1x2), `${reg.n} partidos`)}${kpi("", "Log-loss", dec(reg.logloss, 3), `ingenuo ${dec(reg.logloss_ingenuo, 3)}`)}</div>`
-            : `<p class="note">Cada predicción se guarda antes del partido y se califica después. El registro empieza a llenarse con los primeros resultados.</p>`}
-        </div>
-        <div class="panel stack"><h3>Más claros de la semana</h3>
-          ${claros.map(({ p, m }) => `<button class="mrow" style="grid-template-columns:minmax(0,1fr) auto;padding:8px 0" data-go="partido" data-liga="${p.L.id}" data-id="${esc(p.id)}">
-            <span class="tline">${badge(p.L, p.pH >= p.pA ? p.home : p.away)}<span class="n">${esc(corto(p.L, p.pH >= p.pA ? p.home : p.away))} <span class="faint" style="font-weight:500">vs ${esc(corto(p.L, p.pH >= p.pA ? p.away : p.home))}</span></span></span>
-            <span class="num" style="color:var(--card);font-weight:600">${pct(m)}</span></button>`).join("") || `<p class="note">Sin partidos próximos.</p>`}
-        </div>
-        <div class="panel flush"><div class="ph"><h3>${esc(Lmini.nombre)}</h3><button class="back" data-go="liga" data-liga="${Lmini.id}" data-tab="tabla">Tabla</button></div><div class="scroll">${miniTable(Lmini)}</div></div>
-      </aside>
-    </div></section>`;
+    <h1 id="h-inicio" class="sr">Ballytics: probabilidades de fútbol</h1>
+    <div class="hero panel">${carousel("hero", hero, "Partidos destacados")}</div>
+    <div class="cards">
+      ${card("Jugador destacado", carousel("jug", jug, "Jugadores destacados"), `<span class="tag">Goleadores</span>`, "accent")}
+      ${card("Equipo en forma", carousel("eq", eqs, "Equipos en forma"), `<span class="tag">Últimos 5</span>`)}
+      ${card("Proyección del partido", proy, fx ? `<span class="tag">${esc(fx.L.nombre)}</span>` : "")}
+      ${card("Ranking de fuerza", `${sw}<div class="scroll">${rank}</div><button class="link" data-go="liga" data-liga="${hl}" data-tab="fuerza">Ranking completo →</button>`)}
+      ${card("Tabla", `${sw}<div class="scroll">${tabla}</div><button class="link" data-go="liga" data-liga="${hl}" data-tab="tabla">Tabla completa →</button>`)}
+      ${card("Próximos partidos", `<div class="nlist">${prox}</div>`)}
+      ${card("Trío más probable", `<div class="trio">${trio}</div>`, `<span class="tag">Esta semana</span>`, "dark")}
+      ${card("Rachas activas", `<div class="slist">${rach}</div>`)}
+      ${card("Rendimiento del modelo", `${perf}<button class="link" data-go="registro">Ver registro →</button>`, `<span class="tag">Público</span>`)}
+    </div>
+    <div class="row" style="justify-content:space-between"><h2>Todos los partidos de la semana</h2></div>
+    ${chips}
+    <div class="panel flush">${list}</div>
+  </section>`;
 }
+function spark(serie) {
+  if (!serie || serie.length < 2) return "";
+  const W = 300, H = 70, ys = serie.map(s => s.acierto), y0 = Math.min(...ys) - .03, y1 = Math.max(...ys) + .03;
+  const x = i => 4 + i * (W - 8) / (serie.length - 1), y = v => H - 6 - (v - y0) * (H - 12) / (y1 - y0 || 1);
+  const pts = serie.map((s, i) => `${x(i).toFixed(1)},${y(s.acierto).toFixed(1)}`).join(" ");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" class="spark" role="img" aria-label="Acierto acumulado"><polyline points="${pts} ${x(serie.length - 1)},${H} 4,${H}" fill="rgba(61,139,255,.14)" stroke="none"/><polyline points="${pts}" fill="none" stroke="#3d8bff" stroke-width="2"/><circle cx="${x(serie.length - 1)}" cy="${y(ys[ys.length - 1])}" r="3.5" fill="#3d8bff"/></svg><p class="note">Acierto acumulado del resultado más probable.</p>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-hl]"); if (b) homeLiga = b.dataset.hl; }, true);
 
+/* ---------------- LIGA ---------------- */
+let sortState = { col: null, dir: -1 };
 function vLiga() {
-  const L = D.ligas[R.liga] || D.ligas[ligasIds()[0]], tab = R.tab || "tabla";
-  const tabs = [["tabla", "Tabla"], ["proyeccion", "Proyección"], ["fuerza", "Fuerza"], ["calendario", "Calendario"], ["resultados", "Resultados"]];
-  let body = "";
-  const row = s => `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}">`;
-  if (tab === "tabla") body = `<table class="t"><thead><tr><th>#</th><th>Equipo</th><th class="n">PJ</th><th class="n hide-m">G</th><th class="n hide-m">E</th><th class="n hide-m">P</th><th class="n hide-m">GF</th><th class="n hide-m">GC</th><th class="n">DG</th><th class="n">Pts</th><th class="hide-m">Forma</th></tr></thead><tbody>` +
-    L.tabla.map(s => `${row(s)}<td>${posTag(L, s.pos)}</td><td class="team">${badge(L, s.equipo)}${esc(corto(L, s.equipo))}</td><td class="n">${s.pj}</td><td class="n hide-m">${s.g}</td><td class="n hide-m">${s.e}</td><td class="n hide-m">${s.p}</td><td class="n hide-m">${s.gf}</td><td class="n hide-m">${s.gc}</td><td class="n">${sgn(s.dg)}</td><td class="n"><b>${s.pts}</b></td><td class="hide-m">${formHtml(s.forma)}</td></tr>`).join("") + `</tbody></table>`;
-  if (tab === "proyeccion") {
-    const t = [...L.tabla].sort((a, b) => (b.pts_esp ?? 0) - (a.pts_esp ?? 0));
-    const pb = (v, cls = "") => `<div class="pbar ${cls}"><span class="tr"><i style="width:${100 * (v || 0)}%"></i></span><span class="num">${v < 0.005 ? "<1 %" : pct(v)}</span></div>`;
-    body = `<table class="t"><thead><tr><th>#</th><th>Equipo</th><th class="n hide-m">Pts hoy</th><th class="n">Pts finales</th><th class="n">Campeón</th><th class="n hide-m">Top ${L.top}</th><th class="n">Descenso</th></tr></thead><tbody>` +
-      t.map((s, i) => `${row(s)}<td><span class="pos">${i + 1}</span></td><td class="team">${badge(L, s.equipo)}${esc(corto(L, s.equipo))}</td><td class="n hide-m">${s.pts}</td><td class="n"><b>${dec(s.pts_esp, 1)}</b></td><td>${pb(s.p_campeon, "gold")}</td><td class="hide-m">${pb(s.p_top)}</td><td>${pb(s.p_desc, "bad")}</td></tr>`).join("") +
-      `</tbody></table><p class="note" style="padding:12px 16px">10.000 simulaciones del resto de la temporada con el modelo actual. Descenso = terminar en los últimos ${L.desc}. Los empates en puntos se resuelven al azar.</p>`;
-  }
-  if (tab === "fuerza") {
-    const t = [...L.tabla].sort((a, b) => (b.ataque / b.defensa) - (a.ataque / a.defensa));
-    const mx = Math.max(...t.map(s => s.ataque / s.defensa));
-    body = `<table class="t"><thead><tr><th>#</th><th>Equipo</th><th class="n">Ataque</th><th class="n">Defensa</th><th>Fuerza global</th></tr></thead><tbody>` +
-      t.map((s, i) => `${row(s)}<td><span class="pos">${i + 1}</span></td><td class="team">${badge(L, s.equipo)}${esc(corto(L, s.equipo))}</td><td class="n">${dec(s.ataque)}</td><td class="n">${dec(s.defensa)}</td><td style="width:35%"><div class="pbar" style="justify-content:flex-start"><span class="tr" style="width:100%"><i style="width:${(100 * (s.ataque / s.defensa) / mx).toFixed(1)}%"></i></span></div></td></tr>`).join("") +
-      `</tbody></table><p class="note" style="padding:12px 16px">Ataque: goles que marca frente a una defensa promedio (1,00 = promedio de la liga). Defensa: goles que recibe; menos es mejor.</p>`;
-  }
-  if (tab === "calendario") {
-    const ps = L.partidos.slice(0, 40), g = {};
-    ps.forEach(p => (g[dayKey(p.kickoff)] ||= []).push(p));
-    body = Object.entries(g).map(([k, a]) => `<div class="day">${esc(dayLabel(k))}</div>` + a.map(p => matchRow(p, false)).join("")).join("") || `<div class="empty">Sin calendario disponible.</div>`;
-  }
-  if (tab === "resultados") body = resultsTable(L, L.resultados.slice(0, 60));
+  const L = D.ligas[R.liga] || D.ligas[ligasIds()[0]];
+  const tabs = [["resumen", "Resumen"], ["tabla", "Tabla"], ["partidos", "Partidos"], ["estadisticas", "Estadísticas"], ["jugadores", "Jugadores"],
+    ["rachas", "Rachas"], ["corners", "Córners y tarjetas"], ["proyeccion", "Proyección"], ["fuerza", "Fuerza"]].filter(([k]) => L.tabla_ok || !["tabla", "proyeccion"].includes(k));
+  const tab = tabs.some(t => t[0] === R.tab) ? R.tab : "resumen";
+  const body = ({ resumen: lResumen, tabla: lTabla, partidos: lPartidos, estadisticas: lStats, jugadores: lJug, rachas: lRachas, corners: lCorners, proyeccion: lProy, fuerza: lFuerza }[tab])(L);
   return `<section class="view" aria-labelledby="h-liga">
-    <div class="row" style="justify-content:space-between"><h1 id="h-liga">${esc(L.nombre)}</h1><span class="stamp">Datos hasta <b>${fecha(L.datos_hasta + "T12:00")}</b></span></div>
-    ${chips(L.id, "liga", false)}
-    <div class="tabs2" role="group" aria-label="Vista">${tabs.map(([k, n]) => `<button data-go="liga" data-liga="${L.id}" data-tab="${k}" aria-pressed="${k === tab}">${n}</button>`).join("")}</div>
-    <div class="panel flush scroll">${body}</div></section>`;
+    <div class="lhead panel">${leagueMark(L, "xl")}<div><h1 id="h-liga">${esc(L.nombre)}</h1><span class="muted">${esc(L.pais)} · datos hasta ${L.datos_hasta ? fecha(L.datos_hasta + "T12:00") : "—"}</span></div></div>
+    <div class="tabs2 wide" role="group" aria-label="Sección">${tabs.map(([k, n]) => `<button data-go="liga" data-liga="${L.id}" data-tab="${k}" aria-pressed="${k === tab}">${n}</button>`).join("")}</div>
+    ${body}</section>`;
 }
-function resultsTable(L, rs) {
-  if (!rs.length) return `<div class="empty">Todavía no hay resultados esta temporada.</div>`;
-  return `<table class="t"><tbody>` + rs.map(x => `<tr><td class="num muted" style="width:70px">${fecha(x.kickoff)}</td>
-    <td style="text-align:right;font-weight:${x.hg > x.ag ? 700 : 500}">${esc(corto(L, x.home))}</td>
-    <td class="n" style="text-align:center;width:70px"><b>${x.hg} – ${x.ag}</b></td>
-    <td style="font-weight:${x.ag > x.hg ? 700 : 500}">${esc(corto(L, x.away))}</td></tr>`).join("") + `</tbody></table>`;
+function zonesLegend(L) {
+  if (!L.zonas || !L.zonas.length) return "";
+  const seen = new Set();
+  return `<div class="legend">${L.zonas.filter(z => !seen.has(z.nombre) && seen.add(z.nombre)).map(z => `<span><i class="z-${z.cls}"></i>${esc(z.nombre)}</span>`).join("")}</div>`;
+}
+function fullTable(L, compact = false) {
+  if (!L.tabla_ok) return `<div class="empty">Esta competición se juega por grupos o fases; aquí mostramos partidos, estadísticas y jugadores.</div>`;
+  const row = s => `<tr class="click zrow ${zoneOf(L, s.pos) ? "z-" + zoneOf(L, s.pos).cls : ""}" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}">`;
+  return `<table class="t"><thead><tr><th>#</th><th>Equipo</th><th class="n">PJ</th>${compact ? "" : `<th class="n hide-m">G</th><th class="n hide-m">E</th><th class="n hide-m">P</th><th class="n hide-m">GF</th><th class="n hide-m">GC</th>`}<th class="n">DG</th><th class="n">Pts</th>${compact ? "" : `<th class="hide-m">Forma</th>`}</tr></thead><tbody>` +
+    L.tabla.map(s => `${row(s)}<td>${posTag(L, s.pos)}</td><td class="team">${badge(L, s.equipo)}${esc(corto(L, s.equipo))}</td><td class="n">${s.pj}</td>${compact ? "" : `<td class="n hide-m">${s.g}</td><td class="n hide-m">${s.e}</td><td class="n hide-m">${s.p}</td><td class="n hide-m">${s.gf}</td><td class="n hide-m">${s.gc}</td>`}<td class="n">${sgn(s.dg)}</td><td class="n"><b>${s.pts}</b></td>${compact ? "" : `<td class="hide-m">${formHtml(s.forma)}</td>`}</tr>`).join("") +
+    `</tbody></table>${zonesLegend(L)}`;
+}
+function lTabla(L) { return `<div class="panel flush scroll">${fullTable(L)}</div>`; }
+function weeks(L) {
+  const w = {};
+  L.resultados.forEach(x => (w[weekStart(x.kickoff)] ||= { res: [], fx: [] }).res.push(x));
+  L.partidos.forEach(p => (w[weekStart(p.kickoff)] ||= { res: [], fx: [] }).fx.push(p));
+  return w;
+}
+function weekWidget(L, sel) {
+  const W = weeks(L), keys = Object.keys(W).sort();
+  if (!keys.length) return `<div class="empty">Sin partidos.</div>`;
+  const cur = weekStart(new Date().toISOString());
+  let k = sel && W[sel] ? sel : (keys.find(x => x >= cur) || keys[keys.length - 1]);
+  const i = keys.indexOf(k), wkd = W[k];
+  const [y, m, d] = k.split("-").map(Number), end = new Date(y, m - 1, d + 6);
+  const lab = `${new Date(y, m - 1, d).toLocaleDateString("es-CL", { day: "numeric", month: "short" })} – ${end.toLocaleDateString("es-CL", { day: "numeric", month: "short" })}`;
+  const nav = (j, t) => j >= 0 && j < keys.length ? `<button class="wbtn" data-go="liga" data-liga="${L.id}" data-tab="${R.tab || "partidos"}" data-wk="${keys[j]}" data-keep aria-label="${t}">${t === "Semana anterior" ? "‹" : "›"}</button>` : `<span class="wbtn off" aria-hidden="true">·</span>`;
+  const res = [...wkd.res].sort((a, b) => a.kickoff.localeCompare(b.kickoff)).map(x => resultRow(L, x)).join("");
+  const fx = wkd.fx.map(p => matchRow(p, false)).join("");
+  return `<div class="wnav">${nav(i - 1, "Semana anterior")}<b>Semana del ${esc(lab)}</b>${nav(i + 1, "Semana siguiente")}</div>${res ? `<div class="rlist">${res}</div>` : ""}${fx}`;
+}
+function lPartidos(L) { return `<div class="panel flush">${weekWidget(L, R.wk)}</div>`; }
+function scorersTable(L, n = 25, team = null) {
+  const gs = (L.goleadores || []).filter(g => !team || g.equipo === team).slice(0, n);
+  if (!gs.length) return `<div class="empty">Sin goles registrados todavía.</div>`;
+  return `<table class="t"><thead><tr><th>#</th><th>Jugador</th><th class="n">Goles</th><th class="n hide-m">Penales</th><th>Últimos 5</th></tr></thead><tbody>` +
+    gs.map((g, i) => `<tr><td><span class="pos">${i + 1}</span></td><td class="team">${badge(L, g.equipo)}<span>${esc(g.jugador)}${team ? "" : `<small class="faint" style="display:block;font-weight:500">${esc(corto(L, g.equipo))}</small>`}</span></td><td class="n"><b>${g.goles}</b></td><td class="n hide-m">${g.penales}</td><td><span class="l5">${(g.ult5 || []).map(v => `<i class="${v ? "on" : ""}">${v || "·"}</i>`).join("")}</span></td></tr>`).join("") + `</tbody></table>`;
+}
+function cardsTable(L, n = 20) {
+  const ts = (L.amonestados || []).slice(0, n);
+  if (!ts.length) return `<div class="empty">Sin tarjetas registradas.</div>`;
+  return `<table class="t"><thead><tr><th>#</th><th>Jugador</th><th class="n">Amarillas</th><th class="n">Rojas</th></tr></thead><tbody>` +
+    ts.map((g, i) => `<tr><td><span class="pos">${i + 1}</span></td><td class="team">${badge(L, g.equipo)}<span>${esc(g.jugador)}<small class="faint" style="display:block;font-weight:500">${esc(corto(L, g.equipo))}</small></span></td><td class="n"><span class="ycard"></span> ${g.amarillas}</td><td class="n">${g.rojas ? `<span class="rcard"></span> ${g.rojas}` : "—"}</td></tr>`).join("") + `</tbody></table>`;
+}
+function lJug(L) {
+  return `<div class="grid2"><div class="panel flush"><div class="ph"><h3>Goleadores</h3></div><div class="scroll">${scorersTable(L)}</div></div>
+    <div class="panel flush"><div class="ph"><h3>Más amonestados</h3></div><div class="scroll">${cardsTable(L)}</div></div></div>
+    <p class="note">Goles y tarjetas según el detalle de cada partido publicado por ESPN. No incluye autogoles.</p>`;
+}
+const STAT_COLS = [["pj", "PJ", 0], ["gf", "Goles", 2], ["gc", "Recibe", 2], ["tiros", "Tiros", 1], ["tiros_arco", "Al arco", 1], ["corners", "Córners", 1],
+  ["posesion", "Posesión", 0], ["faltas", "Faltas", 1], ["tarjetas", "Tarjetas", 1], ["ambos", "Ambos marcan", -1], ["over25", "+2,5 goles", -1], ["vallas", "Vallas inv.", 0]];
+function lStats(L) {
+  const col = R.sort && STAT_COLS.some(c => c[0] === R.sort) ? R.sort : "gf";
+  const rows = [...(L.stats || [])].filter(s => s.pj).sort((a, b) => (b[col] ?? -1) - (a[col] ?? -1));
+  const fmt = (v, d) => v == null ? "—" : d === -1 ? pct(v) : dec(v, d);
+  return `<div class="panel flush scroll"><table class="t sortable"><thead><tr><th>Equipo</th>${STAT_COLS.map(([k, n]) => `<th class="n"><button class="sbtn" data-go="liga" data-liga="${L.id}" data-tab="estadisticas" data-sort="${k}" data-keep aria-pressed="${k === col}">${n}${k === col ? " ↓" : ""}</button></th>`).join("")}</tr></thead><tbody>` +
+    rows.map(s => `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}"><td class="team">${badge(L, s.equipo)}${esc(corto(L, s.equipo))}</td>${STAT_COLS.map(([k, , d]) => `<td class="n ${k === col ? "hl" : ""}">${fmt(s[k], d)}</td>`).join("")}</tr>`).join("") +
+    `</tbody></table></div><p class="note">Promedios por partido en la temporada actual. Toca una columna para ordenar.</p>`;
+}
+function rachasList(L, rs) {
+  if (!rs.length) return `<div class="empty">Ninguna racha de 3 o más partidos.</div>`;
+  return `<div class="slist">${rs.map(s => `<button class="srow" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}">${badge(L, s.equipo)}<span><b>${esc(corto(L, s.equipo))}</b><small>${esc(s.texto)}</small></span><span class="sn num">${s.n}</span></button>`).join("")}</div>`;
+}
+function lRachas(L) {
+  const by = {}; (L.rachas || []).forEach(s => (by[s.texto] ||= []).push(s));
+  const keys = Object.keys(by);
+  if (!keys.length) return `<div class="panel empty">Ninguna racha de 3 o más partidos.</div>`;
+  return `<div class="cards">${keys.map(k => card(k[0].toUpperCase() + k.slice(1), rachasList(L, by[k].slice(0, 8)))).join("")}</div>`;
+}
+function lCorners(L) {
+  const up = L.partidos.filter(p => p.ch != null || p.th != null).slice(0, 12);
+  const st = [...(L.stats || [])].filter(s => s.pj).sort((a, b) => (b.corners ?? 0) - (a.corners ?? 0));
+  const rows = up.map(p => {
+    const c = p.ch != null ? p.ch + p.ca : null, t = p.th != null ? p.th + p.ta : null;
+    return `<tr class="click" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}"><td class="num muted">${fecha(p.kickoff)}</td><td>${esc(corto(L, p.home))} – ${esc(corto(L, p.away))}</td>
+      <td class="n">${dec(c, 1)}</td><td class="n">${c != null ? pct(poisOver(9.5, c)) : "—"}</td><td class="n">${dec(t, 1)}</td><td class="n">${t != null ? pct(poisOver(4.5, t)) : "—"}</td></tr>`;
+  }).join("");
+  return `<div class="panel flush scroll"><div class="ph"><h3>Próximos partidos</h3></div><table class="t"><thead><tr><th>Fecha</th><th>Partido</th><th class="n">Córners esp.</th><th class="n">+9,5 córners</th><th class="n">Tarjetas esp.</th><th class="n">+4,5 tarjetas</th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="empty">Sin datos de córners o tarjetas para esta liga.</td></tr>`}</tbody></table></div>
+    <div class="panel flush scroll"><div class="ph"><h3>Promedios por equipo</h3></div><table class="t"><thead><tr><th>Equipo</th><th class="n">Córners a favor</th><th class="n">Córners en contra</th><th class="n">Tarjetas</th><th class="n">Faltas</th></tr></thead><tbody>` +
+    st.map(s => `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}"><td class="team">${badge(L, s.equipo)}${esc(corto(L, s.equipo))}</td><td class="n">${dec(s.corners, 1)}</td><td class="n">${dec(s.corners_rival, 1)}</td><td class="n">${dec(s.tarjetas, 1)}</td><td class="n">${dec(s.faltas, 1)}</td></tr>`).join("") +
+    `</tbody></table></div><p class="note">Córners y tarjetas usan el mismo modelo de ataque y defensa que los goles. No consideran al árbitro, que influye mucho en las tarjetas.</p>`;
+}
+function lProy(L) {
+  const t = [...L.tabla].sort((a, b) => (b.pts_esp ?? 0) - (a.pts_esp ?? 0));
+  const zs = []; (L.zonas || []).forEach(z => { if (!zs.some(x => x.cls === z.cls)) zs.push(z); });
+  const pb = (v, cls = "") => `<div class="pbar ${cls}"><span class="tr"><i style="width:${100 * (v || 0)}%"></i></span><span class="num">${!v || v < 0.005 ? "<1 %" : pct(v)}</span></div>`;
+  const zname = z => z.cls === "desc" ? "Descenso" : z.nombre.replace(" (fase de grupos)", "").replace(" (previa)", "");
+  return `<div class="panel flush scroll"><table class="t"><thead><tr><th>#</th><th>Equipo</th><th class="n hide-m">Pts hoy</th><th class="n">Pts finales</th><th class="n">Campeón</th>${zs.map(z => `<th class="n hide-m">${esc(zname(z))}</th>`).join("")}</tr></thead><tbody>` +
+    t.map((s, i) => `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}"><td><span class="pos">${i + 1}</span></td><td class="team">${badge(L, s.equipo)}${esc(corto(L, s.equipo))}</td><td class="n hide-m">${s.pts}</td><td class="n"><b>${dec(s.pts_esp, 1)}</b></td><td>${pb(s.p_campeon, "gold")}</td>${zs.map(z => `<td class="hide-m">${pb((s.zonas || {})[z.cls], z.cls === "desc" ? "bad" : "")}</td>`).join("")}</tr>`).join("") +
+    `</tbody></table></div><p class="note">10.000 simulaciones del resto de la temporada con el modelo actual.</p>`;
+}
+function lFuerza(L) {
+  const t = [...L.tabla].sort((a, b) => (b.ataque / b.defensa) - (a.ataque / a.defensa));
+  const mx = Math.max(...t.map(s => s.ataque / s.defensa));
+  return `<div class="panel flush scroll"><table class="t"><thead><tr><th>#</th><th>Equipo</th><th class="n">Ataque</th><th class="n">Defensa</th><th>Fuerza global</th></tr></thead><tbody>` +
+    t.map((s, i) => `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}"><td><span class="pos">${i + 1}</span></td><td class="team">${badge(L, s.equipo)}${esc(corto(L, s.equipo))}</td><td class="n">${dec(s.ataque)}</td><td class="n">${dec(s.defensa)}</td><td style="width:35%"><div class="pbar" style="justify-content:flex-start"><span class="tr" style="width:100%"><i style="width:${(100 * (s.ataque / s.defensa) / mx).toFixed(1)}%"></i></span></div></td></tr>`).join("") +
+    `</tbody></table></div><p class="note">Ataque: goles que marca frente a una defensa promedio (1,00 = promedio de la liga). Defensa: goles que recibe; menos es mejor.</p>`;
+}
+function lResumen(L) {
+  return `<div class="layout">
+    <div class="stack">
+      <div class="panel flush">${weekWidget(L, R.wk)}</div>
+      ${L.tabla_ok ? `<div class="panel flush scroll"><div class="ph"><h3>Tabla</h3><button class="link" data-go="liga" data-liga="${L.id}" data-tab="tabla">Completa →</button></div>${fullTable(L, true)}</div>` : ""}
+    </div>
+    <aside class="stack">
+      <div class="panel flush"><div class="ph"><h3>Goleadores</h3><button class="link" data-go="liga" data-liga="${L.id}" data-tab="jugadores">Todos →</button></div><div class="scroll">${scorersTable(L, 6)}</div></div>
+      <div class="panel stack"><div class="row" style="justify-content:space-between"><h3>Rachas</h3><button class="link" data-go="liga" data-liga="${L.id}" data-tab="rachas">Todas →</button></div>${rachasList(L, (L.rachas || []).slice(0, 6))}</div>
+    </aside></div>`;
 }
 
+/* ---------------- PARTIDO ---------------- */
 function vPartido() {
   const L = D.ligas[R.liga], p = findMatch(R.liga, R.id);
-  if (!L || !p) return `<section class="view"><button class="back" data-go="inicio">← Partidos</button><div class="panel empty">Este partido ya no está en el calendario (puede que ya se haya jugado).</div></section>`;
+  if (!L || !p) return `<section class="view"><button class="back" data-go="inicio">← Inicio</button><div class="panel empty">Este partido ya no está en el calendario (puede que ya se haya jugado).</div></section>`;
   const { m, lh, la } = matrix(L.modelo, p.home, p.away), k = markets(m);
-  const sh = L.tabla.find(s => s.equipo === p.home) || {}, sa = L.tabla.find(s => s.equipo === p.away) || {};
+  const sh = rowOf(L, p.home), sa = rowOf(L, p.away), H = corto(L, p.home), A = corto(L, p.away);
   const N = 6; let mx = 0; for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) mx = Math.max(mx, m[i][j]);
   let heat = `<tr><th></th>${[...Array(N).keys()].map(j => `<th>${j}</th>`).join("")}</tr>`;
   for (let i = 0; i < N; i++) { heat += `<tr><th>${i}</th>`; for (let j = 0; j < N; j++) { const al = (m[i][j] / mx) * .92 + .03;
     heat += `<td style="background:rgba(var(--heat),${al.toFixed(3)});color:${al > .5 ? "var(--heat-ink)" : "var(--ink)"}">${(100 * m[i][j]).toFixed(1).replace(".", ",")}</td>`; } heat += "</tr>"; }
-  const H = corto(L, p.home), A = corto(L, p.away);
+  const ct = p.ch != null ? p.ch + p.ca : null, tt = p.th != null ? p.th + p.ta : null;
   const groups = [
     ["Resultado (1X2)", [["H", `Gana ${H}`, k.H], ["D", "Empate", k.D], ["A", `Gana ${A}`, k.A]]],
     ["Doble oportunidad", [["1X", `${H} o empate`, k.H + k.D], ["X2", `Empate o ${A}`, k.D + k.A], ["12", "Sin empate", k.H + k.A]]],
     ["Goles", [["O15", "Más de 1,5", k.O15], ["U15", "Menos de 1,5", 1 - k.O15], ["O25", "Más de 2,5", k.O25], ["U25", "Menos de 2,5", 1 - k.O25], ["O35", "Más de 3,5", k.O35], ["U35", "Menos de 3,5", 1 - k.O35]]],
     ["Ambos marcan", [["BY", "Sí", k.B], ["BN", "No", 1 - k.B]]],
   ];
+  if (ct != null) groups.push(["Córners (total)", [8.5, 9.5, 10.5].flatMap(l => [[`CO${l}`, `Más de ${String(l).replace(".", ",")}`, poisOver(l, ct)], [`CU${l}`, `Menos de ${String(l).replace(".", ",")}`, 1 - poisOver(l, ct)]])]);
+  if (tt != null) groups.push(["Tarjetas (total)", [3.5, 4.5].flatMap(l => [[`TO${l}`, `Más de ${String(l).replace(".", ",")}`, poisOver(l, tt)], [`TU${l}`, `Menos de ${String(l).replace(".", ",")}`, 1 - poisOver(l, tt)]])]);
+  (p.goleadores || []).filter(g => g.p).forEach((g, i) => { if (i === 0) groups.push(["Marca en cualquier momento", []]); groups[groups.length - 1][1].push([`G${g.jid}`, `${g.jugador} (${g.lado === "h" ? H : A})`, g.p]); });
   const st = ODDS[p.id] || (ODDS[p.id] = {});
   const mk = `<tr><th>Mercado</th><th style="text-align:right">Prob.</th><th style="text-align:right">Justa</th><th style="text-align:right">Tu cuota</th><th style="text-align:right">EV</th></tr>` +
     groups.map(([g, rows]) => `<tr class="grp"><td colspan="5">${g}</td></tr>` + rows.map(([key, n, pr]) => `<tr><td>${esc(n)}</td><td class="n">${pct(pr, 1)}</td><td class="n">${dec(1 / pr)}</td>
-      <td class="n"><input class="odd" inputmode="decimal" aria-label="Cuota ${esc(n)}" data-k="${key}" data-p="${pr}" value="${st[key] ? String(st[key]).replace(".", ",") : ""}" placeholder="—"></td><td class="n" data-ev="${key}"></td></tr>`).join("")).join("");
+      <td class="n"><input class="odd" inputmode="decimal" aria-label="Cuota ${esc(n)}" data-k="${esc(key)}" data-p="${pr}" value="${st[key] ? String(st[key]).replace(".", ",") : ""}" placeholder="—"></td><td class="n" data-ev="${esc(key)}"></td></tr>`).join("")).join("");
   const reg = D.registro && D.registro.filas && D.registro.filas.find(f => String(f.id) === String(p.id));
-  const side = (s, t, cls) => `<div class="side ${cls}">${badge(L, t, true)}<button class="tn" data-go="equipo" data-liga="${L.id}" data-team="${esc(t)}">${esc(corto(L, t))}</button>
+  const side = (s, t, cls) => `<div class="side ${cls}">${badge(L, t, "lg")}<button class="tn" data-go="equipo" data-liga="${L.id}" data-team="${esc(t)}">${esc(corto(L, t))}</button>
       <span class="xgv">${dec(cls === "l" ? lh : la)}</span><span class="lbl">goles esperados</span>
       <span class="row" style="gap:8px;${cls === "r" ? "justify-content:flex-end" : ""}">${s.pos ? `<span class="muted num" style="font-size:12px">${s.pos}º · ${s.pts} pts</span>` : ""}${formHtml(s.forma)}</span></div>`;
+  const s1 = statOf(L, p.home), s2 = statOf(L, p.away);
+  const cmp = [["Goles por partido", "gf", 2], ["Goles recibidos", "gc", 2], ["Tiros al arco", "tiros_arco", 1], ["Córners", "corners", 1], ["Posesión (%)", "posesion", 0], ["Tarjetas", "tarjetas", 1], ["Ambos marcan", "ambos", -1], ["Más de 2,5 goles", "over25", -1]]
+    .filter(([, key]) => s1[key] != null && s2[key] != null)
+    .map(([n, key, d]) => { const a = s1[key], b = s2[key], t = (a + b) || 1, f = v => d === -1 ? pct(v) : dec(v, d);
+      return `<div class="cmp"><span class="num">${f(a)}</span><span class="cl"><i style="width:${100 * a / t}%"></i></span><span class="lbl">${n}</span><span class="cr"><i style="width:${100 * b / t}%"></i></span><span class="num">${f(b)}</span></div>`; }).join("");
+  const scorers = (p.goleadores || []).length ? (p.goleadores || []).map(g => `<div class="srow static">${badge(L, g.lado === "h" ? p.home : p.away)}<span><b>${esc(g.jugador)}</b><small>${g.goles} goles en la temporada</small></span><span class="sn num">${pct(g.p)}</span></div>`).join("") : `<p class="note">Sin goleadores registrados todavía.</p>`;
+  const h2h = (p.h2h || []).length ? p.h2h.map(x => resultRow(L, x)).join("") : `<p class="note">No se enfrentaron en las últimas temporadas.</p>`;
   return `<section class="view" aria-labelledby="h-p">
-    <button class="back" data-go="inicio" data-liga="${L.id}">← Partidos</button>
+    <button class="back" data-go="liga" data-liga="${L.id}" data-tab="partidos">← ${esc(L.nombre)}</button>
     <h1 id="h-p" class="sr">${esc(H)} vs ${esc(A)}</h1>
     <div class="panel match">
-      <div class="meta"><span>${esc(L.nombre)}</span><span>·</span><span>${new Date(p.kickoff).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })} ${hhmm(p.kickoff)}</span>${p.estado === "en_vivo" ? `<span class="bad">EN VIVO</span>` : ""}</div>
+      <div class="meta">${leagueMark(L, "sm")}<span>${esc(L.nombre)}</span><span>·</span><span>${new Date(p.kickoff).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })} ${hhmm(p.kickoff)}</span>${p.estado === "en_vivo" ? `<span class="bad">EN VIVO</span>` : ""}</div>
       <div class="face">${side(sh, p.home, "l")}<span class="vs">VS</span>${side(sa, p.away, "r")}</div>
       <div class="probs">
         <div class="pt h"><span class="lbl">${esc(H)}</span><span class="v">${pct(k.H, 1)}</span><div class="tr"><i style="width:${100 * k.H}%"></i></div></div>
         <div class="pt d"><span class="lbl">Empate</span><span class="v">${pct(k.D, 1)}</span><div class="tr"><i style="width:${100 * k.D}%"></i></div></div>
         <div class="pt a"><span class="lbl">${esc(A)}</span><span class="v">${pct(k.A, 1)}</span><div class="tr"><i style="width:${100 * k.A}%"></i></div></div>
       </div>
-      ${reg ? `<p class="note" style="margin-top:14px">Esta predicción quedó guardada en el registro público el ${fecha(reg.predicho)} y se calificará cuando termine el partido.</p>` : ""}
+      <div class="kpis mini">${kpi("", "Más de 2,5 goles", pct(k.O25), "")}${kpi("", "Ambos marcan", pct(k.B), "")}${ct != null ? kpi("", "Córners esperados", dec(ct, 1), `${dec(p.ch, 1)} – ${dec(p.ca, 1)}`) : ""}${tt != null ? kpi("", "Tarjetas esperadas", dec(tt, 1), `${dec(p.th, 1)} – ${dec(p.ta, 1)}`) : ""}</div>
+      ${reg ? `<p class="note" style="margin-top:14px">Predicción guardada en el registro público el ${fecha(reg.predicho)}; se califica al terminar el partido.</p>` : ""}
     </div>
     <div class="grid2">
-      <div class="panel stack"><h3>Marcador exacto</h3><div class="scroll"><table class="heat">${heat}</table></div>
-        <p class="note">Filas: goles de ${esc(H)}. Columnas: goles de ${esc(A)}. Más brillante, más probable.</p></div>
+      <div class="stack">
+        <div class="panel stack"><h3>Marcador exacto</h3><div class="scroll"><table class="heat">${heat}</table></div><p class="note">Filas: goles de ${esc(H)}. Columnas: goles de ${esc(A)}.</p></div>
+        ${cmp ? `<div class="panel stack"><h3>Comparación de la temporada</h3><div class="cmph"><span>${badge(L, p.home)} ${esc(H)}</span><span>${esc(A)} ${badge(L, p.away)}</span></div>${cmp}</div>` : ""}
+        <div class="panel stack"><h3>Goleadores probables</h3><div class="slist">${scorers}</div><p class="note">Probabilidad de marcar según sus goles en la temporada y los goles esperados de su equipo.</p></div>
+        <div class="panel stack"><h3>Últimos enfrentamientos</h3><div class="rlist">${h2h}</div></div>
+      </div>
       <div class="panel stack"><h3>Mercados y valor</h3>
-        <p class="note">Escribe la cuota de tu casa de apuestas para ver el valor esperado (EV) por cada $1. Ojo: en el backtest, apostar solo por "valor" del modelo perdió plata.</p>
+        <p class="note">Escribe la cuota de tu casa de apuestas para ver el valor esperado (EV) por cada $1. En el backtest, apostar solo por "valor" del modelo perdió plata.</p>
         <div class="scroll"><table class="mk">${mk}</table></div></div>
     </div></section>`;
 }
 function bindOdds() {
   const st = ODDS[R.id] || {};
   const upd = () => document.querySelectorAll("[data-ev]").forEach(td => {
-    const inp = document.querySelector(`input[data-k="${td.dataset.ev}"]`), o = st[td.dataset.ev], pr = +inp.dataset.p;
+    const inp = [...document.querySelectorAll("input.odd")].find(i => i.dataset.k === td.dataset.ev), o = st[td.dataset.ev], pr = +inp.dataset.p;
     if (!o) { td.innerHTML = `<span class="faint">—</span>`; return; }
     const ev = pr * o - 1;
-    td.innerHTML = `<span class="${ev > 0 ? "good" : "bad"}">${ev > 0 ? "+" : "−"}${pct(Math.abs(ev), 1)}</span>${ev > 0.05 ? ` <span class="val" title="Kelly ¼: ${pct(Math.max(0, ev / (o - 1)) / 4, 1)} del bankroll">valor</span>` : ""}`;
+    td.innerHTML = `<span class="num ${ev > 0 ? "good" : "bad"}">${ev > 0 ? "+" : "−"}${pct(Math.abs(ev), 1)}</span>${ev > 0.05 ? ` <span class="val" title="Kelly ¼: ${pct(Math.max(0, ev / (o - 1)) / 4, 1)} del bankroll">valor</span>` : ""}`;
   });
   document.querySelectorAll("input.odd").forEach(inp => inp.addEventListener("input", () => { const v = parseFloat(inp.value.replace(",", ".")); st[inp.dataset.k] = v > 1 ? v : undefined; upd(); }));
   upd();
 }
 
+/* ---------------- EQUIPO ---------------- */
 function vEquipo() {
-  const L = D.ligas[R.liga]; const s = L && L.tabla.find(x => x.equipo === R.team);
-  if (!s) return `<section class="view"><button class="back" data-go="liga">← Ligas</button><div class="panel empty">No encontré ese equipo.</div></section>`;
-  const prox = L.partidos.filter(p => p.home === s.equipo || p.away === s.equipo).slice(0, 6);
-  const res = L.resultados.filter(x => x.home === s.equipo || x.away === s.equipo).slice(0, 10);
+  const L = D.ligas[R.liga]; const t = R.team;
+  if (!L || !(L.equipos[t] || rowOf(L, t).equipo)) return `<section class="view"><button class="back" data-go="inicio">← Inicio</button><div class="panel empty">No encontré ese equipo.</div></section>`;
+  const s = rowOf(L, t), st = statOf(L, t);
+  const prox = L.partidos.filter(p => p.home === t || p.away === t).slice(0, 6);
+  const res = L.resultados.filter(x => x.home === t || x.away === t).slice(0, 8);
+  const rs = (L.rachas || []).filter(x => x.equipo === t);
+  const zs = s.zonas ? Object.entries(s.zonas).map(([cls, v]) => { const z = (L.zonas || []).find(z => z.cls === cls); return z ? kpi(cls === "desc" ? "" : "", cls === "desc" ? "Descenso" : z.nombre.replace(" (fase de grupos)", "").replace(" (previa)", ""), pct(v, 1), "") : ""; }).join("") : "";
   return `<section class="view" aria-labelledby="h-e">
-    <button class="back" data-go="liga" data-liga="${L.id}" data-tab="tabla">← ${esc(L.nombre)}</button>
-    <div class="thead">${badge(L, s.equipo, true)}<div><h1 id="h-e">${esc(corto(L, s.equipo))}</h1><span class="muted">${esc(L.nombre)} · ${s.pos}º con ${s.pts} pts en ${s.pj} partidos</span></div><span style="margin-left:auto">${formHtml(s.forma)}</span></div>
-    <div class="kpis">${kpi("m", "Ataque", dec(s.ataque), "1,00 = promedio liga")}${kpi("", "Defensa", dec(s.defensa), "menos es mejor")}${kpi("", "Pts finales", dec(s.pts_esp, 1), "proyección")}${kpi("k", "Campeón", pct(s.p_campeon, 1), "")}${kpi("", `Top ${L.top}`, pct(s.p_top, 1), "")}${kpi("", "Descenso", pct(s.p_desc, 1), "")}</div>
+    <button class="back" data-go="liga" data-liga="${L.id}" data-tab="resumen">← ${esc(L.nombre)}</button>
+    <div class="lhead panel">${badge(L, t, "xl")}<div><h1 id="h-e">${esc(corto(L, t))}</h1><span class="muted">${esc(L.nombre)}${s.pos ? ` · ${s.pos}º con ${s.pts} pts en ${s.pj} partidos` : ""}</span></div><span style="margin-left:auto">${formHtml(s.forma)}</span></div>
+    <div class="kpis">${s.ataque ? kpi("m", "Ataque", dec(s.ataque), "1,00 = promedio liga") + kpi("", "Defensa", dec(s.defensa), "menos es mejor") : ""}${s.pts_esp != null ? kpi("", "Pts finales", dec(s.pts_esp, 1), "proyección") + kpi("k", "Campeón", pct(s.p_campeon, 1), "") : ""}${zs}</div>
+    ${st.pj ? `<div class="panel stack"><h3>Estadísticas de la temporada</h3><div class="sgrid wide">
+      ${[["Goles/PJ", dec(st.gf)], ["Recibe/PJ", dec(st.gc)], ["Tiros/PJ", dec(st.tiros, 1)], ["Al arco/PJ", dec(st.tiros_arco, 1)], ["Córners/PJ", dec(st.corners, 1)], ["Posesión", st.posesion != null ? dec(st.posesion, 0) + " %" : "—"],
+         ["Tarjetas/PJ", dec(st.tarjetas, 1)], ["Faltas/PJ", dec(st.faltas, 1)], ["Ambos marcan", pct(st.ambos)], ["+2,5 goles", pct(st.over25)], ["Vallas invictas", st.vallas], ["Sin marcar", st.sin_marcar]]
+        .map(([n, v]) => `<div><span class="lbl">${n}</span><b class="num">${v}</b></div>`).join("")}</div></div>` : ""}
     <div class="grid2">
-      <div class="panel flush"><div class="ph"><h3>Próximos partidos</h3></div>${prox.map(p => matchRow(p, false)).join("") || `<div class="empty">Sin partidos programados.</div>`}</div>
-      <div class="panel flush"><div class="ph"><h3>Últimos resultados</h3></div><div class="scroll">${resultsTable(L, res)}</div></div>
+      <div class="stack">
+        <div class="panel flush"><div class="ph"><h3>Próximos partidos</h3></div>${prox.map(p => matchRow(p, false)).join("") || `<div class="empty">Sin partidos programados.</div>`}</div>
+        <div class="panel flush"><div class="ph"><h3>Goleadores del equipo</h3></div><div class="scroll">${scorersTable(L, 10, t)}</div></div>
+      </div>
+      <div class="stack">
+        <div class="panel flush"><div class="ph"><h3>Últimos resultados</h3></div><div class="rlist">${res.map(x => resultRow(L, x) + (x.goles && x.goles.length ? `<div class="gl">${x.goles.map(g => `<span>${g.min ? g.min + "' " : ""}${esc(g.jug || "")}${g.pen ? " (p)" : ""}${g.og ? " (ag)" : ""}</span>`).join("")}</div>` : "")).join("") || `<div class="empty">Sin partidos jugados.</div>`}</div></div>
+        ${rs.length ? `<div class="panel stack"><h3>Rachas activas</h3>${rachasList(L, rs)}</div>` : ""}
+      </div>
     </div></section>`;
 }
 
+/* ---------------- REGISTRO y MÉTODO ---------------- */
 function calChart(pts) {
   if (!pts || !pts.length) return `<p class="note">Aún no hay suficientes partidos calificados.</p>`;
   const W = 320, H = 250, pad = 34, sx = x => pad + x * (W - pad - 10), sy = y => H - pad - y * (H - pad - 10);
@@ -302,7 +581,6 @@ function calChart(pts) {
   pts.forEach(p => s += `<circle cx="${sx(p.pred)}" cy="${sy(p.real)}" r="${(3 + 5 * Math.sqrt(p.n / mx)).toFixed(1)}" fill="#3d8bff" stroke="#0e131e" stroke-width="1.5"><title>Predijo ${pct(p.pred)} · ocurrió ${pct(p.real)} · ${p.n} casos</title></circle>`);
   return s + `<text x="${(W + pad) / 2}" y="${H - 2}" text-anchor="middle">probabilidad predicha (%)</text></svg>`;
 }
-
 function vRegistro() {
   const g = D.registro;
   if (!g) return `<section class="view"><h1>Registro</h1><div class="panel empty">Todavía no hay registro.</div></section>`;
@@ -320,11 +598,10 @@ function vRegistro() {
     <p class="muted">Cada predicción se guarda antes de que empiece el partido y no se puede cambiar después. Así se mide si el modelo sirve, con resultados reales y no con capturas de los aciertos.${g.desde ? ` Registro desde el ${fecha(g.desde + "T12:00")}.` : ""}</p>
     <div class="kpis">${kpi("m", "Partidos calificados", g.n || 0, "")}${kpi("", "Acierto 1X2", pct(g.acierto_1x2, 1), "el resultado más probable")}${kpi("k", "Log-loss", dec(g.logloss, 3), `ingenuo ${dec(g.logloss_ingenuo, 3)} · menos es mejor`)}${kpi("", "Más/Menos 2,5", pct(g.acierto_o25, 1), "acierto")}${kpi("", "Marcador exacto", pct(g.marcador_exacto, 1), "el más probable")}</div>
     <div class="grid2">
-      <div class="panel stack"><h3>Calibración</h3><p class="note">Si el modelo dice 40 %, ¿pasa el 40 % de las veces?</p>${calChart(g.calibracion)}</div>
-      <div class="panel flush"><div class="ph"><h3>Predicciones</h3><div class="tabs2" role="group" aria-label="Filtro">${[["calificados", "Calificadas"], ["pendientes", "Pendientes"]].map(([k, n]) => `<button data-go="registro" data-tab="${k}" aria-pressed="${k === tab}">${n}</button>`).join("")}</div></div><div class="scroll" style="max-height:520px;overflow:auto"><table class="t"><thead><tr><th>Fecha</th><th>Partido</th><th class="n hide-m">1 · X · 2</th><th class="n">Pick</th><th class="n">Resultado</th><th></th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="empty">${tab === "pendientes" ? "No hay partidos pendientes en el registro." : "Todavía no hay partidos calificados."}</td></tr>`}</tbody></table></div></div>
+      <div class="panel stack"><h3>Calibración</h3><p class="note">Si el modelo dice 40 %, ¿pasa el 40 % de las veces?</p>${calChart(g.calibracion)}${spark(g.serie)}</div>
+      <div class="panel flush"><div class="ph"><h3>Predicciones</h3><div class="tabs2" role="group" aria-label="Filtro">${[["calificados", "Calificadas"], ["pendientes", "Pendientes"]].map(([k, n]) => `<button data-go="registro" data-tab="${k}" data-keep aria-pressed="${k === tab}">${n}</button>`).join("")}</div></div><div class="scroll" style="max-height:560px;overflow:auto"><table class="t"><thead><tr><th>Fecha</th><th>Partido</th><th class="n hide-m">1 · X · 2</th><th class="n">Pick</th><th class="n">Resultado</th><th></th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="empty">${tab === "pendientes" ? "No hay partidos pendientes en el registro." : "Todavía no hay partidos calificados."}</td></tr>`}</tbody></table></div></div>
     </div></section>`;
 }
-
 function vMetodo() {
   const B = D.metodo;
   const curve = () => {
@@ -341,21 +618,23 @@ function vMetodo() {
   return `<section class="view" aria-labelledby="h-m">
     <h1 id="h-m">Cómo funciona</h1>
     <div class="panel stack" style="font-size:15px">
-      <p><b>El modelo.</b> Cada equipo tiene una fuerza de ataque y una de defensa. Con eso se calcula cuántos goles se espera que marque cada uno (λ), y la probabilidad de cada marcador sale de una distribución de Poisson con la corrección de Dixon y Coles (1997) para los resultados bajos (0-0, 1-0, 0-1, 1-1).</p>
-      <p><b>Los datos.</b> Resultados de 1ª y 2ª división de las últimas tres temporadas. Los partidos recientes pesan más (vida media de unos 231 días) y se mezcla un 30 % de tiros al arco con los goles, porque los tiros tienen menos ruido. Se reajusta todos los días.</p>
-      <p><b>Las proyecciones.</b> El resto de la temporada se simula 10.000 veces con estas probabilidades para estimar puntos finales y opciones de título, copas o descenso.</p>
+      <p><b>Goles.</b> Cada equipo tiene una fuerza de ataque y una de defensa. Con eso se calcula cuántos goles se espera que marque cada uno, y la probabilidad de cada marcador sale de una distribución de Poisson con la corrección de Dixon y Coles (1997) para los resultados bajos.</p>
+      <p><b>Datos.</b> Resultados de las últimas tres temporadas, incluida la segunda división cuando existe, para medir bien a los recién ascendidos. Los partidos recientes pesan más (vida media de unos 231 días) y se mezcla un 30 % de tiros al arco con los goles, porque los tiros tienen menos ruido. Se reajusta tres veces al día.</p>
+      <p><b>Córners y tarjetas.</b> El mismo modelo de ataque y defensa, ajustado sobre córners ganados y tarjetas recibidas. No conoce al árbitro.</p>
+      <p><b>Goleadores.</b> La probabilidad de que un jugador marque sale de su parte de los goles de su equipo en la temporada y de los goles esperados de su equipo en ese partido.</p>
+      <p><b>Proyecciones.</b> El resto de la temporada se simula 10.000 veces para estimar puntos finales y opciones de título, copas o descenso.</p>
       <p class="muted">Lo que no sabe: lesiones, alineaciones, fichajes, rotaciones ni motivación. Por eso las casas de apuestas, que sí incorporan esa información, predicen mejor.</p>
     </div>
     ${B ? `<h2>¿Le gana al mercado?</h2>
-    <p class="muted">Backtest de la temporada 2025-26: cada semana se reajustó el modelo solo con partidos anteriores y se comparó con las cuotas de Bet365 (${(B.n_test || 0).toLocaleString("es-CL")} partidos de las cinco ligas).</p>
+    <p class="muted">Backtest de la temporada 2025-26 en las cinco grandes ligas: cada semana se reajustó el modelo solo con partidos anteriores y se comparó con las cuotas de Bet365 (${(B.n_test || 0).toLocaleString("es-CL")} partidos).</p>
     <div class="kpis">${kpi("m", "Log-loss modelo", dec(B.logloss.modelo, 4), "menos es mejor")}${kpi("k", "Log-loss mercado", dec(B.logloss.mercado, 4), "cuotas sin margen")}${kpi("", "Log-loss ingenuo", dec(B.logloss.ingenuo, 4), "% histórico L/E/V")}</div>
     <div class="panel verdict">${B.veredicto}</div>
     <div class="grid2"><div class="panel stack"><h3>Calibración (backtest)</h3>${calChart(B.calibracion)}</div>
       <div class="panel stack"><h3>Apostar al "valor" (EV &gt; 5 %)</h3><p class="note">1 unidad por apuesta en 1X2, temporada 2025-26.</p>${curve()}</div></div>` : ""}
-    <p class="note">El código es abierto: modelo, datos y este sitio se actualizan solos con GitHub Actions.</p></section>`;
+    <p class="note">Fuente de datos: marcadores públicos de ESPN. El código es abierto y el sitio se actualiza solo con GitHub Actions.</p></section>`;
 }
 
 /* ---------------- arranque ---------------- */
 load().then(() => { R = fromHash(); render(); })
-  .catch(err => { $app.innerHTML = `<div class="panel empty">No pude cargar los datos (${esc(err.message)}). Si abriste el archivo directo desde tu computador, el navegador bloquea la lectura: usa la versión publicada en GitHub Pages.</div>`; });
+  .catch(err => { $app.innerHTML = `<div class="panel empty">No pude cargar los datos (${esc(err.message)}). Si abriste el archivo directo desde tu computador, el navegador bloquea la lectura: usa la versión publicada.</div>`; });
 })();
