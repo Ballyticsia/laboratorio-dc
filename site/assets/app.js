@@ -42,6 +42,19 @@ function badge(L, t, size = "") {
   const img = logo ? `<img class="crest" src="${esc(logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove('logo');this.remove()">` : "";
   return `<span class="badge ${size}${logo ? " logo" : ""}" style="background:${bg};color:${fg}" aria-hidden="true">${esc(ab)}${img}</span>`;
 }
+/* cara del jugador: foto de ESPN (o de API-Football), con iniciales y color del equipo si no hay foto */
+function face(L, t, jid, name, size = "", alt = "") {
+  const i = info(L, t), c = i.color && /^[0-9a-f]{6}$/i.test(i.color) ? i.color : null;
+  const bg = c ? "#" + c : hashColor(t || name || ""), fg = c && lum(c) > 0.62 ? "#07090f" : "#fff";
+  const w = String(name || "").replace(/[^A-Za-zÀ-ÿ' -]/g, "").trim().split(/\s+/).filter(Boolean);
+  const ini = ((w[0] || "?")[0] + (w.length > 1 ? w[w.length - 1][0] : "")).toUpperCase();
+  const espn = /^\d+$/.test(String(jid || "")) ? `https://a.espncdn.com/i/headshots/soccer/players/full/${jid}.png` : "";
+  const api = typeof alt === "string" && /^https:\/\/media\.api-sports\.io\//.test(alt) ? alt : "";
+  const src = espn || api, alt2 = espn && api ? api : "";
+  const img = src ? `<span class="ph"><img src="${esc(src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${alt2 ? ` data-alt="${esc(alt2)}"` : ""} onerror="if(this.dataset.alt){this.src=this.dataset.alt;this.dataset.alt=''}else this.parentNode.remove()"></span>` : "";
+  const crest = size !== "sm" && t ? `<span class="fb">${badge(L, t, "xs")}</span>` : "";
+  return `<span class="face ${size}" style="--fc:${bg};--ff:${fg}" aria-hidden="true"><i>${esc(ini)}</i>${img}${crest}</span>`;
+}
 function leagueMark(L, size = "") {
   const logo = L.logo && /^https:\/\//.test(L.logo) ? L.logo : null;
   const ab = L.nombre.split(" ").map(w => w[0]).join("").slice(0, 3).toUpperCase();
@@ -125,7 +138,7 @@ function buildMenu() {
       Object.keys(L.equipos).forEach(t => { const key = id + "|" + t; if (seen.has(key)) return; seen.add(key);
         eq.push({ k: "Equipos", n: corto(L, t), alt: t, sub: L.nombre, html: badge(L, t), go: `data-go="equipo" data-liga="${id}" data-team="${esc(t)}"` }); });
       (L.goleadores || []).forEach(g => { const key = g.jid + "|" + id; if (seenP.has(key)) return; seenP.add(key);
-        pl.push({ k: "Jugadores", n: g.jugador, sub: `${corto(L, g.equipo)} · ${L.nombre} · ${g.goles} goles`, html: badge(L, g.equipo), go: `data-go="jugador" data-liga="${id}" data-id="${esc(g.jid)}"` }); });
+        pl.push({ k: "Jugadores", n: g.jugador, sub: `${corto(L, g.equipo)} · ${L.nombre} · ${g.goles} goles`, html: face(L, g.equipo, g.jid, g.jugador), go: `data-go="jugador" data-liga="${id}" data-id="${esc(g.jid)}"` }); });
     });
     idx = [...ligas, ...eq, ...pl].map(x => ({ ...x, s: norm(x.n + " " + (x.alt || "")) }));
   };
@@ -393,7 +406,7 @@ function vInicio() {
     const L = D.ligas[j.liga], p = findMatch(j.liga, j.partido); if (!L || !p) return "";
     const rival = p.home === j.equipo ? p.away : p.home;
     return `<div class="fp">
-      <div class="fp-head">${badge(L, j.equipo, "lg")}<div><b class="fp-name">${esc(j.jugador)}</b><span class="muted">${esc(corto(L, j.equipo))} · ${esc(L.nombre)}</span></div></div>
+      <div class="fp-head">${face(L, j.equipo, j.jid, j.jugador, "lg")}<div><b class="fp-name">${esc(j.jugador)}</b><span class="muted">${esc(corto(L, j.equipo))} · ${esc(L.nombre)}</span></div></div>
       <div class="fp-big"><span class="lbl">Probabilidad de marcar</span><span class="v num">${pct(j.p)}</span><span class="muted">vs ${esc(corto(L, rival))} · ${esc(cuando(p.kickoff))}</span></div>
       <div class="fp-stats"><span><b class="num">${j.goles}</b> goles en la temporada</span><span class="l5">${(j.ult5 || []).map(g => `<i class="${g ? "on" : ""}">${g || "·"}</i>`).join("")}<small>últimos 5</small></span></div>
       <button class="btn ghost sm" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}">Ver partido</button></div>`;
@@ -559,13 +572,13 @@ function scorersTable(L, n = 25, team = null) {
   const gs = (L.goleadores || []).filter(g => !team || g.equipo === team).slice(0, n);
   if (!gs.length) return `<div class="empty">Sin goles registrados todavía.</div>`;
   return `<table class="t"><thead><tr><th>#</th><th>Jugador</th><th class="n">Goles</th><th class="n hide-m">Penales</th><th>Últimos 5</th></tr></thead><tbody>` +
-    gs.map((g, i) => `<tr class="click" data-go="jugador" data-liga="${L.id}" data-id="${esc(g.jid)}"><td><span class="pos">${i + 1}</span></td><td class="team">${badge(L, g.equipo)}<span>${esc(g.jugador)}${team ? "" : `<small class="faint" style="display:block;font-weight:500">${esc(corto(L, g.equipo))}</small>`}</span></td><td class="n"><b>${g.goles}</b></td><td class="n hide-m">${g.penales}</td><td><span class="l5">${(g.ult5 || []).map(v => `<i class="${v ? "on" : ""}">${v || "·"}</i>`).join("")}</span></td></tr>`).join("") + `</tbody></table>`;
+    gs.map((g, i) => `<tr class="click" data-go="jugador" data-liga="${L.id}" data-id="${esc(g.jid)}"><td><span class="pos">${i + 1}</span></td><td class="team">${face(L, g.equipo, g.jid, g.jugador)}<span>${esc(g.jugador)}${team ? "" : `<small class="faint" style="display:block;font-weight:500">${esc(corto(L, g.equipo))}</small>`}</span></td><td class="n"><b>${g.goles}</b></td><td class="n hide-m">${g.penales}</td><td><span class="l5">${(g.ult5 || []).map(v => `<i class="${v ? "on" : ""}">${v || "·"}</i>`).join("")}</span></td></tr>`).join("") + `</tbody></table>`;
 }
 function cardsTable(L, n = 20) {
   const ts = (L.amonestados || []).slice(0, n);
   if (!ts.length) return `<div class="empty">Sin tarjetas registradas.</div>`;
   return `<table class="t"><thead><tr><th>#</th><th>Jugador</th><th class="n">Amarillas</th><th class="n">Rojas</th></tr></thead><tbody>` +
-    ts.map((g, i) => `<tr><td><span class="pos">${i + 1}</span></td><td class="team">${badge(L, g.equipo)}<span>${esc(g.jugador)}<small class="faint" style="display:block;font-weight:500">${esc(corto(L, g.equipo))}</small></span></td><td class="n"><span class="ycard"></span> ${g.amarillas}</td><td class="n">${g.rojas ? `<span class="rcard"></span> ${g.rojas}` : "—"}</td></tr>`).join("") + `</tbody></table>`;
+    ts.map((g, i) => `<tr><td><span class="pos">${i + 1}</span></td><td class="team">${face(L, g.equipo, g.jid, g.jugador)}<span>${esc(g.jugador)}<small class="faint" style="display:block;font-weight:500">${esc(corto(L, g.equipo))}</small></span></td><td class="n"><span class="ycard"></span> ${g.amarillas}</td><td class="n">${g.rojas ? `<span class="rcard"></span> ${g.rojas}` : "—"}</td></tr>`).join("") + `</tbody></table>`;
 }
 function lJug(L) {
   return `<div class="grid2"><div class="panel flush"><div class="ph"><h3>Goleadores</h3></div><div class="scroll">${scorersTable(L)}</div></div>
@@ -679,7 +692,7 @@ function vPartido() {
     .filter(([, key]) => s1[key] != null && s2[key] != null)
     .map(([n, key, d]) => { const a = s1[key], b = s2[key], t = (a + b) || 1, f = v => d === -1 ? pct(v) : dec(v, d);
       return `<div class="cmp"><span class="num">${f(a)}</span><span class="cl"><i style="width:${100 * a / t}%"></i></span><span class="lbl">${n}</span><span class="cr"><i style="width:${100 * b / t}%"></i></span><span class="num">${f(b)}</span></div>`; }).join("");
-  const scorers = (p.goleadores || []).length ? (p.goleadores || []).map(g => `<div class="srow" data-go="jugador" data-liga="${L.id}" data-id="${esc(g.jid)}">${badge(L, g.lado === "h" ? p.home : p.away)}<span><b>${esc(g.jugador)}</b><small>${g.goles} goles en la temporada</small></span><span class="sn num">${pct(g.p)}</span></div>`).join("") : `<p class="note">Sin goleadores registrados todavía.</p>`;
+  const scorers = (p.goleadores || []).length ? (p.goleadores || []).map(g => `<div class="srow" data-go="jugador" data-liga="${L.id}" data-id="${esc(g.jid)}">${face(L, g.lado === "h" ? p.home : p.away, g.jid, g.jugador)}<span><b>${esc(g.jugador)}</b><small>${g.goles} goles en la temporada</small></span><span class="sn num">${pct(g.p)}</span></div>`).join("") : `<p class="note">Sin goleadores registrados todavía.</p>`;
   const h2h = (p.h2h || []).length ? p.h2h.map(x => resultRow(L, x)).join("") : `<p class="note">No se enfrentaron en las últimas temporadas.</p>`;
   const tabs = [["resumen", "Resumen"], ["mercados", "Mercados"], ["alineaciones", "Alineaciones"], ["historial", "Historial"]];
   const tab = tabs.some(t => t[0] === R.tab) ? R.tab : "resumen";
@@ -1045,7 +1058,7 @@ async function loadSummary() {
       const side = t.homeAway === "home" ? p.home : p.away;
       const st = (t.roster || []).filter(x => x.starter), sub = (t.roster || []).filter(x => !x.starter);
       return `<div class="lu"><div class="lu-h">${badge(L, side)}<b>${esc(corto(L, side))}</b>${t.formation ? `<span class="tag">${esc(t.formation)}</span>` : ""}</div>
-        <ol>${st.map(x => `<li><span class="num jn">${esc(x.jersey || "")}</span><span>${esc((x.athlete || {}).displayName || "")}</span><small>${esc((x.position || {}).abbreviation || "")}</small></li>`).join("")}</ol>
+        <ol>${st.map(x => `<li><span class="num jn">${esc(x.jersey || "")}</span>${face(L, side, (x.athlete || {}).id, (x.athlete || {}).displayName, "sm")}<span>${esc((x.athlete || {}).displayName || "")}</span><small>${esc((x.position || {}).abbreviation || "")}</small></li>`).join("")}</ol>
         ${sub.length ? `<p class="note">Suplentes: ${sub.map(x => esc((x.athlete || {}).displayName || "")).join(", ")}</p>` : ""}</div>`;
     }).join("")}</div>` : `<p class="note">Aún no publicadas. Las alineaciones suelen salir cerca de una hora antes del partido.</p>`;
     const meta = [venue ? `Estadio: <b>${esc(venue)}</b>` : "", ref ? `Árbitro: <b>${esc(ref.displayName || ref.fullName || "")}</b>` : ""].filter(Boolean).join(" · ");
@@ -1065,7 +1078,7 @@ function bajasPanel(L, p) {
     "Back Injury": "Espalda", "Foot Injury": "Pie", "Thigh Injury": "Muslo", "Shoulder Injury": "Hombro", "Hip Injury": "Cadera", "Broken Leg": "Fractura de pierna",
     "Concussion": "Conmoción", "Inactive": "Inactivo", "Coach's decision": "Decisión técnica", "International duty": "Selección", "Knock": "Golpe" }[m] || m || "");
   const col = (lado, t) => `<div class="bj-col"><div class="lu-h">${badge(L, t)}<b>${esc(corto(L, t))}</b></div>${(b[lado] || []).length ? b[lado].map(x =>
-      `<div class="bj-row">${tipo(x.tipo)}<span class="bj-n"><b>${esc(x.jug)}</b><small>${esc(motivo(x.motivo))}${x.goles ? ` · ${x.goles} ${x.goles === 1 ? "gol" : "goles"} en la temporada` : ""}</small></span></div>`).join("")
+      `<div class="bj-row">${tipo(x.tipo)}${face(L, t, x.jid, x.jug, "sm", x.foto)}<span class="bj-n"><b>${esc(x.jug)}</b><small>${esc(motivo(x.motivo))}${x.goles ? ` · ${x.goles} ${x.goles === 1 ? "gol" : "goles"} en la temporada` : ""}</small></span></div>`).join("")
     : `<p class="note">Sin bajas informadas.</p>`}</div>`;
   return `<div class="panel stack"><h3>Bajas ${help("Lesionados y suspendidos informados por API-Football. «Baja» = no juega; «Duda» = puede no jugar. Si falta un goleador, el modelo ajusta sus goles esperados.")}</h3>
     <div class="lineups">${col("h", p.home)}${col("a", p.away)}</div>
@@ -1120,7 +1133,7 @@ function vJugador() {
   const otras = ligasIds().filter(id => id !== L.id).map(id => ({ L: D.ligas[id], p: findPlayer(D.ligas[id], pl.jid) })).filter(x => x.p);
   return `<section class="view" aria-labelledby="h-j">
     <button class="back" data-go="equipo" data-liga="${L.id}" data-team="${esc(pl.equipo)}">← ${esc(corto(L, pl.equipo))}</button>
-    <div class="lhead panel">${badge(L, pl.equipo, "xl")}<div><h1 id="h-j">${esc(pl.jugador)}</h1><span class="muted">${esc(corto(L, pl.equipo))} · ${esc(L.nombre)}</span></div></div>
+    <div class="lhead panel">${face(L, pl.equipo, pl.jid, pl.jugador, "xl")}<div><h1 id="h-j">${esc(pl.jugador)}</h1><span class="muted">${esc(corto(L, pl.equipo))} · ${esc(L.nombre)}</span></div></div>
     <div class="kpis">${kpi("k", "Goles", pl.goles, pj ? `${dec(pl.goles / pj, 2)} por partido del equipo` : "")}${kpi("", "Penales", pl.penales, "")}${kpi("", "Amarillas", pl.amarillas, "")}${kpi("", "Rojas", pl.rojas, "")}
       ${np ? kpi("m", "Marca en el próximo", pct(np.p), `vs ${esc(corto(L, next.home === pl.equipo ? next.away : next.home))}`) : ""}</div>
     ${pl.ult5 && pl.ult5.length ? `<div class="panel row" style="justify-content:space-between"><h3>Goles en los últimos 5 partidos del equipo</h3><span class="l5">${pl.ult5.map(v => `<i class="${v ? "on" : ""}">${v || "·"}</i>`).join("")}</span></div>` : ""}

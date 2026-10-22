@@ -581,8 +581,13 @@ def main():
                 for lado, team in (("h", p["home"]), ("a", p["away"])):
                     tot, perdido = max(ctx["team_goals"].get(team, 0), 1), 0
                     for b in bj[lado]:
-                        g = sum(n for (jid, t), n in ctx["goles"].items() if t == team and lesiones.jugador_igual(b["jug"], ctx["name_of"].get(jid, "")))
+                        hits = [(jid, n) for (jid, t), n in ctx["goles"].items() if t == team and lesiones.jugador_igual(b["jug"], ctx["name_of"].get(jid, ""))]
+                        g = sum(n for _, n in hits)
                         b["goles"] = g
+                        if hits and str(hits[0][0]).isdigit():
+                            b["jid"] = hits[0][0]   # número de ESPN, para la foto
+                        if not b.get("foto"):
+                            b.pop("foto", None)
                         if b.get("tipo") == "Missing Fixture":
                             perdido += g
                     share[lado] = min(perdido / tot, 0.6)

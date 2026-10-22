@@ -83,7 +83,7 @@ def asignar(bajas, partidos):
             continue
         lista = out.setdefault(best[1], {"h": [], "a": []})[best[2]]
         if not any(x["jug"] == b["jug"] for x in lista):
-            lista.append({"jug": b["jug"], "tipo": b["tipo"], "motivo": b["motivo"]})
+            lista.append({"jug": b["jug"], "tipo": b["tipo"], "motivo": b["motivo"], "foto": b.get("foto")})
     return out
 
 
@@ -125,7 +125,7 @@ def _cargar_fecha(dia):
     for it in data.get("response", []):
         p, t, fx = it.get("player") or {}, it.get("team") or {}, it.get("fixture") or {}
         filas.append({"jug": p.get("name"), "tipo": p.get("type"), "motivo": p.get("reason"), "equipo": t.get("name"),
-                      "fecha": fx.get("date"), "liga": (it.get("league") or {}).get("name")})
+                      "fecha": fx.get("date"), "liga": (it.get("league") or {}).get("name"), "foto": p.get("photo")})
     with open(path, "w", encoding="utf-8") as f:
         json.dump({"pedido": datetime.now(timezone.utc).isoformat(timespec="minutes"), "filas": filas}, f, ensure_ascii=False)
     ESTADO["fechas"][dia] = {"filas": len(filas), "desde_cache": False}
