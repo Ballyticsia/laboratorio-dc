@@ -193,6 +193,8 @@ function toHash(r) {
   if (r.v === "jugador") return `#/jugador/${r.liga}/${encodeURIComponent(r.id)}`;
   if (r.v === "comparar") return `#/comparar/${r.liga}/${encodeURIComponent(r.team || "")}/${encodeURIComponent(r.id || "")}`;
   if (r.v === "inicio") return r.liga && r.liga !== "todas" ? `#/partidos/${r.liga}` : "#/";
+  if (r.v === "vivo") return `#/vivo/${r.tab || "hoy"}${r.id === "envivo" ? "/envivo" : ""}`;
+  if (r.v === "envivo") return `#/envivo/${r.liga}/${encodeURIComponent(r.id)}${r.tab && r.tab !== "resumen" ? "/" + r.tab : ""}`;
   return `#/${r.v}`;
 }
 function fromHash() {
@@ -211,6 +213,8 @@ function fromHash() {
     case "jugador": return { v: "jugador", liga: p[1], id: p[2] };
     case "comparar": return { v: "comparar", liga: D.ligas[p[1]] ? p[1] : first, team: p[2], id: p[3] };
     case "partidos": return { v: "inicio", liga: D.ligas[p[1]] ? p[1] : "todas" };
+    case "vivo": return { v: "vivo", tab: p[1] || "hoy", id: p[2] };
+    case "envivo": return { v: "envivo", liga: p[1], id: p[2], tab: p[3] || "resumen" };
     default: return { v: "inicio", liga: "todas" };
   }
 }
@@ -234,10 +238,11 @@ function render() {
   timers.splice(0).forEach(clearInterval);
   const need = ["liga", "partido", "equipo", "jugador", "comparar"].includes(R.v) && R.liga && D.meta && D.meta[R.liga] && !D.ligas[R.liga] ? R.liga : null;
   if (need) { $app.innerHTML = skeleton(); ensure(need).then(() => render()); return; }
-  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", combinada: "seguimiento" }[R.v] || R.v);
+  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", combinada: "seguimiento", envivo: "vivo" }[R.v] || R.v);
   document.querySelectorAll("[data-nav]").forEach(b => b.setAttribute("aria-current", b.dataset.nav === sec ? "page" : "false"));
   const f = { inicio: vInicio, liga: vLiga, partido: vPartido, equipo: vEquipo, registro: vRegistro, metodo: vMetodo,
-    sobre: vSobre, responsable: vResponsable, jugador: vJugador, comparar: vComparar, combinada: vCombinada, seguimiento: vSeguimiento }[R.v] || vInicio;
+    sobre: vSobre, responsable: vResponsable, jugador: vJugador, comparar: vComparar, combinada: vCombinada, seguimiento: vSeguimiento,
+    vivo: typeof vVivo === "function" ? vVivo : vInicio, envivo: typeof vEnVivo === "function" ? vEnVivo : vInicio }[R.v] || vInicio;
   $app.innerHTML = staleBanner() + f();
   if (R.v === "partido") { if (R.tab === "mercados") bindOdds(); if (R.tab === "alineaciones" || document.getElementById("xi-adj")) loadSummary(); }
   if (R.v === "comparar") bindCompare();
@@ -1574,6 +1579,229 @@ document.addEventListener("click", e => {
 })();
 
 /* ---------------- arranque ---------------- */
+/* ================= EN VIVO: partidos de hoy por competición y centro del partido =================
+   Todo se pide directo a ESPN desde el navegador (marcadores, alineaciones, estadísticas, minuto a minuto). */
+
+const COMPS = [
+  ["uefa.champions", "Champions League", "Europa"], ["uefa.europa", "Europa League", "Europa"], ["uefa.europa.conf", "Conference League", "Europa"],
+  ["conmebol.libertadores", "Copa Libertadores", "Sudamérica"], ["conmebol.sudamericana", "Copa Sudamericana", "Sudamérica"],
+  ["eng.1", "Premier League", "Inglaterra"], ["esp.1", "LaLiga", "España"], ["ita.1", "Serie A", "Italia"], ["ger.1", "Bundesliga", "Alemania"], ["fra.1", "Ligue 1", "Francia"],
+  ["chi.1", "Primera División", "Chile"], ["arg.1", "Liga Profesional", "Argentina"], ["bra.1", "Brasileirão", "Brasil"],
+  ["por.1", "Primeira Liga", "Portugal"], ["ned.1", "Eredivisie", "Países Bajos"], ["eng.2", "Championship", "Inglaterra"],
+  ["usa.1", "MLS", "Estados Unidos"], ["mex.1", "Liga MX", "México"],
+  ["eng.fa", "FA Cup", "Inglaterra"], ["eng.league_cup", "Copa de la Liga", "Inglaterra"], ["esp.copa_del_rey", "Copa del Rey", "España"],
+  ["ita.coppa_italia", "Coppa Italia", "Italia"], ["ger.dfb_pokal", "Copa de Alemania", "Alemania"], ["fra.coupe_de_france", "Copa de Francia", "Francia"],
+  ["fifa.worldq.conmebol", "Eliminatorias Sudamericanas", "Selecciones"], ["uefa.nations", "Liga de Naciones", "Selecciones"], ["fifa.friendly", "Amistosos", "Selecciones"],
+];
+const ESPN = "https://site.api.espn.com/apis/site/v2/sports/soccer";
+const VV = { cache: {}, sum: {}, team: "h" };
+
+const ymd = d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+const localDay = iso => { const d = new Date(iso); return ymd(d); };
+function dayOf(tab) { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + (tab === "ayer" ? -1 : tab === "manana" ? 1 : 0)); return d; }
+
+function vParse(e, slug, comp) {
+  const c = (e.competitions || [])[0] || {}, st = c.status || e.status || {}, t = st.type || {};
+  const side = k => { const x = (c.competitors || []).find(y => y.homeAway === k) || {}, tm = x.team || {};
+    return { id: tm.id, name: tm.shortDisplayName || tm.displayName || "", full: tm.displayName || "", abr: tm.abbreviation, logo: tm.logo, color: tm.color, score: x.score }; };
+  return { id: e.id, slug, comp, date: e.date, state: t.state, detail: t.shortDetail || t.detail || "", clock: st.displayClock, period: st.period, h: side("home"), a: side("away") };
+}
+async function vFetchDay(tab) {
+  const d = dayOf(tab), key = ymd(d), c = VV.cache[key];
+  if (c && Date.now() - c.t < 25000) return c.data;
+  const d2 = new Date(d); d2.setDate(d2.getDate() + 1); const d0 = new Date(d); d0.setDate(d0.getDate() - 1);
+  const out = await Promise.all(COMPS.map(async ([slug, name, region]) => {
+    try {
+      const r = await fetch(`${ESPN}/${slug}/scoreboard?dates=${ymd(d0)}-${ymd(d2)}&limit=200`);
+      if (!r.ok) return null;
+      const j = await r.json(), lg = (j.leagues || [])[0] || {};
+      const evs = (j.events || []).map(e => vParse(e, slug, name)).filter(e => localDay(e.date) === key).sort((a, b) => a.date.localeCompare(b.date));
+      return evs.length ? { slug, name, region, logo: ((lg.logos || [])[0] || {}).href, evs } : null;
+    } catch (e) { return null; }
+  }));
+  const data = out.filter(Boolean);
+  VV.cache[key] = { t: Date.now(), data };
+  return data;
+}
+/* partido del modelo (mismo id de ESPN) */
+function vModel(id) {
+  for (const L of Object.values(D.ligas || {})) { const p = (L.partidos || []).find(x => String(x.id) === String(id)); if (p) return { L, p }; }
+  return null;
+}
+const vLiveTxt = e => e.state === "in" ? (e.clock && e.detail.toLowerCase().indexOf("half") < 0 && e.detail.indexOf("Entretiempo") < 0 ? e.clock : "ET") : e.state === "post" ? "Final" : hhmm(e.date);
+function vTeam(e, k, cls) {
+  const t = e[k], img = t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : "";
+  return `<span class="vt ${cls}"><span class="vtn">${esc(t.name)}</span><span class="vlogo">${img}</span></span>`;
+}
+function vRow(e) {
+  const m = vModel(e.id), sc = e.state === "pre" ? `<span class="vtime">${hhmm(e.date)}</span>` : `<span class="vsc num">${esc(e.h.score ?? "")}<i>-</i>${esc(e.a.score ?? "")}</span>`;
+  const st = e.state === "in" ? `<span class="vmin live">${esc(vLiveTxt(e))}</span>` : e.state === "post" ? `<span class="vmin">Final</span>` : `<span class="vmin">&nbsp;</span>`;
+  return `<button class="vrow ${e.state}" data-go="envivo" data-liga="${esc(e.slug)}" data-id="${esc(e.id)}">
+    ${st}<span class="vmid">${vTeam(e, "h", "l")}${sc}${vTeam(e, "a", "r")}</span>
+    ${m && e.state !== "post" ? `<span class="vmodel" title="Probabilidad Ballytics">${pct(m.p.pH)} · ${pct(m.p.pD)} · ${pct(m.p.pA)}</span>` : `<span class="vmodel"></span>`}</button>`;
+}
+
+function vVivo() {
+  const tab = ["ayer", "hoy", "manana"].includes(R.tab) ? R.tab : "hoy", solo = R.id === "envivo";
+  setTimeout(() => vFillList(tab, solo), 0);
+  if (tab === "hoy") timers.push(setInterval(() => { if (R.v === "vivo" && !document.hidden) vFillList(tab, solo); }, 30000));
+  return `<section class="view" aria-labelledby="h-vivo">
+    <div class="row" style="justify-content:space-between;align-items:flex-end"><h1 id="h-vivo">En vivo</h1><span class="note" id="vv-upd"></span></div>
+    <div class="vbar">
+      <div class="tabs2" role="group" aria-label="Día">${[["ayer", "Ayer"], ["hoy", "Hoy"], ["manana", "Mañana"]].map(([k, n]) => `<button data-go="vivo" data-tab="${k}" data-id="${solo ? "envivo" : ""}" data-keep aria-pressed="${k === tab}">${n}</button>`).join("")}</div>
+      <button class="vlivebtn" data-go="vivo" data-tab="${tab}" data-id="${solo ? "" : "envivo"}" data-keep aria-pressed="${solo}"><span class="dot"></span>Solo en vivo <b id="vv-n"></b></button>
+    </div>
+    <div id="vv-list"><div class="panel empty">Buscando partidos…</div></div>
+    <p class="note">Marcadores, alineaciones y estadísticas en vivo de ESPN. Se actualiza solo cada 30 segundos.</p></section>`;
+}
+async function vFillList(tab, solo) {
+  if (D.indice) D.indice.ligas.forEach(l => ensure(l.id));
+  const box = document.getElementById("vv-list"); if (!box) return;
+  const data = await vFetchDay(tab);
+  if (R.v !== "vivo" || !document.getElementById("vv-list")) return;
+  const nLive = data.reduce((s, c) => s + c.evs.filter(e => e.state === "in").length, 0);
+  const n = document.getElementById("vv-n"); if (n) n.textContent = nLive ? `(${nLive})` : "";
+  const groups = data.map(c => ({ ...c, evs: solo ? c.evs.filter(e => e.state === "in") : c.evs })).filter(c => c.evs.length);
+  groups.sort((a, b) => (b.evs.some(e => e.state === "in") - a.evs.some(e => e.state === "in")));
+  box.innerHTML = groups.length ? groups.map(c => `<div class="panel flush vcomp"><div class="vch">${c.logo ? `<img src="${esc(c.logo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}<b>${esc(c.name)}</b><span class="faint">${esc(c.region)}</span><span class="vcount">${c.evs.filter(e => e.state === "in").length ? `<span class="dot"></span>${c.evs.filter(e => e.state === "in").length} en vivo · ` : ""}${c.evs.length} ${c.evs.length === 1 ? "partido" : "partidos"}</span></div>${c.evs.map(vRow).join("")}</div>`).join("")
+    : `<div class="panel empty">${solo ? "No hay partidos en vivo en este momento." : "No hay partidos este día en las competiciones que seguimos."}</div>`;
+  const u = document.getElementById("vv-upd"); if (u) u.textContent = `Actualizado ${hhmm(new Date().toISOString())}`;
+}
+
+/* ---------------- centro del partido ---------------- */
+const STATS = [["possessionPct", "Posesión", "%"], ["totalShots", "Remates"], ["shotsOnTarget", "Remates al arco"], ["blockedShots", "Remates bloqueados"],
+  ["wonCorners", "Saques de esquina"], ["offsides", "Fueras de juego"], ["foulsCommitted", "Faltas"], ["yellowCards", "Tarjetas amarillas"], ["redCards", "Tarjetas rojas"],
+  ["saves", "Atajadas"], ["accuratePasses", "Pases completados"], ["totalPasses", "Pases"], ["passPct", "Precisión de pases", "%"], ["totalCrosses", "Centros"],
+  ["totalLongBalls", "Balones largos"], ["totalTackles", "Entradas"], ["interceptions", "Intercepciones"], ["totalClearance", "Despejes"]];
+const KEY = ["possessionPct", "totalShots", "shotsOnTarget", "wonCorners", "foulsCommitted", "offsides"];
+
+function vEnVivo() {
+  const tabs = [["resumen", "Resumen"], ["alineaciones", "Alineaciones"], ["estadisticas", "Estadísticas"], ["minuto", "Relato"]];
+  const tab = tabs.some(t => t[0] === R.tab) ? R.tab : "resumen";
+  setTimeout(() => vFillMatch(), 0);
+  timers.push(setInterval(() => { if (R.v === "envivo" && !document.hidden && VV.state === "in") vFillMatch(true); }, 30000));
+  return `<section class="view vcenter">
+    <button class="back" data-go="vivo" data-tab="hoy">← En vivo</button>
+    <div class="panel vhead" id="vc-head"><div class="empty">Cargando partido…</div></div>
+    <div class="mtabs vtabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" data-go="envivo" data-liga="${esc(R.liga)}" data-id="${esc(R.id)}" data-tab="${k}" data-keep aria-selected="${k === tab}">${n}</button>`).join("")}</div>
+    <div id="vc-body"></div></section>`;
+}
+async function vSummary(slug, id, force) {
+  const k = slug + "|" + id, c = VV.sum[k];
+  if (c && !force && Date.now() - c.t < 20000) return c.j;
+  const r = await fetch(`${ESPN}/${slug}/summary?event=${encodeURIComponent(id)}`);
+  if (!r.ok) throw new Error(r.status);
+  const j = await r.json(); VV.sum[k] = { t: Date.now(), j }; return j;
+}
+function vHeader(j) {
+  const c = ((j.header || {}).competitions || [])[0] || {}, st = c.status || {}, t = st.type || {};
+  const side = k => { const x = (c.competitors || []).find(y => y.homeAway === k) || {}, tm = x.team || {};
+    return { id: String(tm.id || ""), name: tm.displayName || tm.name || "", short: tm.shortDisplayName || tm.displayName || "", logo: tm.logo || ((tm.logos || [])[0] || {}).href, color: tm.color, score: x.score }; };
+  return { state: t.state, detail: t.shortDetail || t.detail || "", clock: st.displayClock, period: st.period, date: c.date, h: side("home"), a: side("away"), league: ((j.header || {}).league || {}).name || "" };
+}
+const minOf = (H) => { if (H.state === "post") return 90; if (H.state !== "in") return 0; const m = parseInt(String(H.clock || "0"), 10) || 0; return /half|HT|Entretiempo/i.test(H.detail) ? 45 : Math.min(m, 90); };
+function vEvents(j, H) {
+  return (j.keyEvents || []).filter(e => e.type && /goal|card|substitution|penalty/i.test((e.type.type || "") + (e.type.text || ""))).map(e => {
+    const ty = (e.type.type || e.type.text || "").toLowerCase(), team = String((e.team || {}).id || ""), lado = team === H.h.id ? "h" : team === H.a.id ? "a" : "";
+    const who = (e.participants || []).map(p => (p.athlete || {}).displayName).filter(Boolean);
+    const kind = /own/.test(ty) ? "og" : /goal|scored/.test(ty) ? "goal" : /red/.test(ty) ? "red" : /yellow/.test(ty) ? "yellow" : /substitution/.test(ty) ? "sub" : "other";
+    return { min: (e.clock || {}).displayValue || "", lado, kind, who, text: e.text || "" };
+  });
+}
+const ICON = { goal: "⚽", og: "⚽", yellow: `<i class="ycard"></i>`, red: `<i class="rcard"></i>`, sub: "⇄", other: "•" };
+function vLogo(t, cls = "") { return `<span class="vlogo ${cls}">${t.logo ? `<img src="${esc(t.logo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : esc((t.short || "?").slice(0, 3))}</span>`; }
+
+async function vFillMatch(force) {
+  const slug = R.liga, id = R.id, head = document.getElementById("vc-head"), body = document.getElementById("vc-body");
+  if (!head || !body) return;
+  let j;
+  try { j = await vSummary(slug, id, force); } catch (e) { head.innerHTML = `<div class="empty">No pude cargar este partido. Prueba de nuevo en un rato.</div>`; return; }
+  if (R.v !== "envivo" || R.id !== id) return;
+  const H = vHeader(j), evs = vEvents(j, H), comp = (COMPS.find(c => c[0] === slug) || [])[1] || H.league, m = vModel(id);
+  const goals = l => evs.filter(e => (e.kind === "goal" && e.lado === l) || (e.kind === "og" && e.lado && e.lado !== l)).map(e => `${esc((e.who[0] || "").split(" ").slice(-1)[0])} ${esc(e.min)}${e.kind === "og" ? " (ec)" : ""}`).join(", ");
+  const status = H.state === "in" ? `<span class="vmin live big">${esc(/half|HT/i.test(H.detail) ? "Entretiempo" : H.clock || H.detail)}</span>` : H.state === "post" ? `<span class="vmin big">Final</span>` : `<span class="vmin big">${esc(new Date(H.date).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))} · ${hhmm(H.date)}</span>`;
+  head.innerHTML = `<div class="vhcomp">${esc(comp)}</div>
+    <div class="vhrow"><div class="vhteam">${vLogo(H.h, "xl")}<b>${esc(H.h.short)}</b><small>${goals("h")}</small></div>
+      <div class="vhmid">${H.state === "pre" ? `<span class="vhsc num">vs</span>` : `<span class="vhsc num">${esc(H.h.score ?? 0)} – ${esc(H.a.score ?? 0)}</span>`}${status}</div>
+      <div class="vhteam">${vLogo(H.a, "xl")}<b>${esc(H.a.short)}</b><small>${goals("a")}</small></div></div>
+    ${m ? `<div class="row" style="justify-content:center;margin-top:10px"><button class="btn ghost sm" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">Análisis de Ballytics →</button></div>` : ""}`;
+  const tab = R.tab || "resumen";
+  if (tab === "resumen") body.innerHTML = (m ? vProbPanel(m, H) : "") + vKeyStats(j, H) + vTimeline(evs, H);
+  if (tab === "alineaciones") body.innerHTML = vPitch(j, H);
+  if (tab === "estadisticas") body.innerHTML = vStats(j, H, false);
+  if (tab === "minuto") body.innerHTML = vComments(j);
+  VV.state = H.state;
+}
+
+/* probabilidad en vivo: goles que faltan según el tiempo restante (Poisson) + marcador actual */
+function vProbPanel(m, H) {
+  const p = m.p, L = m.L, min = minOf(H), hs = +H.h.score || 0, as = +H.a.score || 0;
+  if (H.state === "pre") return "";
+  const f = H.state === "post" ? 0 : Math.max(0, (92 - min) / 92), lh = (p.lh || 1.3) * f, la = (p.la || 1.1) * f;
+  let pH = 0, pD = 0, pA = 0;
+  for (let i = 0; i <= 10; i++) for (let k = 0; k <= 10; k++) { const q = pois(i, lh) * pois(k, la), x = hs + i, y = as + k; if (x > y) pH += q; else if (x === y) pD += q; else pA += q; }
+  const s = pH + pD + pA; pH /= s; pD /= s; pA /= s;
+  const H1 = corto(L, p.home), A1 = corto(L, p.away);
+  return `<div class="panel stack"><h3>Probabilidad en vivo ${help("Parte de la probabilidad Ballytics antes del partido y considera el marcador actual y los minutos que quedan: los goles que faltan se reparten según los goles esperados de cada equipo. No considera expulsiones ni el dominio del partido.")}</h3>
+    <div class="hero-p">${bar3(pH, pD, pA)}</div><div class="nums vpn"><span><b>${pct(pH)}</b> ${esc(H1)}</span><span>${pct(pD)} empate</span><span>${esc(A1)} <b>${pct(pA)}</b></span></div>
+    <p class="note">Antes del partido: ${pct(p.pH)} · ${pct(p.pD)} · ${pct(p.pA)}${H.state === "in" ? ` · minuto ${min}` : ""}.</p></div>`;
+}
+function vStatRows(j, H, only) {
+  const T = (j.boxscore || {}).teams || [], th = T.find(t => String((t.team || {}).id) === H.h.id) || T[1] || {}, ta = T.find(t => String((t.team || {}).id) === H.a.id) || T[0] || {};
+  const get = (t, k) => { const s = (t.statistics || []).find(x => x.name === k); return s ? s.displayValue : null; };
+  return STATS.filter(([k]) => !only || only.includes(k)).map(([k, n, u]) => {
+    let a = get(th, k), b = get(ta, k); if (a == null || b == null) return "";
+    let va = parseFloat(a), vb = parseFloat(b); if (k === "passPct" && va <= 1 && vb <= 1) { va *= 100; vb *= 100; a = Math.round(va); b = Math.round(vb); }
+    const t = (va + vb) || 1, fa = u ? `${a}%` : a, fb = u ? `${b}%` : b;
+    return `<div class="vst"><span class="num ${va > vb ? "hi h" : ""}">${esc(fa)}</span><span class="vsl">${n}</span><span class="num ${vb > va ? "hi a" : ""}">${esc(fb)}</span>
+      <span class="vbars"><span class="vb l"><i style="width:${100 * va / t}%"></i></span><span class="vb r"><i style="width:${100 * vb / t}%"></i></span></span></div>`;
+  }).join("");
+}
+function vKeyStats(j, H) { const r = vStatRows(j, H, KEY); return r ? `<div class="panel stack"><h3>Estadísticas importantes</h3>${r}<button class="link" data-go="envivo" data-liga="${esc(R.liga)}" data-id="${esc(R.id)}" data-tab="estadisticas" data-keep>Todas las estadísticas →</button></div>` : ""; }
+function vStats(j, H) { const r = vStatRows(j, H); return `<div class="panel stack"><h3>Estadísticas</h3>${r || `<p class="note">Las estadísticas aparecen cuando empieza el partido.</p>`}</div>`; }
+function vTimeline(evs, H) {
+  if (!evs.length) return `<div class="panel stack"><h3>Incidencias</h3><p class="note">${H.state === "pre" ? "El partido aún no empieza." : "Sin goles ni tarjetas por ahora."}</p></div>`;
+  return `<div class="panel stack"><h3>Incidencias</h3><div class="vtl">${evs.slice().reverse().map(e => `<div class="vev ${e.lado}"><span class="vem num">${esc(e.min)}</span><span class="vei ${e.kind}">${ICON[e.kind]}</span><span class="vew"><b>${esc(e.who[0] || "")}</b>${e.kind === "sub" && e.who[1] ? `<small>sale ${esc(e.who[1])}</small>` : e.kind === "goal" && e.who[1] ? `<small>asistencia ${esc(e.who[1])}</small>` : e.kind === "og" ? "<small>en contra</small>" : ""}</span></div>`).join("")}</div></div>`;
+}
+function vComments(j) {
+  const c = (j.commentary || []).slice().reverse().slice(0, 120);
+  return `<div class="panel stack"><h3>Minuto a minuto</h3>${c.length ? `<div class="vcm">${c.map(x => `<div><span class="num vem">${esc((x.time || {}).displayValue || "")}</span><span>${esc(x.text || "")}</span></div>`).join("")}</div><p class="note">Relato de ESPN (en inglés).</p>` : `<p class="note">Sin relato disponible para este partido.</p>`}</div>`;
+}
+
+/* alineación en la cancha según la formación */
+function lineRank(ab) { ab = (ab || "").toUpperCase();
+  if (ab === "G" || ab === "GK") return 0;
+  if (ab === "D" || /^(CD|CB|LB|RB|LWB|RWB|SW)(-|$)/.test(ab)) return 1;
+  if (/^(DM|CDM)(-|$)/.test(ab)) return 2;
+  if (ab === "M" || /^(CM|LM|RM)(-|$)/.test(ab)) return 3;
+  if (/^(AM|CAM|LW|RW|SS)(-|$)/.test(ab)) return 4;
+  return 5; }
+/* de izquierda a derecha: lateral/extremo izquierdo, centro-izquierda, centro, centro-derecha, lateral/extremo derecho */
+const lineSide = ab => { ab = (ab || "").toUpperCase(); return /^(LB|LWB|LM|LW)$/.test(ab) ? 0 : /-L$/.test(ab) ? 1 : /^(RB|RWB|RM|RW)$/.test(ab) ? 4 : /-R$/.test(ab) ? 3 : 2; };
+function vPitch(j, H) {
+  const ros = (j.rosters || []).filter(t => (t.roster || []).some(x => x.starter));
+  if (!ros.length) return `<div class="panel stack"><h3>Alineaciones</h3><p class="note">Aún no publicadas. Suelen salir cerca de una hora antes del partido.</p></div>`;
+  const lado = VV.team === "a" ? "away" : "home", T = ros.find(t => t.homeAway === lado) || ros[0], team = T.homeAway === "home" ? H.h : H.a;
+  const Lf = { equipos: { [team.name]: { color: team.color, logo: team.logo } } };
+  const st = (T.roster || []).filter(x => x.starter), subs = (T.roster || []).filter(x => !x.starter);
+  const gk = st.filter(x => lineRank((x.position || {}).abbreviation) === 0), out = st.filter(x => lineRank((x.position || {}).abbreviation) !== 0)
+    .sort((a, b) => lineRank((a.position || {}).abbreviation) - lineRank((b.position || {}).abbreviation) || lineSide((a.position || {}).abbreviation) - lineSide((b.position || {}).abbreviation) || (a.formationPlace || 0) - (b.formationPlace || 0));
+  let rowsN = String(T.formation || "").split("-").map(n => parseInt(n, 10)).filter(n => n > 0);
+  if (rowsN.reduce((s, n) => s + n, 0) !== out.length) { const g = {}; out.forEach(x => { const r = lineRank((x.position || {}).abbreviation); g[r] = (g[r] || 0) + 1; }); rowsN = Object.keys(g).sort().map(k => g[k]); }
+  const rows = [gk.length ? gk : st.slice(0, 1)]; let i = 0; rowsN.forEach(n => { rows.push(out.slice(i, i + n)); i += n; });
+  const ev = (j.keyEvents || []);
+  const chip = x => { const a = x.athlete || {}, id = String(a.id || ""), nm = a.shortName || a.displayName || "";
+    const g = ev.filter(e => /goal|scored/i.test((e.type || {}).type || "") && !/own/i.test((e.type || {}).type || "") && ((e.participants || [])[0] || {}).athlete && String(e.participants[0].athlete.id) === id).length;
+    const card = ev.some(e => /red/i.test((e.type || {}).type || "") && ((e.participants || [])[0] || {}).athlete && String(e.participants[0].athlete.id) === id) ? "red" : ev.some(e => /yellow/i.test((e.type || {}).type || "") && ((e.participants || [])[0] || {}).athlete && String(e.participants[0].athlete.id) === id) ? "yellow" : "";
+    return `<div class="vpl">${face(Lf, team.name, id, a.displayName, "lg")}<span class="vjn num">${esc(x.jersey || "")}</span>${g ? `<span class="vgl">${"⚽".repeat(Math.min(g, 3))}</span>` : ""}${card ? `<i class="${card === "red" ? "rcard" : "ycard"} vcd"></i>` : ""}${x.subbedOut ? `<span class="vso">⇄</span>` : ""}<b>${esc(nm.split(" ").slice(-1)[0] || nm)}</b></div>`; };
+  const pitch = `<div class="vpitch"><div class="vlines"><i class="c"></i><i class="b t"></i><i class="b bt"></i></div>${rows.slice().reverse().map(r => `<div class="vprow">${r.map(chip).join("")}</div>`).join("")}</div>`;
+  return `<div class="panel stack"><div class="row" style="justify-content:space-between"><h3>Alineaciones ${T.formation ? `<span class="tag">${esc(T.formation)}</span>` : ""}</h3>
+      <div class="tabs2" role="group" aria-label="Equipo">${[["h", H.h], ["a", H.a]].map(([k, t]) => `<button data-vteam="${k}" aria-pressed="${(VV.team === "a" ? "a" : "h") === k}">${esc(t.short)}</button>`).join("")}</div></div>
+    ${pitch}
+    ${subs.length ? `<h3 style="margin-top:6px">Suplentes</h3><div class="vsubs">${subs.map(x => `<div class="vsb ${x.subbedIn ? "in" : ""}"><span class="num vjn2">${esc(x.jersey || "")}</span>${face(Lf, team.name, (x.athlete || {}).id, (x.athlete || {}).displayName, "sm")}<span>${esc((x.athlete || {}).displayName || "")}</span>${x.subbedIn ? `<small>entró</small>` : ""}</div>`).join("")}</div>` : ""}</div>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-vteam]"); if (!b) return; VV.team = b.dataset.vteam; vFillMatch(); });
+
 load().then(() => { R = fromHash(); render(); pollLive(); setInterval(pollLive, 60000);
   D.all.then(() => { if (R.v === "inicio" || R.v === "registro") { const y = window.scrollY; render(); window.scrollTo(0, y); } }); })
   .catch(err => { $app.innerHTML = `<div class="panel empty">No pude cargar los datos (${esc(err.message)}). Si abriste el archivo directo desde tu computador, el navegador bloquea la lectura: usa la versión publicada.</div>`; });
