@@ -21,10 +21,11 @@ L2 = 1.0
 MAX_GOALS = 10
 
 
-def fit(df, ref_date, xi=XI, alpha=ALPHA, l2=L2, home_l2=None):
+def fit(df, ref_date, xi=XI, alpha=ALPHA, l2=L2, home_l2=None, beta=0.0):
     """df: columnas date, home, away, hg, ag, hst, ast (tiros al arco; pueden faltar).
     home_l2: si se indica, cada equipo tiene su propia ventaja de local (encogida hacia el promedio
-    con esa penalización L2); si es None, la localía es la misma para todos."""
+    con esa penalización L2); si es None, la localía es la misma para todos.
+    beta: peso de los goles esperados (xG, columnas xgh/xga) en los partidos que los tengan."""
     ref = np.datetime64(pd.Timestamp(ref_date).date(), "D")
     days = (ref - pd.to_datetime(df["date"]).values.astype("datetime64[D]")).astype(float)
     w = np.exp(-xi * days)
@@ -43,6 +44,12 @@ def fit(df, ref_date, xi=XI, alpha=ALPHA, l2=L2, home_l2=None):
         k = (hg[ok].sum() + ag[ok].sum()) / max(hst[ok].sum() + ast[ok].sum(), 1)
         yh[ok] = (1 - alpha) * hg[ok] + alpha * k * hst[ok]
         ya[ok] = (1 - alpha) * ag[ok] + alpha * k * ast[ok]
+    if beta > 0 and "xgh" in d and "xga" in d:
+        xh = pd.to_numeric(d["xgh"], errors="coerce").values.astype(float)
+        xa = pd.to_numeric(d["xga"], errors="coerce").values.astype(float)
+        okx = ~(np.isnan(xh) | np.isnan(xa))
+        yh[okx] = (1 - beta) * yh[okx] + beta * xh[okx]
+        ya[okx] = (1 - beta) * ya[okx] + beta * xa[okx]
     n, sw = len(teams), w.sum()
 
     th = home_l2 is not None
@@ -149,15 +156,31 @@ def sin_margen(cuotas):
     return q, qo
 
 
-def calibrar(cuotas, rho, lh0, la0):
+def mercado_q(cuotas=None, mercado=None):
+    """Probabilidades de mercado (1X2, más/menos y su línea): The Odds API si está; si no, ESPN."""
+    if mercado and all(mercado.get(k) for k in ("h", "d", "a")):
+        s = mercado["h"] + mercado["d"] + mercado["a"]
+        q = np.array([mercado["h"], mercado["d"], mercado["a"]]) / s
+        if mercado.get("over") is not None and mercado.get("linea") is not None:
+            return q, mercado["over"], mercado["linea"]
+        _, qo = sin_margen(cuotas) if cuotas else (None, None)   # sin más/menos: se usa el de ESPN si existe
+        return q, qo, (cuotas or {}).get("linea") if qo is not None else None
+    if cuotas:
+        q, qo = sin_margen(cuotas)
+        return q, qo, cuotas.get("linea")
+    return None, None, None
+
+
+def calibrar(cuotas, rho, lh0, la0, mercado=None):
     """Goles esperados que reproducen la cuota (1X2 y más/menos sin margen).
 
     En el backtest 2025-26 (3.747 partidos) la cuota fue más precisa que el modelo solo, y la
     tabla de marcadores armada con estos goles mejoró el marcador exacto y "ambos marcan"."""
-    q, qo = sin_margen(cuotas)
+    q, qo, line = mercado_q(cuotas, mercado)
     if q is None:
         return None
-    line = cuotas.get("linea")
+    if line is None:
+        qo = None
 
     def res(z):
         m = score_matrix(np.exp(z[0]), np.exp(z[1]), rho)

@@ -83,6 +83,12 @@ El robot usa la clave guardada en **Settings → Secrets and variables → Actio
 - El modelo propio queda guardado en `p.modelo`, y el registro guarda las tres versiones: modelo propio (`pH…top`), mercado (`mH…mA`) y Ballytics (`fH…ftop`).
 - La razón está en `pipeline/backtest_mercado.json`: en 3.747 partidos de 2025-26 la cuota fue más precisa en el 1X2, y sus goles implícitos mejoraron el marcador exacto y "ambos marcan".
 
+## The Odds API (Pinnacle y otras casas)
+Secreto `ODDS_API_KEY`. Con el plan gratis (500 créditos al mes) cada liga se actualiza más o menos una vez al día, solo si juega en las próximas 36 horas, y se guarda una reserva para no quedarse sin créditos. El estado queda en `data/odds_api/estado.json`. Sin clave se usan las cuotas de ESPN (DraftKings).
+
+## xG (Understat)
+`pipeline/backtest_xg.py` (workflow "Backtest de xG", mensual o a mano) compara el modelo con y sin goles esperados. El robot usa xG solo si `data/backtest_xg.json` dice `"usar": true`.
+
 ## Cambiar cosas
 - **Horario:** la línea `cron` del workflow (está en hora UTC; Chile es UTC-3).
 - **Ligas:** la lista `LIGAS` en `pipeline/generar.py` (códigos de ESPN como `eng.1`, `esp.1`, `por.1`, `ned.1`, `arg.1`, `chi.1`).

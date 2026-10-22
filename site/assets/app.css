@@ -712,3 +712,5 @@ svg .dotg:hover .pt{fill:var(--card)}
 :root[data-theme="light"] .vm{background:#f4f7fb}
 .vm-t .sh{display:none}
 @media (max-width:640px){.vm{padding:10px}.vm-t .lg{display:none}.vm-t .sh{display:inline}.vm-t td:first-child{white-space:normal}.vm-t td small{display:block;margin:2px 0 0}.vm-t th,.vm-t td{padding:7px 5px}}
+.xi h3{margin:0 0 4px}.xi .mktrow{margin-top:8px}.xi .bj-row:first-of-type{border-top:0}
+.lineups+.note,.xi+.lineups{margin-top:14px}

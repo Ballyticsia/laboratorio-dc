@@ -23,8 +23,10 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
 import datos  # noqa: E402
+import cuotas  # noqa: E402
 import lesiones  # noqa: E402
-from modelo import XI, ALPHA, calibrar, fit, markets, score_matrix, sin_margen  # noqa: E402
+import xg  # noqa: E402
+from modelo import XI, ALPHA, calibrar, fit, markets, mercado_q, score_matrix  # noqa: E402
 
 RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SALIDA = os.path.join(RAIZ, "site", "data")
@@ -315,7 +317,7 @@ def side_model(played, today, col):
 def ledger_update(pred_rows, jugados, now_iso):
     # lh…top = modelo propio; m* = mercado sin margen; f* = probabilidad Ballytics (ajustada a la cuota si la hay)
     cols = ["id", "liga", "kickoff", "home", "away", "lh", "la", "pH", "pD", "pA", "pO25", "pBTTS", "top", "predicho", "hg", "ag", "mH", "mD", "mA",
-            "fH", "fD", "fA", "fO25", "fBTTS", "ftop"]
+            "fH", "fD", "fA", "fO25", "fBTTS", "ftop", "jH", "jD", "jA", "jO25"]
     reg = pd.read_csv(REGISTRO, dtype={"id": str}) if os.path.exists(REGISTRO) else pd.DataFrame(columns=cols)
     reg = reg.reindex(columns=cols).set_index("id", drop=False)
     for a, b in (("fH", "pH"), ("fD", "pD"), ("fA", "pA"), ("fO25", "pO25"), ("fBTTS", "pBTTS"), ("ftop", "top")):
@@ -326,7 +328,9 @@ def ledger_update(pred_rows, jugados, now_iso):
         own = p.get("modelo") or p
         reg.loc[p["id"], cols[:14]] = [p[c] for c in cols[:5]] + [own[c] for c in cols[5:13]] + [now_iso]
         reg.loc[p["id"], ["fH", "fD", "fA", "fO25", "fBTTS", "ftop"]] = [p["pH"], p["pD"], p["pA"], p["pO25"], p["pBTTS"], p["top"]]
-        q, _ = sin_margen(p["cuotas"]) if p.get("cuotas") else (None, None)
+        aj = p.get("ajuste")
+        reg.loc[p["id"], ["jH", "jD", "jA", "jO25"]] = [aj["pH"], aj["pD"], aj["pA"], aj["pO25"]] if aj else [np.nan] * 4
+        q, _, _ = mercado_q(p.get("cuotas"), p.get("mercado"))
         if q is not None:
             reg.loc[p["id"], ["mH", "mD", "mA"]] = q.round(4)
     res = jugados.set_index("id")
@@ -383,6 +387,11 @@ def ledger_summary(reg, base):
             out["vs_mercado"] = dict(n=int(len(gm)), modelo=ll3(["pH", "pD", "pA"]), mercado=ll3(["mH", "mD", "mA"]),
                                      ballytics=ll3(["fH", "fD", "fA"]), acierto_modelo=hit3(["pH", "pD", "pA"]),
                                      acierto_mercado=hit3(["mH", "mD", "mA"]), acierto_ballytics=hit3(["fH", "fD", "fA"]))
+        gj = g.dropna(subset=["jH", "jD", "jA"])
+        if len(gj):
+            kj = gj.res.map({"H": 0, "D": 1, "A": 2}).values
+            llj = lambda cs: r(-np.log(np.clip(gj[cs].astype(float).values[np.arange(len(kj)), kj], 1e-9, None)).mean())
+            out["bajas"] = dict(n=int(len(gj)), modelo=llj(["pH", "pD", "pA"]), con_bajas=llj(["jH", "jD", "jA"]))
         probs, hits = P.ravel(), np.eye(3)[k].ravel()
         cal = []
         for lo in np.arange(0, 1, .1):
@@ -425,6 +434,14 @@ def main():
         hist = {}
     stamp = now.strftime("%Y-%m-%dT%H:%MZ")
     bajas = lesiones.cargar()
+    try:   # xG solo si el backtest mensual (pipeline/backtest_xg.py) mostró que mejora
+        with open(os.path.join(RAIZ, "data", "backtest_xg.json"), encoding="utf-8") as fx:
+            XGC = json.load(fx)
+    except (OSError, ValueError):
+        XGC = {}
+    usar_xg = bool(XGC.get("usar"))
+    print(f"  xG: {'sí, peso ' + str(XGC.get('beta')) if usar_xg else 'no (el backtest no mostró mejora o aún no se corre)'}")
+    cuotas.cargar([L["id"] for L in LIGAS if not args.ligas or L["id"] in args.ligas])
     pendientes = []
     portada = dict(partidos=[], jugadores=[], equipos=[], rachas=[])
     for L in LIGAS:
@@ -439,7 +456,14 @@ def main():
         extra = [datos.load(s, start, today, today) for s in L.get("s2", [])]
         both = pd.concat([d1] + [e for e in extra if not e.empty], ignore_index=True)
         played = both[(both.estado == "jugado") & both.hg.notna() & (both.date <= hoy)].drop_duplicates(["date", "home", "away"])
-        model = fit(played, today, home_l2=HOME_L2)
+        n_xg = 0
+        slugs = [L["s1"]] + L.get("s2", [])
+        if usar_xg and any(s in xg.LIGAS for s in slugs):
+            played, n_xg, _ = xg.con_xg(played, slugs, start, today)
+        if n_xg:
+            model = fit(played, today, home_l2=HOME_L2, alpha=XGC.get("alpha", ALPHA), beta=XGC.get("beta", 0.0))
+        else:
+            model = fit(played, today, home_l2=HOME_L2)
         mc, mt = side_model(played, today, "corners"), side_model(played, today, "tarjetas")
 
         cur = d1[d1.date >= cur_start]
@@ -488,10 +512,16 @@ def main():
                      estado=x.estado, **solo)
             lam = None
             od = getattr(x, "odds", None)
-            if isinstance(od, dict):
-                p["cuotas"] = od
-                # Probabilidad Ballytics: goles esperados ajustados a la cuota; el modelo propio queda en p["modelo"]
-                cal = calibrar(od, model.rho, lh, la)
+            od = od if isinstance(od, dict) else None
+            if od:
+                p["cuotas"] = od   # DraftKings vía ESPN (precarga la pestaña Mercados)
+            mq = cuotas.buscar(L["id"], x.kickoff, x.home, x.away)   # Pinnacle o promedio de casas (The Odds API)
+            if mq:
+                p["mercado"] = mq
+                cuotas.ESTADO["partidos_con_cuota"] += 1
+            if od or mq:
+                # Probabilidad Ballytics: goles esperados ajustados al mercado; el modelo propio queda en p["modelo"]
+                cal = calibrar(od, model.rho, lh, la, mq)
                 if cal:
                     lam = cal
                     fm = markets(score_matrix(cal[0], cal[1], model.rho))
@@ -559,7 +589,7 @@ def main():
         meta = datos.meta(L["s1"])
         out = dict(id=L["id"], nombre=L["nombre"], pais=L["pais"], region=L["region"], logo=meta.get("logo"),
                    actualizado=now.isoformat(timespec="minutes"), datos_hasta=str(p1.date.max().date()) if len(p1) else None,
-                   usa_tiros=model.usa_tiros, tabla_ok=tiene_tabla, zonas=[dict(desde=a, hasta=b, nombre=n, cls=c) for a, b, n, c in L.get("zonas", [])],
+                   usa_tiros=model.usa_tiros, usa_xg=bool(n_xg), tabla_ok=tiene_tabla, zonas=[dict(desde=a, hasta=b, nombre=n, cls=c) for a, b, n, c in L.get("zonas", [])],
                    modelo=mj, modelo_corners=mc.to_json() if mc else None, modelo_tarjetas=mt.to_json() if mt else None,
                    slug=L["s1"], grupos=grupos, equipos=info, tabla=tabla, stats=stats_eq, rachas=rachas, goleadores=goleadores, amonestados=amonestados,
                    partidos=partidos, resultados=resultados)
@@ -568,7 +598,7 @@ def main():
                            datos_hasta=out["datos_hasta"], proximos=len(partidos)))
         print(f"  {len(jug)} jugados · {len(partidos)} por jugar · datos hasta {out['datos_hasta']} · "
               f"córners {'sí' if mc else 'no'} · tarjetas {'sí' if mt else 'no'} · {len(goleadores)} goleadores · "
-              f"{n_calib} ajustados a la cuota", flush=True)
+              f"{n_calib} ajustados a la cuota" + (f" · {n_xg} con xG" if n_xg else ""), flush=True)
 
     if not indice:
         print("No conseguí datos de ninguna liga. Revisa la conexión y vuelve a intentar.")
@@ -579,10 +609,6 @@ def main():
     hist = {k: v for k, v in hist.items() if v.get("k", "") >= limite_hist}
     with open(HISTORIAL, "w", encoding="utf-8") as f:
         json.dump(hist, f, separators=(",", ":"))
-    jug_df = pd.concat(jugados_all, ignore_index=True) if jugados_all else pd.DataFrame(columns=["id", "hg", "ag"])
-    reg = ledger_update(preds_reg, jug_df, now.isoformat(timespec="minutes"))
-    with open(os.path.join(SALIDA, "registro.json"), "w", encoding="utf-8") as f:
-        json.dump(ledger_summary(reg, base), f, ensure_ascii=False, separators=(",", ":"))
 
     # bajas (API-Football): se asignan con todos los partidos de todas las ligas a la vista
     if bajas:
@@ -621,10 +647,16 @@ def main():
         lesiones.ESTADO["partidos_con_bajas"] = len(asign)
         lesiones.ESTADO["partidos_ajustados"] = n_aj
         print(f"  Bajas asignadas a {len(asign)} partidos · {n_aj} con ajuste por goleadores ausentes")
+    # registro público (después de las bajas, para guardar también el modelo con bajas)
+    jug_df = pd.concat(jugados_all, ignore_index=True) if jugados_all else pd.DataFrame(columns=["id", "hg", "ag"])
+    reg = ledger_update(preds_reg, jug_df, now.isoformat(timespec="minutes"))
+    with open(os.path.join(SALIDA, "registro.json"), "w", encoding="utf-8") as f:
+        json.dump(ledger_summary(reg, base), f, ensure_ascii=False, separators=(",", ":"))
     for L, out, _ in pendientes:
         with open(os.path.join(SALIDA, f"{L['id']}.json"), "w", encoding="utf-8") as f:
             json.dump(clean(out), f, ensure_ascii=False, separators=(",", ":"))
     lesiones.guardar_estado()
+    cuotas.guardar_estado()
     portada["partidos"] = sorted(portada["partidos"], key=lambda p: -p["peso"])[:6]
     portada["jugadores"] = sorted(portada["jugadores"], key=lambda p: -p["p"])[:6]
     portada["equipos"] = sorted(portada["equipos"], key=lambda p: (-p["puntos5"], p["pos"]))[:6]
@@ -636,7 +668,8 @@ def main():
         except (OSError, ValueError):
             bt_mercado = None
         json.dump(clean(dict(actualizado=now.isoformat(timespec="minutes"), xi=XI, alpha=ALPHA, ligas=indice, portada=portada, backtest_mercado=bt_mercado,
-                             api_football=dict(activa=lesiones.ESTADO["activa"], bajas=len(bajas), restantes=lesiones.ESTADO["restantes"]))),
+                             api_football=dict(activa=lesiones.ESTADO["activa"], bajas=len(bajas), restantes=lesiones.ESTADO["restantes"]),
+                             odds_api=dict(activa=cuotas.ESTADO["activa"], partidos=cuotas.ESTADO["partidos_con_cuota"], restantes=cuotas.ESTADO["restantes"]))),
                   f, ensure_ascii=False, separators=(",", ":"))
     print("Listo: datos en site/data/")
 
