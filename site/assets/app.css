@@ -487,3 +487,6 @@ nav.main .dd-item:hover{background:rgba(61,139,255,.1);color:var(--ink)}
 .warn::before{content:"";flex:none;width:8px;height:8px;margin-top:6px;border-radius:50%;background:var(--card);box-shadow:0 0 10px var(--card)}
 .warn p{max-width:none}
 .warn.stale{margin-bottom:0}
+.mktrow{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:6px 12px;align-items:center;margin-top:14px;padding:10px 12px;border-radius:10px;background:rgba(7,9,15,.5);border:1px solid var(--line);font-size:13px}
+.mktrow .num{font-weight:600}
+@media (max-width:640px){.mktrow{grid-template-columns:auto 1fr}}

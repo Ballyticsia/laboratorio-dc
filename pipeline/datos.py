@@ -80,15 +80,29 @@ def _american(ml):
 
 
 def _odds(comp):
-    """Cuotas 1X2 (decimal) si ESPN las incluye. Vienen en formato americano."""
+    """Cuotas (decimal) si ESPN las incluye. Vienen en formato americano (+220, -135)."""
     for o in comp.get("odds") or []:
         if not isinstance(o, dict):
             continue
-        h = _american((o.get("homeTeamOdds") or {}).get("moneyLine"))
-        a = _american((o.get("awayTeamOdds") or {}).get("moneyLine"))
-        d = _american((o.get("drawOdds") or {}).get("moneyLine"))
-        if h and a and d:
-            return {"h": h, "d": d, "a": a, "casa": ((o.get("provider") or {}).get("name"))}
+        ml = o.get("moneyline") or {}
+
+        def pick(side):
+            x = ml.get(side) or {}
+            return _american((x.get("close") or {}).get("odds")) or _american((x.get("open") or {}).get("odds"))
+
+        h, a, d = pick("home"), pick("away"), pick("draw")
+        h = h or _american((o.get("homeTeamOdds") or {}).get("moneyLine"))
+        a = a or _american((o.get("awayTeamOdds") or {}).get("moneyLine"))
+        d = d or _american((o.get("drawOdds") or {}).get("moneyLine"))
+        if not (h and a and d):
+            continue
+        out = {"h": h, "d": d, "a": a, "casa": (o.get("provider") or {}).get("displayName") or (o.get("provider") or {}).get("name")}
+        tot = o.get("total") or {}
+        ov, un = (tot.get("over") or {}).get("close") or {}, (tot.get("under") or {}).get("close") or {}
+        line = _num(o.get("overUnder"))
+        if line is not None and _american(ov.get("odds")) and _american(un.get("odds")):
+            out.update(linea=line, over=_american(ov.get("odds")), under=_american(un.get("odds")))
+        return out
     return None
 
 
@@ -239,6 +253,13 @@ def _stats_map(entry):
     return out
 
 
+def _es(nombre):
+    import re
+    n = nombre.replace("League Phase", "Fase de liga").replace("Eastern Conference", "Conferencia Este")
+    n = n.replace("Western Conference", "Conferencia Oeste")
+    return re.sub(r"^Group ([A-Z0-9]+)$", r"Grupo \1", n)
+
+
 def standings(slug):
     """Tablas oficiales de ESPN. Devuelve [{nombre, filas:[...]}] o [] si no hay."""
     try:
@@ -264,7 +285,7 @@ def standings(slug):
             for i, f in enumerate(filas, 1):
                 f["pos"] = f["pos"] or i
                 f["dg"] = f["gf"] - f["gc"]
-            grupos.append(dict(nombre=node.get("name") or name or "", filas=filas))
+            grupos.append(dict(nombre=_es(node.get("name") or name or ""), filas=filas))
         for ch in node.get("children") or []:
             walk(ch, ch.get("name") or name)
 

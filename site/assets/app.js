@@ -526,6 +526,14 @@ function vPartido() {
   if (tt != null) groups.push(["Tarjetas (total)", [3.5, 4.5].flatMap(l => [[`TO${l}`, `Más de ${String(l).replace(".", ",")}`, poisOver(l, tt)], [`TU${l}`, `Menos de ${String(l).replace(".", ",")}`, 1 - poisOver(l, tt)]])]);
   (p.goleadores || []).filter(g => g.p).forEach((g, i) => { if (i === 0) groups.push(["Marca en cualquier momento", []]); groups[groups.length - 1][1].push([`G${g.jid}`, `${g.jugador} (${g.lado === "h" ? H : A})`, g.p]); });
   const st = ODDS[p.id] || (ODDS[p.id] = {});
+  const cq = p.cuotas;
+  if (cq && !st._pre) {
+    st._pre = true; st.H = cq.h; st.D = cq.d; st.A = cq.a;
+    if (cq.linea === 2.5 && cq.over && cq.under) { st.O25 = cq.over; st.U25 = cq.under; }
+  }
+  let mkt = "";
+  if (cq) { const inv = [1 / cq.h, 1 / cq.d, 1 / cq.a], sm = inv[0] + inv[1] + inv[2];
+    mkt = `<div class="mktrow"><span class="lbl">Mercado (${esc(cq.casa || "casas")}, sin margen)</span><span class="num">${pct(inv[0] / sm)} · ${pct(inv[1] / sm)} · ${pct(inv[2] / sm)}</span><span class="lbl">Modelo</span><span class="num">${pct(k.H)} · ${pct(k.D)} · ${pct(k.A)}</span></div>`; }
   const mk = `<tr><th>Mercado</th><th style="text-align:right">Prob.</th><th style="text-align:right">Justa</th><th style="text-align:right">Tu cuota</th><th style="text-align:right">EV</th></tr>` +
     groups.map(([g, rows]) => `<tr class="grp"><td colspan="5">${g}</td></tr>` + rows.map(([key, n, pr]) => `<tr><td>${esc(n)}</td><td class="n">${pct(pr, 1)}</td><td class="n">${dec(1 / pr)}</td>
       <td class="n"><input class="odd" inputmode="decimal" aria-label="Cuota ${esc(n)}" data-k="${esc(key)}" data-p="${pr}" value="${st[key] ? String(st[key]).replace(".", ",") : ""}" placeholder="—"></td><td class="n" data-ev="${esc(key)}"></td></tr>`).join("")).join("");
@@ -553,6 +561,7 @@ function vPartido() {
         <div class="pt a"><span class="lbl">${esc(A)}</span><span class="v">${pct(k.A, 1)}</span><div class="tr"><i style="width:${100 * k.A}%"></i></div></div>
       </div>
       <div class="kpis mini">${kpi("", "Más de 2,5 goles", pct(k.O25), "")}${kpi("", "Ambos marcan", pct(k.B), "")}${ct != null ? kpi("", "Córners esperados", dec(ct, 1), `${dec(p.ch, 1)} – ${dec(p.ca, 1)}`) : ""}${tt != null ? kpi("", "Tarjetas esperadas", dec(tt, 1), `${dec(p.th, 1)} – ${dec(p.ta, 1)}`) : ""}</div>
+      ${mkt}
       ${reg ? `<p class="note" style="margin-top:14px">Predicción guardada en el registro público el ${fecha(reg.predicho)}; se califica al terminar el partido.</p>` : ""}
     </div>
     <div class="panel stack previa"><h3>Previa</h3>${previa(L, p, k, ct, tt)}</div>
@@ -565,7 +574,7 @@ function vPartido() {
         <div class="panel stack"><h3>Últimos enfrentamientos</h3><div class="rlist">${h2h}</div></div>
       </div>
       <div class="panel stack"><h3>Mercados y valor</h3>
-        <p class="note">Escribe la cuota de tu casa de apuestas para ver el valor esperado (EV) por cada $1. En el backtest, apostar solo por "valor" del modelo perdió plata.</p>
+        <p class="note">${cq ? `Cuotas precargadas de ${esc(cq.casa || "ESPN")} (vía ESPN); puedes cambiarlas por las de tu casa. EV es el valor esperado por cada $1.` : "Escribe la cuota de tu casa de apuestas para ver el valor esperado (EV) por cada $1."} En el backtest, apostar solo por "valor" del modelo perdió plata.</p>
         <div class="scroll"><table class="mk">${mk}</table></div></div>
     </div></section>`;
 }
