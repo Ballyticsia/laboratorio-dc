@@ -137,7 +137,8 @@ function buildMenu() {
   D.indice.ligas.forEach(l => (groups[l.region] ||= []).push(l));
   const m = document.getElementById("dd-menu");
   m.innerHTML = Object.entries(groups).map(([g, ls]) => `<div class="dd-col"><span class="lbl">${esc(g)}</span>` +
-    ls.map(L => `<button class="dd-item" data-go="liga" data-liga="${L.id}" data-tab="resumen">${leagueMark(L)}<span>${esc(L.nombre)}<small>${esc(L.pais)}</small></span></button>`).join("") + `</div>`).join("");
+    ls.map(L => `<button class="dd-item" data-go="liga" data-liga="${L.id}" data-tab="resumen">${leagueMark(L)}<span>${esc(L.nombre)}<small>${esc(L.pais)}</small></span></button>`).join("") + `</div>`).join("")
+    + `<div class="dd-all"><span class="lbl">Ligas con probabilidades de Ballytics. Resultados, tablas y partidos en vivo de más de 180 competiciones:</span><button class="btn sm" data-go="competiciones">Todas las competiciones →</button></div>`;
   const btns = [...document.querySelectorAll(".dd-toggle")];
   const setOpen = open => { m.hidden = !open; btns.forEach(b => b.setAttribute("aria-expanded", String(open))); document.body.classList.toggle("sheet-open", open); };
   btns.forEach(b => b.addEventListener("click", e => { e.stopPropagation(); setOpen(m.hidden); }));
@@ -193,8 +194,10 @@ function toHash(r) {
   if (r.v === "jugador") return `#/jugador/${r.liga}/${encodeURIComponent(r.id)}`;
   if (r.v === "comparar") return `#/comparar/${r.liga}/${encodeURIComponent(r.team || "")}/${encodeURIComponent(r.id || "")}`;
   if (r.v === "inicio") return r.liga && r.liga !== "todas" ? `#/partidos/${r.liga}` : "#/";
-  if (r.v === "vivo") return `#/vivo/${r.tab || "hoy"}${r.id === "envivo" ? "/envivo" : ""}`;
-  if (r.v === "envivo") return `#/envivo/${r.liga}/${encodeURIComponent(r.id)}${r.tab && r.tab !== "resumen" ? "/" + r.tab : ""}`;
+  if (r.v === "vivo") return `#/vivo${r.tab || r.id === "envivo" ? "/" + (r.tab || "hoy") : ""}${r.id === "envivo" ? "/envivo" : ""}`;
+  if (r.v === "envivo") return `#/envivo/${encodeURIComponent(r.id)}${r.tab && r.tab !== "resumen" ? "/" + r.tab : ""}`;
+  if (r.v === "comp") return `#/comp/${r.liga}${r.tab && r.tab !== "partidos" ? "/" + r.tab : ""}`;
+  if (r.v === "club") return `#/club/${r.liga}/${encodeURIComponent(r.id)}${r.tab && r.tab !== "partidos" ? "/" + r.tab : ""}`;
   return `#/${r.v}`;
 }
 function fromHash() {
@@ -213,8 +216,12 @@ function fromHash() {
     case "jugador": return { v: "jugador", liga: p[1], id: p[2] };
     case "comparar": return { v: "comparar", liga: D.ligas[p[1]] ? p[1] : first, team: p[2], id: p[3] };
     case "partidos": return { v: "inicio", liga: D.ligas[p[1]] ? p[1] : "todas" };
-    case "vivo": return { v: "vivo", tab: p[1] || "hoy", id: p[2] };
-    case "envivo": return { v: "envivo", liga: p[1], id: p[2], tab: p[3] || "resumen" };
+    case "vivo": return { v: "vivo", tab: /^\d{8}$/.test(p[1] || "") ? p[1] : undefined, id: p[2] || (p[1] === "envivo" ? "envivo" : undefined) };
+    case "envivo": return /^\d+$/.test(p[1] || "") ? { v: "envivo", id: p[1], tab: p[2] || "resumen" } : { v: "envivo", id: p[2], tab: p[3] || "resumen" };
+    case "competiciones": return { v: "competiciones" };
+    case "noticias": return { v: "noticias" };
+    case "comp": return { v: "comp", liga: p[1], tab: p[2] || "partidos" };
+    case "club": return { v: "club", liga: p[1], id: p[2], tab: p[3] || "partidos" };
     default: return { v: "inicio", liga: "todas" };
   }
 }
@@ -238,11 +245,11 @@ function render() {
   timers.splice(0).forEach(clearInterval);
   const need = ["liga", "partido", "equipo", "jugador", "comparar"].includes(R.v) && R.liga && D.meta && D.meta[R.liga] && !D.ligas[R.liga] ? R.liga : null;
   if (need) { $app.innerHTML = skeleton(); ensure(need).then(() => render()); return; }
-  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", combinada: "seguimiento", envivo: "vivo" }[R.v] || R.v);
+  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", combinada: "seguimiento", envivo: "vivo", competiciones: "vivo", comp: "vivo", club: "vivo", noticias: "vivo" }[R.v] || R.v);
   document.querySelectorAll("[data-nav]").forEach(b => b.setAttribute("aria-current", b.dataset.nav === sec ? "page" : "false"));
   const f = { inicio: vInicio, liga: vLiga, partido: vPartido, equipo: vEquipo, registro: vRegistro, metodo: vMetodo,
     sobre: vSobre, responsable: vResponsable, jugador: vJugador, comparar: vComparar, combinada: vCombinada, seguimiento: vSeguimiento,
-    vivo: typeof vVivo === "function" ? vVivo : vInicio, envivo: typeof vEnVivo === "function" ? vEnVivo : vInicio }[R.v] || vInicio;
+    vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias }[R.v] || vInicio;
   $app.innerHTML = staleBanner() + f();
   if (R.v === "partido") { if (R.tab === "mercados") bindOdds(); if (R.tab === "alineaciones" || document.getElementById("xi-adj")) loadSummary(); }
   if (R.v === "comparar") bindCompare();
@@ -1579,108 +1586,324 @@ document.addEventListener("click", e => {
 })();
 
 /* ---------------- arranque ---------------- */
-/* ================= EN VIVO: partidos de hoy por competición y centro del partido =================
-   Todo se pide directo a ESPN desde el navegador (marcadores, alineaciones, estadísticas, minuto a minuto). */
+/* ================= EN VIVO, COMPETICIONES, EQUIPOS Y NOTICIAS (ESPN, desde el navegador) =================
+   - Partidos del día: una sola consulta a ESPN con todos los partidos (soccer/all/scoreboard).
+   - 184 competiciones con país y región en assets/competiciones.json; las demás toman el nombre que trae ESPN.
+   - Centro del partido para cualquier partido (soccer/all/summary), tabla, calendario de equipos, plantel y noticias. */
 
-const COMPS = [
-  ["uefa.champions", "Champions League", "Europa"], ["uefa.europa", "Europa League", "Europa"], ["uefa.europa.conf", "Conference League", "Europa"],
-  ["conmebol.libertadores", "Copa Libertadores", "Sudamérica"], ["conmebol.sudamericana", "Copa Sudamericana", "Sudamérica"],
-  ["eng.1", "Premier League", "Inglaterra"], ["esp.1", "LaLiga", "España"], ["ita.1", "Serie A", "Italia"], ["ger.1", "Bundesliga", "Alemania"], ["fra.1", "Ligue 1", "Francia"],
-  ["chi.1", "Primera División", "Chile"], ["arg.1", "Liga Profesional", "Argentina"], ["bra.1", "Brasileirão", "Brasil"],
-  ["por.1", "Primeira Liga", "Portugal"], ["ned.1", "Eredivisie", "Países Bajos"], ["eng.2", "Championship", "Inglaterra"],
-  ["usa.1", "MLS", "Estados Unidos"], ["mex.1", "Liga MX", "México"],
-  ["eng.fa", "FA Cup", "Inglaterra"], ["eng.league_cup", "Copa de la Liga", "Inglaterra"], ["esp.copa_del_rey", "Copa del Rey", "España"],
-  ["ita.coppa_italia", "Coppa Italia", "Italia"], ["ger.dfb_pokal", "Copa de Alemania", "Alemania"], ["fra.coupe_de_france", "Copa de Francia", "Francia"],
-  ["fifa.worldq.conmebol", "Eliminatorias Sudamericanas", "Selecciones"], ["uefa.nations", "Liga de Naciones", "Selecciones"], ["fifa.friendly", "Amistosos", "Selecciones"],
-];
 const ESPN = "https://site.api.espn.com/apis/site/v2/sports/soccer";
-const VV = { cache: {}, sum: {}, team: "h" };
-
+const ESPN_ST = "https://site.api.espn.com/apis/v2/sports/soccer";
+const VV = { cache: {}, sum: {}, team: "h", comps: null, byId: {}, bySlug: {}, more: {}, q: "", st: {}, sched: {}, news: {} };
+const NCAA = new Set(["5487", "5499"]);   // fútbol universitario de EE.UU.: muchos partidos, poco interés
 const ymd = d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-const localDay = iso => { const d = new Date(iso); return ymd(d); };
-function dayOf(tab) { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + (tab === "ayer" ? -1 : tab === "manana" ? 1 : 0)); return d; }
+const localDay = iso => ymd(new Date(iso));
+const fromYmd = s => new Date(+s.slice(0, 4), +s.slice(4, 6) - 1, +s.slice(6, 8), 12);
+const vget = async u => { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); };
+function lsGet(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+const favComps = () => lsGet("bt_vcomp", []);
+const followed = () => lsGet("bt_vfollow", {});
 
-function vParse(e, slug, comp) {
+async function vComps() {
+  if (VV.comps) return VV.comps;
+  try { VV.comps = await vget("assets/competiciones.json?v=1"); } catch (e) { VV.comps = []; }
+  VV.comps.forEach(c => { VV.byId[c.id] = c; VV.bySlug[c.s] = c; });
+  return VV.comps;
+}
+const compImg = (c, cls = "") => c && c.l ? `<img class="cimg ${cls}" src="${esc(c.l)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'cflag',textContent:'${esc(c.f || "⚽")}'}))">` : `<span class="cflag">${esc((c && c.f) || "⚽")}</span>`;
+function modelBySlug(slug) { return Object.values(D.ligas || {}).find(L => L.slug === slug) || (D.indice ? D.indice.ligas.find(l => l.slug === slug) : null); }
+
+/* ---------- partidos del día ---------- */
+function vParse(e) {
   const c = (e.competitions || [])[0] || {}, st = c.status || e.status || {}, t = st.type || {};
+  const lid = String(e.uid || "").split("~l:")[1]?.split("~")[0] || "";
+  const note = c.altGameNote || "", known = VV.byId[lid];
   const side = k => { const x = (c.competitors || []).find(y => y.homeAway === k) || {}, tm = x.team || {};
-    return { id: tm.id, name: tm.shortDisplayName || tm.displayName || "", full: tm.displayName || "", abr: tm.abbreviation, logo: tm.logo, color: tm.color, score: x.score }; };
-  return { id: e.id, slug, comp, date: e.date, state: t.state, detail: t.shortDetail || t.detail || "", clock: st.displayClock, period: st.period, h: side("home"), a: side("away") };
+    return { id: String(tm.id || ""), name: tm.shortDisplayName || tm.displayName || "", full: tm.displayName || "", abr: tm.abbreviation, logo: tm.logo, color: tm.color, score: x.score, winner: x.winner }; };
+  return { id: String(e.id), lid, comp: known ? known.n : (note.split(",")[0] || "Otras competiciones"), slug: known ? known.s : null,
+    ronda: note.includes(",") ? note.split(",").slice(1).join(",").trim() : "", date: e.date, state: t.state, detail: t.shortDetail || t.detail || "",
+    clock: st.displayClock, period: st.period, h: side("home"), a: side("away") };
 }
-/* ESPN acepta una sola fecha por consulta (un rango da error 400). Se piden el día elegido y el
-   siguiente (por la diferencia horaria) y se filtra por la fecha local. Cada 30 s solo se vuelven a
-   pedir las competiciones con partidos en juego o por empezar; todo se refresca cada 5 minutos. */
-async function vFetchComp(slug, name, region, dates, key) {
-  try {
-    const rs = await Promise.all(dates.map(ds => fetch(`${ESPN}/${slug}/scoreboard?dates=${ds}`).then(r => r.ok ? r.json() : null).catch(() => null)));
-    let logo = null; const seen = new Set(), evs = [];
-    rs.filter(Boolean).forEach(j => { const lg = (j.leagues || [])[0] || {}; logo = logo || ((lg.logos || [])[0] || {}).href;
-      (j.events || []).forEach(e => { if (seen.has(e.id)) return; seen.add(e.id); const x = vParse(e, slug, name); if (localDay(x.date) === key) evs.push(x); }); });
-    evs.sort((a, b) => a.date.localeCompare(b.date) || a.h.name.localeCompare(b.h.name));
-    return { slug, name, region, logo, evs, ok: rs.some(Boolean) };
-  } catch (e) { return { slug, name, region, evs: [], ok: false }; }
+async function vFetchDay(key, onlyKey) {
+  const c = VV.cache[key];
+  if (c && Date.now() - c.t < 20000) return c.evs;
+  await vComps();
+  const d2 = fromYmd(key); d2.setDate(d2.getDate() + 1);
+  const dates = onlyKey && c ? [key] : [key, ymd(d2)];
+  const res = await Promise.all(dates.map(ds => vget(`${ESPN}/all/scoreboard?dates=${ds}&limit=1000`).catch(() => null)));
+  const map = new Map(c ? c.evs.map(e => [e.id, e]) : []);
+  res.filter(Boolean).forEach(j => (j.events || []).forEach(e => { const x = vParse(e); if (!NCAA.has(x.lid) && localDay(x.date) === key) map.set(x.id, x); }));
+  const evs = [...map.values()];
+  VV.cache[key] = { t: Date.now(), evs };
+  return evs;
 }
-async function vFetchDay(tab) {
-  const d = dayOf(tab), key = ymd(d), c = VV.cache[key];
-  const d2 = new Date(d); d2.setDate(d2.getDate() + 1); const dates = [key, ymd(d2)];
-  if (c && Date.now() - c.t < 20000) return c.data;
-  let comps = COMPS;
-  if (c && Date.now() - c.full < 300000) {
-    const soon = Date.now() + 15 * 60e3;
-    comps = COMPS.filter(([slug]) => { const g = c.bySlug[slug]; return g && g.evs.some(e => e.state === "in" || (e.state === "pre" && new Date(e.date).getTime() <= soon)); });
-  }
-  const res = await Promise.all(comps.map(([slug, name, region]) => vFetchComp(slug, name, region, dates, key)));
-  const bySlug = c && comps !== COMPS ? { ...c.bySlug } : {};
-  res.forEach(g => { if (g.ok || !bySlug[g.slug]) bySlug[g.slug] = g; });
-  const data = COMPS.map(([slug]) => bySlug[slug]).filter(g => g && g.evs.length);
-  VV.cache[key] = { t: Date.now(), full: comps === COMPS ? Date.now() : c.full, bySlug, data };
-  return data;
-}
-/* partido del modelo (mismo id de ESPN) */
 function vModel(id) {
   for (const L of Object.values(D.ligas || {})) { const p = (L.partidos || []).find(x => String(x.id) === String(id)); if (p) return { L, p }; }
   return null;
 }
-const vLiveTxt = e => e.state === "in" ? (e.clock && e.detail.toLowerCase().indexOf("half") < 0 && e.detail.indexOf("Entretiempo") < 0 ? e.clock : "ET") : e.state === "post" ? "Final" : hhmm(e.date);
+const isLive = e => e.state === "in";
+const vClock = e => /half|HT|Entretiempo/i.test(e.detail) ? "ET" : (e.clock && e.clock !== "0'" ? e.clock : e.detail);
 function vTeam(e, k, cls) {
   const t = e[k], img = t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : "";
-  return `<span class="vt ${cls}"><span class="vtn">${esc(t.name)}</span><span class="vlogo">${img}</span></span>`;
+  return `<span class="vt ${cls}${e.state === "post" && t.winner ? " win" : ""}"><span class="vtn">${esc(t.name)}</span><span class="vlogo">${img}</span></span>`;
 }
 function vRow(e) {
-  const m = vModel(e.id), sc = e.state === "pre" ? `<span class="vtime">${hhmm(e.date)}</span>` : `<span class="vsc num">${esc(e.h.score ?? "")}<i>-</i>${esc(e.a.score ?? "")}</span>`;
-  const st = e.state === "in" ? `<span class="vmin live">${esc(vLiveTxt(e))}</span>` : e.state === "post" ? `<span class="vmin">Final</span>` : `<span class="vmin">&nbsp;</span>`;
-  return `<button class="vrow ${e.state}" data-go="envivo" data-liga="${esc(e.slug)}" data-id="${esc(e.id)}">
+  const m = vModel(e.id), f = followed()[e.id];
+  const sc = e.state === "pre" ? `<span class="vtime">${hhmm(e.date)}</span>` : `<span class="vsc num">${esc(e.h.score ?? "")}<i>-</i>${esc(e.a.score ?? "")}</span>`;
+  const st = isLive(e) ? `<span class="vmin live">${esc(vClock(e))}</span>` : e.state === "post" ? `<span class="vmin">${/pen|AET|ET/i.test(e.detail) && e.detail !== "FT" ? esc(e.detail) : "Final"}</span>` : /postp|cancel|susp|delay/i.test(e.detail) ? `<span class="vmin warn">${esc(e.detail)}</span>` : `<span class="vmin">&nbsp;</span>`;
+  return `<div class="vrow ${e.state}" data-go="envivo" data-id="${esc(e.id)}" role="link" tabindex="0">
     ${st}<span class="vmid">${vTeam(e, "h", "l")}${sc}${vTeam(e, "a", "r")}</span>
-    ${m && e.state !== "post" ? `<span class="vmodel" title="Probabilidad Ballytics">${pct(m.p.pH)} · ${pct(m.p.pD)} · ${pct(m.p.pA)}</span>` : `<span class="vmodel"></span>`}</button>`;
+    <span class="vside">${m && e.state !== "post" ? `<span class="vmodel" title="Probabilidad Ballytics">${pct(m.p.pH)} · ${pct(m.p.pD)} · ${pct(m.p.pA)}</span>` : ""}${e.state !== "post" ? `<button class="vbell${f ? " on" : ""}" data-follow="${esc(e.id)}" title="${f ? "Dejar de seguir" : "Avisarme de goles"}" aria-label="Avisarme de goles">${f ? "🔔" : "🔕"}</button>` : ""}</span></div>`;
 }
-
+function vHub(active) {
+  return `<div class="vhub" role="tablist">${[["vivo", "Partidos"], ["competiciones", "Competiciones"], ["noticias", "Noticias"]].map(([v, n]) => `<button role="tab" data-go="${v}" aria-selected="${v === active}">${n}</button>`).join("")}</div>`;
+}
 function vVivo() {
-  const tab = ["ayer", "hoy", "manana"].includes(R.tab) ? R.tab : "hoy", solo = R.id === "envivo";
-  setTimeout(() => vFillList(tab, solo), 0);
-  if (tab === "hoy") timers.push(setInterval(() => { if (R.v === "vivo" && !document.hidden) vFillList(tab, solo); }, 30000));
+  const today = ymd(new Date()), key = /^\d{8}$/.test(R.tab || "") ? R.tab : today, solo = R.id === "envivo";
+  const days = [-3, -2, -1, 0, 1, 2, 3].map(i => { const d = fromYmd(today); d.setDate(d.getDate() + i); return d; });
+  const lab = d => { const k = ymd(d), diff = Math.round((fromYmd(k) - fromYmd(today)) / DAYMS); return diff === 0 ? "Hoy" : diff === -1 ? "Ayer" : diff === 1 ? "Mañana" : d.toLocaleDateString("es-CL", { weekday: "short", day: "numeric" }); };
+  setTimeout(() => vFillList(key, solo), 0);
+  if (key === today) timers.push(setInterval(() => { if (R.v === "vivo" && !document.hidden) vFillList(key, solo, true); }, 30000));
   return `<section class="view" aria-labelledby="h-vivo">
     <div class="row" style="justify-content:space-between;align-items:flex-end"><h1 id="h-vivo">En vivo</h1><span class="note" id="vv-upd"></span></div>
+    ${vHub("vivo")}
+    <div class="vdays" role="group" aria-label="Día">${days.map(d => `<button data-go="vivo" data-tab="${ymd(d)}" data-id="${solo ? "envivo" : ""}" data-keep aria-pressed="${ymd(d) === key}">${esc(lab(d))}</button>`).join("")}
+      <label class="vcal" title="Elegir fecha"><span class="sr">Elegir fecha</span><input type="date" id="vv-date" value="${key.slice(0, 4)}-${key.slice(4, 6)}-${key.slice(6)}"></label></div>
     <div class="vbar">
-      <div class="tabs2" role="group" aria-label="Día">${[["ayer", "Ayer"], ["hoy", "Hoy"], ["manana", "Mañana"]].map(([k, n]) => `<button data-go="vivo" data-tab="${k}" data-id="${solo ? "envivo" : ""}" data-keep aria-pressed="${k === tab}">${n}</button>`).join("")}</div>
-      <button class="vlivebtn" data-go="vivo" data-tab="${tab}" data-id="${solo ? "" : "envivo"}" data-keep aria-pressed="${solo}"><span class="dot"></span>Solo en vivo <b id="vv-n"></b></button>
+      <button class="vlivebtn" data-go="vivo" data-tab="${key}" data-id="${solo ? "" : "envivo"}" data-keep aria-pressed="${solo}"><span class="dot"></span>En vivo <b id="vv-n"></b></button>
+      <div class="vsearch"><input id="vv-q" type="search" placeholder="Filtrar por equipo o competición" value="${esc(VV.q)}" autocomplete="off"></div>
     </div>
     <div id="vv-list"><div class="panel empty">Buscando partidos…</div></div>
-    <p class="note">Marcadores, alineaciones y estadísticas en vivo de ESPN. Se actualiza solo cada 30 segundos.</p></section>`;
+    <p class="note">Marcadores y estadísticas en vivo de ESPN. Se actualiza solo cada 30 segundos. Toca la campana de un partido para recibir un aviso cuando haya gol (mientras tengas la página abierta).</p></section>`;
 }
-async function vFillList(tab, solo) {
+async function vFillList(key, solo, refresh) {
   if (D.indice) D.indice.ligas.forEach(l => ensure(l.id));
   const box = document.getElementById("vv-list"); if (!box) return;
-  const data = await vFetchDay(tab);
+  let evs;
+  try { evs = await vFetchDay(key, refresh); } catch (e) { evs = []; }
   if (R.v !== "vivo" || !document.getElementById("vv-list")) return;
-  const nLive = data.reduce((s, c) => s + c.evs.filter(e => e.state === "in").length, 0);
-  const n = document.getElementById("vv-n"); if (n) n.textContent = nLive ? `(${nLive})` : "";
-  const groups = data.map(c => ({ ...c, evs: solo ? c.evs.filter(e => e.state === "in") : c.evs })).filter(c => c.evs.length);
-  groups.sort((a, b) => (b.evs.some(e => e.state === "in") - a.evs.some(e => e.state === "in")));
-  box.innerHTML = groups.length ? groups.map(c => `<div class="panel flush vcomp"><div class="vch">${c.logo ? `<img src="${esc(c.logo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}<b>${esc(c.name)}</b><span class="faint">${esc(c.region)}</span><span class="vcount">${c.evs.filter(e => e.state === "in").length ? `<span class="dot"></span>${c.evs.filter(e => e.state === "in").length} en vivo · ` : ""}${c.evs.length} ${c.evs.length === 1 ? "partido" : "partidos"}</span></div>${c.evs.map(vRow).join("")}</div>`).join("")
-    : `<div class="panel empty">${solo ? "No hay partidos en vivo en este momento." : "No hay partidos este día en las competiciones que seguimos."}</div>`;
-  const u = document.getElementById("vv-upd"); if (u) u.textContent = `Actualizado ${hhmm(new Date().toISOString())}`;
+  const nLive = evs.filter(isLive).length, n = document.getElementById("vv-n"); if (n) n.textContent = nLive ? `(${nLive})` : "";
+  const q = VV.q.trim().toLowerCase(), fav = favComps();
+  const pass = e => (!solo || isLive(e)) && (!q || [e.h.full, e.a.full, e.comp].some(s => (s || "").toLowerCase().includes(q)));
+  const groups = new Map();
+  evs.filter(pass).forEach(e => { const k = e.lid || e.comp; if (!groups.has(k)) groups.set(k, { lid: e.lid, comp: e.comp, slug: e.slug, c: VV.byId[e.lid], evs: [] }); groups.get(k).evs.push(e); });
+  const G = [...groups.values()].map(g => (g.evs.sort((a, b) => (isLive(b) - isLive(a)) || a.date.localeCompare(b.date)), g))
+    .sort((a, b) => ((fav.includes(b.slug)) - (fav.includes(a.slug))) || ((a.c ? a.c.o : 160) - (b.c ? b.c.o : 160)) || (b.evs.some(isLive) - a.evs.some(isLive)) || a.comp.localeCompare(b.comp));
+  const MAX = 8;
+  box.innerHTML = G.length ? G.map(g => {
+    const k = g.lid || g.comp, open = VV.more[k] || q || solo, lv = g.evs.filter(isLive).length, star = g.slug && fav.includes(g.slug);
+    const rows = (open ? g.evs : g.evs.slice(0, MAX)).map(vRow).join("");
+    return `<div class="panel flush vcomp"><div class="vch">${compImg(g.c)}<span class="vchn">${g.slug ? `<button class="link" data-go="comp" data-liga="${esc(g.slug)}">${esc(g.comp)}</button>` : `<b>${esc(g.comp)}</b>`}<small>${esc(g.c ? g.c.p : "")}</small></span>
+      <span class="vcount">${lv ? `<span class="dot"></span>${lv} en vivo · ` : ""}${g.evs.length}</span>${g.slug ? `<button class="vstar${star ? " on" : ""}" data-fcomp="${esc(g.slug)}" aria-label="Seguir competición" title="Seguir competición">${star ? "★" : "☆"}</button>` : ""}</div>
+      ${rows}${!open && g.evs.length > MAX ? `<button class="vmore" data-more="${esc(k)}">Ver los ${g.evs.length} partidos</button>` : ""}</div>`;
+  }).join("") : `<div class="panel empty">${solo ? "No hay partidos en vivo en este momento." : q ? "Ningún partido coincide con el filtro." : "No hay partidos este día."}</div>`;
+  const u = document.getElementById("vv-upd"); if (u) u.textContent = `${evs.length} partidos · actualizado ${hhmm(new Date().toISOString())}`;
 }
 
-/* ---------------- centro del partido ---------------- */
+/* ---------- competiciones ---------- */
+function vCompeticiones() {
+  setTimeout(vFillComps, 0);
+  return `<section class="view" aria-labelledby="h-comps"><h1 id="h-comps">Competiciones</h1>${vHub("competiciones")}
+    <div class="vbar"><div class="vsearch wide"><input id="vc-q" type="search" placeholder="Buscar liga, copa o país" autocomplete="off"></div></div>
+    <div id="vc-list"><div class="panel empty">Cargando…</div></div></section>`;
+}
+async function vFillComps() {
+  const all = await vComps(), box = document.getElementById("vc-list"); if (!box) return;
+  const q = ((document.getElementById("vc-q") || {}).value || "").trim().toLowerCase(), fav = favComps();
+  const L = all.filter(c => !q || (c.n + " " + c.p).toLowerCase().includes(q));
+  const item = c => `<div class="vci"><button class="vcib" data-go="comp" data-liga="${esc(c.s)}">${compImg(c)}<span><b>${esc(c.n)}${modelBySlug(c.s) ? ` <span class="tagm" title="Con probabilidades de Ballytics">%</span>` : ""}</b><small>${esc(c.p)}${c.t.includes("fem") ? " · femenino" : ""}${c.t.includes("juv") ? " · juvenil" : ""}</small></span></button><button class="vstar${fav.includes(c.s) ? " on" : ""}" data-fcomp="${esc(c.s)}" aria-label="Seguir">${fav.includes(c.s) ? "★" : "☆"}</button></div>`;
+  const favs = all.filter(c => fav.includes(c.s)), top = L.filter(c => c.o < 40);
+  const regs = ["Internacional", "Sudamérica", "Europa", "Norteamérica", "Asia", "África"];
+  let html = "";
+  if (!q && favs.length) html += `<div class="panel stack"><h3>Mis competiciones</h3><div class="vcgrid">${favs.map(item).join("")}</div></div>`;
+  if (!q) html += `<div class="panel stack"><h3>Populares</h3><div class="vcgrid">${top.map(item).join("")}</div></div>`;
+  regs.forEach(r => {
+    const rc = L.filter(c => c.r === r); if (!rc.length) return;
+    const byP = {}; rc.forEach(c => (byP[c.p] ||= []).push(c));
+    html += `<div class="panel stack"><h3>${esc(r)}</h3>${Object.keys(byP).sort((a, b) => a.localeCompare(b, "es")).map(p => `<details class="vcountry"${q ? " open" : ""}><summary><span class="cflag">${esc(byP[p][0].f)}</span>${esc(p)} <small>${byP[p].length}</small></summary><div class="vcgrid">${byP[p].map(item).join("")}</div></details>`).join("")}</div>`;
+  });
+  box.innerHTML = html || `<div class="panel empty">Sin resultados.</div>`;
+}
+document.addEventListener("input", e => {
+  if (e.target.id === "vc-q") vFillComps();
+  if (e.target.id === "vv-q") { VV.q = e.target.value; vFillList(/^\d{8}$/.test(R.tab || "") ? R.tab : ymd(new Date()), R.id === "envivo"); }
+});
+document.addEventListener("change", e => { if (e.target.id === "vv-date" && e.target.value) go({ v: "vivo", tab: e.target.value.replace(/-/g, ""), id: R.id, keepScroll: true }); });
+document.addEventListener("click", e => {
+  const s = e.target.closest("[data-fcomp]");
+  if (s) { e.stopPropagation(); e.preventDefault(); const f = favComps(), k = s.dataset.fcomp, i = f.indexOf(k); if (i >= 0) f.splice(i, 1); else f.push(k); lsSet("bt_vcomp", f);
+    s.classList.toggle("on", i < 0); s.textContent = i < 0 ? "★" : "☆"; return; }
+  const m = e.target.closest("[data-more]");
+  if (m) { VV.more[m.dataset.more] = true; vFillList(/^\d{8}$/.test(R.tab || "") ? R.tab : ymd(new Date()), R.id === "envivo"); return; }
+  const b = e.target.closest("[data-follow]");
+  if (b) { e.stopPropagation(); e.preventDefault(); vToggleFollow(b.dataset.follow, b); }
+}, true);
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.classList && e.target.classList.contains("vrow")) e.target.click(); });
+
+/* ---------- página de competición ---------- */
+function vComp() {
+  const slug = R.liga, tabs = [["partidos", "Partidos"], ["tabla", "Tabla"], ["noticias", "Noticias"]], tab = tabs.some(t => t[0] === R.tab) ? R.tab : "partidos";
+  setTimeout(() => vFillComp(slug, tab), 0);
+  return `<section class="view"><button class="back" data-go="competiciones">← Competiciones</button>
+    <div class="panel lhead" id="cp-head"><div class="empty">Cargando…</div></div>
+    <div class="mtabs vtabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" data-go="comp" data-liga="${esc(slug)}" data-tab="${k}" data-keep aria-selected="${k === tab}">${n}</button>`).join("")}</div>
+    <div id="cp-body"><div class="panel empty">Cargando…</div></div></section>`;
+}
+async function vSched(slug) {
+  const c = VV.sched[slug]; if (c && Date.now() - c.t < 60000) return c.evs;
+  const now = new Date(), months = [-1, 0, 1].map(i => { const d = new Date(now.getFullYear(), now.getMonth() + i, 1); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`; });
+  const res = await Promise.all(months.map(m => vget(`${ESPN}/${slug}/scoreboard?dates=${m}&limit=1000`).catch(() => null)));
+  const map = new Map(); let lg = null;
+  res.filter(Boolean).forEach(j => { lg = lg || (j.leagues || [])[0]; (j.events || []).forEach(e => { const x = vParse(e); x.slug = slug; map.set(x.id, x); }); });
+  const evs = [...map.values()].sort((a, b) => a.date.localeCompare(b.date));
+  VV.sched[slug] = { t: Date.now(), evs, lg }; return evs;
+}
+async function vStandings(slug) {
+  if (VV.st[slug] && Date.now() - VV.st[slug].t < 300000) return VV.st[slug].j;
+  const j = await vget(`${ESPN_ST}/${slug}/standings`); VV.st[slug] = { t: Date.now(), j }; return j;
+}
+function stTable(groups, hi = [], slug = "") {
+  const val = (e, k) => { const s = (e.stats || []).find(x => x.name === k); return s ? (s.displayValue ?? s.value) : ""; };
+  return groups.map(g => {
+    const E = (g.standings || {}).entries || [];
+    if (!E.length) return "";
+    const notes = new Map(); E.forEach(e => { if (e.note && e.note.description) notes.set(e.note.color, e.note.description); });
+    return `<div class="panel flush scroll">${g.name && groups.length > 1 ? `<div class="ph"><h3>${esc(g.name)}</h3></div>` : ""}<table class="t vstt"><thead><tr><th>#</th><th>Equipo</th><th class="n">PJ</th><th class="n hide-m">G</th><th class="n hide-m">E</th><th class="n hide-m">P</th><th class="n hide-m">GF</th><th class="n hide-m">GC</th><th class="n">DG</th><th class="n">Pts</th></tr></thead><tbody>${E.map((e, i) => {
+      const t = typeof e.team === "string" ? { displayName: e.team, id: e.id } : (e.team || {}), logo = ((t.logos || [])[0] || {}).href, id = String(t.id || e.id || "");
+      const col = e.note && e.note.color ? `style="box-shadow:inset 3px 0 0 ${esc(e.note.color)}"` : "";
+      return `<tr class="${hi.includes(id) ? "hl" : ""}"><td ${col}><span class="pos">${esc(val(e, "rank") || i + 1)}</span></td><td class="vtm">${slug && id ? `<button class="link tlink" data-go="club" data-liga="${esc(slug)}" data-id="${esc(id)}">` : "<span>"}${logo ? `<img class="tlogo" src="${esc(logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}${esc(t.shortDisplayName || t.displayName || "")}${slug && id ? "</button>" : "</span>"}</td>
+        <td class="n">${esc(val(e, "gamesPlayed"))}</td><td class="n hide-m">${esc(val(e, "wins"))}</td><td class="n hide-m">${esc(val(e, "ties"))}</td><td class="n hide-m">${esc(val(e, "losses"))}</td><td class="n hide-m">${esc(val(e, "pointsFor"))}</td><td class="n hide-m">${esc(val(e, "pointsAgainst"))}</td><td class="n">${esc(val(e, "pointDifferential"))}</td><td class="n"><b>${esc(val(e, "points"))}</b></td></tr>`;
+    }).join("")}</tbody></table>${notes.size ? `<div class="vleg">${[...notes].map(([c, d]) => `<span><i style="background:${esc(c)}"></i>${esc(d)}</span>`).join("")}</div>` : ""}</div>`;
+  }).join("");
+}
+function newsCards(arts) {
+  return arts.length ? `<div class="vnews">${arts.map(a => { const img = ((a.images || [])[0] || {}).url, href = ((a.links || {}).web || {}).href;
+    return `<a class="vnc panel flush" href="${esc(href || "#")}" target="_blank" rel="noopener noreferrer">${img ? `<img src="${esc(img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}<span class="vnt">${a._lg ? `<small class="tag">${esc(a._lg)}</small>` : ""}<b>${esc(a.headline || "")}</b>${a.description ? `<span class="muted">${esc(a.description)}</span>` : ""}<small class="faint">${a.published ? esc(cuando(a.published)) : ""} · ESPN</small></span></a>`; }).join("")}</div>`
+    : `<div class="panel empty">No hay noticias para esta competición.</div>`;
+}
+async function vNews(slug) {
+  if (VV.news[slug] && Date.now() - VV.news[slug].t < 600000) return VV.news[slug].a;
+  let a = [];
+  try { a = (await vget(`${ESPN}/${slug}/news?limit=20&lang=es&region=ar`)).articles || []; } catch (e) {}
+  if (!a.length) try { a = (await vget(`${ESPN}/${slug}/news?limit=20`)).articles || []; } catch (e) {}
+  VV.news[slug] = { t: Date.now(), a }; return a;
+}
+function dayGroups(evs) {
+  const by = {}; evs.forEach(e => (by[localDay(e.date)] ||= []).push(e));
+  return Object.keys(by).map(k => `<div class="vday"><span class="lbl">${esc(fromYmd(k).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))}</span></div>${by[k].map(vRow).join("")}`).join("");
+}
+async function vFillComp(slug, tab) {
+  await vComps();
+  const c = VV.bySlug[slug], head = document.getElementById("cp-head"), body = document.getElementById("cp-body"); if (!head) return;
+  const fav = favComps().includes(slug), M = modelBySlug(slug);
+  let evs = [];
+  try { evs = await vSched(slug); } catch (e) {}
+  const lg = (VV.sched[slug] || {}).lg || {}, name = c ? c.n : lg.name || slug, logo = c && c.l ? c.l : ((lg.logos || [])[0] || {}).href;
+  if (R.v !== "comp" || R.liga !== slug) return;
+  head.innerHTML = `${logo ? `<img class="cimg xl" src="${esc(logo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : `<span class="cflag xl">${esc((c && c.f) || "⚽")}</span>`}<div><h1>${esc(name)}</h1><span class="muted">${esc(c ? c.p : "")}${lg.season && lg.season.displayName ? " · " + esc(lg.season.displayName) : ""}</span></div>
+    <div class="row" style="margin-left:auto;gap:8px">${M ? `<button class="btn sm" data-go="liga" data-liga="${M.id}">Probabilidades Ballytics</button>` : ""}<button class="vstar big${fav ? " on" : ""}" data-fcomp="${esc(slug)}" aria-label="Seguir">${fav ? "★" : "☆"}</button></div>`;
+  if (tab === "partidos") {
+    const now = Date.now(), live = evs.filter(isLive), next = evs.filter(e => e.state === "pre" && new Date(e.date).getTime() >= now - 3 * 3600e3).slice(0, 20), done = evs.filter(e => e.state === "post").slice(-20).reverse();
+    body.innerHTML = (live.length ? `<div class="panel flush vcomp"><div class="vch"><span class="dot"></span><b>En vivo</b></div>${live.map(vRow).join("")}</div>` : "")
+      + `<div class="grid2"><div class="panel flush vcomp"><div class="vch"><b>Próximos partidos</b></div>${next.length ? dayGroups(next) : `<div class="empty">Sin partidos programados en las próximas semanas.</div>`}</div>
+         <div class="panel flush vcomp"><div class="vch"><b>Resultados</b></div>${done.length ? dayGroups(done) : `<div class="empty">Sin resultados recientes.</div>`}</div></div>`;
+  }
+  if (tab === "tabla") {
+    let j = null; try { j = await vStandings(slug); } catch (e) {}
+    if (R.v !== "comp" || R.liga !== slug) return;
+    const groups = j ? (j.children && j.children.length ? j.children : [j]) : [];
+    const t = stTable(groups, [], slug);
+    body.innerHTML = t || `<div class="panel empty">Esta competición no tiene tabla de posiciones (o aún no empieza).</div>`;
+  }
+  if (tab === "noticias") { const a = await vNews(slug); if (R.v === "comp" && R.liga === slug) body.innerHTML = newsCards(a.slice(0, 18)); }
+}
+
+/* ---------- página de equipo (cualquier club o selección) ---------- */
+function vClub() {
+  const slug = R.liga, id = R.id, tabs = [["partidos", "Partidos"], ["plantel", "Plantel"]], tab = tabs.some(t => t[0] === R.tab) ? R.tab : "partidos";
+  setTimeout(() => vFillClub(slug, id, tab), 0);
+  return `<section class="view"><button class="back" data-go="comp" data-liga="${esc(slug)}">← Competición</button>
+    <div class="panel lhead" id="cl-head"><div class="empty">Cargando…</div></div>
+    <div class="mtabs vtabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" data-go="club" data-liga="${esc(slug)}" data-id="${esc(id)}" data-tab="${k}" data-keep aria-selected="${k === tab}">${n}</button>`).join("")}</div>
+    <div id="cl-body"><div class="panel empty">Cargando…</div></div></section>`;
+}
+function schedRow(e, teamId) {
+  const c = (e.competitions || [])[0] || {}, cs = c.competitors || [], h = cs.find(x => x.homeAway === "home") || {}, a = cs.find(x => x.homeAway === "away") || {};
+  const st = ((c.status || e.status || {}).type || {}), sc = x => x.score && typeof x.score === "object" ? x.score.displayValue : x.score;
+  const lid = String(e.uid || "").split("~l:")[1]?.split("~")[0] || "", lgName = (e.league && (e.league.shortName || e.league.name)) || (VV.byId[lid] || {}).n || "";
+  const me = String((h.team || {}).id) === String(teamId) ? h : a, res = st.state === "post" ? (me.winner ? "G" : (cs.some(x => x.winner) ? "P" : "E")) : "";
+  const x = { id: String(e.id), date: e.date, state: st.state, detail: st.shortDetail || "", clock: (c.status || {}).displayClock,
+    h: { name: (h.team || {}).shortDisplayName || (h.team || {}).displayName, logo: ((h.team || {}).logos || [{}])[0].href || (h.team || {}).logo, score: sc(h), winner: h.winner },
+    a: { name: (a.team || {}).shortDisplayName || (a.team || {}).displayName, logo: ((a.team || {}).logos || [{}])[0].href || (a.team || {}).logo, score: sc(a), winner: a.winner } };
+  return `<div class="vday sm"><span class="lbl">${esc(new Date(e.date).toLocaleDateString("es-CL", { day: "numeric", month: "short" }))} · ${esc(lgName)}</span>${res ? `<span class="form"><i class="${res}">${res}</i></span>` : ""}</div>${vRow(x)}`;
+}
+async function vFillClub(slug, id, tab) {
+  const head = document.getElementById("cl-head"), body = document.getElementById("cl-body"); if (!head) return;
+  let past = null, fut = null, ros = null;
+  try { [past, fut] = await Promise.all([vget(`${ESPN}/${slug}/teams/${id}/schedule`).catch(() => null), vget(`${ESPN}/${slug}/teams/${id}/schedule?fixture=true`).catch(() => null)]); } catch (e) {}
+  if (R.v !== "club" || R.id !== id) return;
+  const t = (past || fut || {}).team || {}, logo = ((t.logos || [])[0] || {}).href || t.logo;
+  head.innerHTML = `${logo ? `<img class="cimg xl" src="${esc(logo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}<div><h1>${esc(t.displayName || "Equipo")}</h1><span class="muted">${esc(t.standingSummary || (VV.bySlug[slug] || {}).n || "")}</span></div>`;
+  if (tab === "partidos") {
+    const pe = ((past || {}).events || []).filter(e => (((e.competitions || [])[0] || {}).status || {}).type?.state === "post").slice(-12).reverse();
+    const fe = ((fut || {}).events || []).slice(0, 12);
+    body.innerHTML = `<div class="grid2"><div class="panel flush vcomp"><div class="vch"><b>Próximos partidos</b></div>${fe.length ? fe.map(e => schedRow(e, id)).join("") : `<div class="empty">Sin partidos programados.</div>`}</div>
+      <div class="panel flush vcomp"><div class="vch"><b>Últimos resultados</b></div>${pe.length ? pe.map(e => schedRow(e, id)).join("") : `<div class="empty">Sin resultados.</div>`}</div></div>`;
+  }
+  if (tab === "plantel") {
+    try { ros = await vget(`${ESPN}/${slug}/teams/${id}/roster`); } catch (e) {}
+    if (R.v !== "club" || R.id !== id) return;
+    const A = (ros && ros.athletes) || [], ord = { G: 0, D: 1, M: 2, F: 3 }, grp = { G: "Arqueros", D: "Defensas", M: "Mediocampistas", F: "Delanteros" };
+    const by = {}; A.forEach(a => { const p = ((a.position || {}).abbreviation || "M")[0]; (by[p in ord ? p : "M"] ||= []).push(a); });
+    const Lf = { equipos: { [t.displayName]: { color: t.color, logo } } };
+    body.innerHTML = A.length ? Object.keys(by).sort((a, b) => ord[a] - ord[b]).map(p => `<div class="panel stack"><h3>${grp[p]}</h3><div class="vsquad">${by[p].map(a => `<div class="vsq">${face(Lf, t.displayName, a.id, a.displayName, "")}<span><b>${esc(a.displayName)}</b><small>${a.jersey ? "#" + esc(a.jersey) + " · " : ""}${a.age ? esc(a.age) + " años" : ""}${a.citizenship ? " · " + esc(a.citizenship) : ""}</small></span></div>`).join("")}</div></div>`).join("")
+      + (ros.coach && ros.coach[0] ? `<p class="note">Entrenador: <b>${esc([ros.coach[0].firstName, ros.coach[0].lastName].filter(Boolean).join(" "))}</b></p>` : "")
+      : `<div class="panel empty">Plantel no disponible.</div>`;
+  }
+}
+
+/* ---------- noticias ---------- */
+function vNoticias() {
+  setTimeout(vFillNoticias, 0);
+  return `<section class="view" aria-labelledby="h-news"><h1 id="h-news">Noticias</h1>${vHub("noticias")}<div id="vn-list"><div class="panel empty">Cargando noticias…</div></div>
+    <p class="note">Noticias de ESPN Deportes. Se abren en ESPN. Agrega competiciones a "Mis competiciones" para ver primero sus noticias.</p></section>`;
+}
+async function vFillNoticias() {
+  await vComps();
+  const slugs = [...new Set([...favComps(), "uefa.champions", "esp.1", "eng.1", "conmebol.libertadores", "ita.1", "arg.1"])].slice(0, 8);
+  const all = (await Promise.all(slugs.map(async s => (await vNews(s)).slice(0, 8).map(a => ({ ...a, _lg: (VV.bySlug[s] || {}).n || s }))))).flat();
+  const seen = new Set(), arts = all.filter(a => { const k = a.headline; if (!k || seen.has(k)) return false; seen.add(k); return true; }).sort((a, b) => (b.published || "").localeCompare(a.published || ""));
+  const box = document.getElementById("vn-list"); if (box && R.v === "noticias") box.innerHTML = newsCards(arts.slice(0, 36));
+}
+
+/* ---------- avisos de gol (mientras la página está abierta) ---------- */
+async function vToggleFollow(id, btn) {
+  const f = followed();
+  if (f[id]) { delete f[id]; lsSet("bt_vfollow", f); if (btn) { btn.classList.remove("on"); btn.textContent = "🔕"; } return; }
+  if ("Notification" in window && Notification.permission === "default") { try { await Notification.requestPermission(); } catch (e) {} }
+  const ev = Object.values(VV.cache).flatMap(c => c.evs).find(e => e.id === id);
+  f[id] = { s: ev ? `${ev.h.score ?? 0}-${ev.a.score ?? 0}` : "", n: ev ? `${ev.h.name} vs ${ev.a.name}` : "", d: ev ? ev.date : "" };
+  lsSet("bt_vfollow", f);
+  if (btn) { btn.classList.add("on"); btn.textContent = "🔔"; }
+  if (!("Notification" in window) || Notification.permission !== "granted") toast("Te avisaré aquí en la página. Para avisos del sistema, permite las notificaciones en tu navegador.");
+  else toast("Listo: te aviso cuando haya gol en este partido.");
+}
+function toast(msg) { const t = document.createElement("div"); t.className = "vtoast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 4500); }
+async function vWatch() {
+  const f = followed(), ids = Object.keys(f); if (!ids.length || document.hidden) return;
+  const old = Date.now() - 3 * DAYMS; ids.forEach(i => { if (f[i].d && new Date(f[i].d).getTime() < old) delete f[i]; });
+  const key = ymd(new Date()); let evs = [];
+  try { delete VV.cache[key]; evs = await vFetchDay(key); } catch (e) { return; }
+  evs.forEach(e => { const w = f[e.id]; if (!w) return; const s = `${e.h.score ?? 0}-${e.a.score ?? 0}`;
+    if (w.s && s !== w.s && e.state !== "pre") { const msg = `${e.h.name} ${e.h.score} – ${e.a.score} ${e.a.name}`;
+      if ("Notification" in window && Notification.permission === "granted") { try { new Notification("¡Gol!", { body: msg, tag: e.id }); } catch (x) {} }
+      toast("⚽ ¡Gol! " + msg); }
+    w.s = s; if (e.state === "post") delete f[e.id]; });
+  lsSet("bt_vfollow", f);
+}
+setInterval(vWatch, 30000);
+
+/* ---------- centro del partido ---------- */
 const STATS = [["possessionPct", "Posesión", "%"], ["totalShots", "Remates"], ["shotsOnTarget", "Remates al arco"], ["blockedShots", "Remates bloqueados"],
   ["wonCorners", "Saques de esquina"], ["offsides", "Fueras de juego"], ["foulsCommitted", "Faltas"], ["yellowCards", "Tarjetas amarillas"], ["redCards", "Tarjetas rojas"],
   ["saves", "Atajadas"], ["accuratePasses", "Pases completados"], ["totalPasses", "Pases"], ["passPct", "Precisión de pases", "%"], ["totalCrosses", "Centros"],
@@ -1688,61 +1911,79 @@ const STATS = [["possessionPct", "Posesión", "%"], ["totalShots", "Remates"], [
 const KEY = ["possessionPct", "totalShots", "shotsOnTarget", "wonCorners", "foulsCommitted", "offsides"];
 
 function vEnVivo() {
-  const tabs = [["resumen", "Resumen"], ["alineaciones", "Alineaciones"], ["estadisticas", "Estadísticas"], ["minuto", "Relato"]];
+  const tabs = [["resumen", "Resumen"], ["alineaciones", "Alineaciones"], ["estadisticas", "Estadísticas"], ["previa", "Previa"], ["tabla", "Tabla"], ["minuto", "Relato"]];
   const tab = tabs.some(t => t[0] === R.tab) ? R.tab : "resumen";
   setTimeout(() => vFillMatch(), 0);
   timers.push(setInterval(() => { if (R.v === "envivo" && !document.hidden && VV.state === "in") vFillMatch(true); }, 30000));
   return `<section class="view vcenter">
-    <button class="back" data-go="vivo" data-tab="hoy">← En vivo</button>
+    <button class="back" data-go="vivo">← En vivo</button>
     <div class="panel vhead" id="vc-head"><div class="empty">Cargando partido…</div></div>
-    <div class="mtabs vtabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" data-go="envivo" data-liga="${esc(R.liga)}" data-id="${esc(R.id)}" data-tab="${k}" data-keep aria-selected="${k === tab}">${n}</button>`).join("")}</div>
+    <div class="mtabs vtabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" data-go="envivo" data-id="${esc(R.id)}" data-tab="${k}" data-keep aria-selected="${k === tab}">${n}</button>`).join("")}</div>
     <div id="vc-body"></div></section>`;
 }
-async function vSummary(slug, id, force) {
-  const k = slug + "|" + id, c = VV.sum[k];
+async function vSummary(id, force) {
+  const c = VV.sum[id];
   if (c && !force && Date.now() - c.t < 20000) return c.j;
-  const r = await fetch(`${ESPN}/${slug}/summary?event=${encodeURIComponent(id)}`);
-  if (!r.ok) throw new Error(r.status);
-  const j = await r.json(); VV.sum[k] = { t: Date.now(), j }; return j;
+  const j = await vget(`${ESPN}/all/summary?event=${encodeURIComponent(id)}`); VV.sum[id] = { t: Date.now(), j }; return j;
 }
 function vHeader(j) {
-  const c = ((j.header || {}).competitions || [])[0] || {}, st = c.status || {}, t = st.type || {};
+  const c = ((j.header || {}).competitions || [])[0] || {}, st = c.status || {}, t = st.type || {}, lg = (j.header || {}).league || {};
   const side = k => { const x = (c.competitors || []).find(y => y.homeAway === k) || {}, tm = x.team || {};
-    return { id: String(tm.id || ""), name: tm.displayName || tm.name || "", short: tm.shortDisplayName || tm.displayName || "", logo: tm.logo || ((tm.logos || [])[0] || {}).href, color: tm.color, score: x.score }; };
-  return { state: t.state, detail: t.shortDetail || t.detail || "", clock: st.displayClock, period: st.period, date: c.date, h: side("home"), a: side("away"), league: ((j.header || {}).league || {}).name || "" };
+    return { id: String(tm.id || ""), name: tm.displayName || tm.name || "", short: tm.shortDisplayName || tm.displayName || "", logo: tm.logo || ((tm.logos || [])[0] || {}).href, color: tm.color, score: x.score, rec: (x.record || [])[0] }; };
+  return { state: t.state, detail: t.shortDetail || t.detail || "", clock: st.displayClock, period: st.period, date: c.date, h: side("home"), a: side("away"),
+    league: lg.name || "", slug: lg.slug || "", lid: String(lg.id || ""), note: (c.notes || [])[0] ? c.notes[0].headline : "" };
 }
-const minOf = (H) => { if (H.state === "post") return 90; if (H.state !== "in") return 0; const m = parseInt(String(H.clock || "0"), 10) || 0; return /half|HT|Entretiempo/i.test(H.detail) ? 45 : Math.min(m, 90); };
+const minOf = H => { if (H.state === "post") return 90; if (H.state !== "in") return 0; const m = parseInt(String(H.clock || "0"), 10) || 0; return /half|HT|Entretiempo/i.test(H.detail) ? 45 : Math.min(m, 90); };
 function vEvents(j, H) {
   return (j.keyEvents || []).filter(e => e.type && /goal|card|substitution|penalty/i.test((e.type.type || "") + (e.type.text || ""))).map(e => {
     const ty = (e.type.type || e.type.text || "").toLowerCase(), team = String((e.team || {}).id || ""), lado = team === H.h.id ? "h" : team === H.a.id ? "a" : "";
     const who = (e.participants || []).map(p => (p.athlete || {}).displayName).filter(Boolean);
-    const kind = /own/.test(ty) ? "og" : /goal|scored/.test(ty) ? "goal" : /red/.test(ty) ? "red" : /yellow/.test(ty) ? "yellow" : /substitution/.test(ty) ? "sub" : "other";
-    return { min: (e.clock || {}).displayValue || "", lado, kind, who, text: e.text || "" };
+    const kind = /own/.test(ty) ? "og" : /missed|saved/.test(ty) ? "miss" : /goal|scored/.test(ty) ? "goal" : /red/.test(ty) ? "red" : /yellow/.test(ty) ? "yellow" : /substitution/.test(ty) ? "sub" : "other";
+    return { min: (e.clock || {}).displayValue || "", lado, kind, who, text: e.text || "", pen: /penalty/.test(ty) };
   });
 }
-const ICON = { goal: "⚽", og: "⚽", yellow: `<i class="ycard"></i>`, red: `<i class="rcard"></i>`, sub: "⇄", other: "•" };
+const ICON = { goal: "⚽", og: "⚽", miss: "✕", yellow: `<i class="ycard"></i>`, red: `<i class="rcard"></i>`, sub: "⇄", other: "•" };
 function vLogo(t, cls = "") { return `<span class="vlogo ${cls}">${t.logo ? `<img src="${esc(t.logo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : esc((t.short || "?").slice(0, 3))}</span>`; }
 
 async function vFillMatch(force) {
-  const slug = R.liga, id = R.id, head = document.getElementById("vc-head"), body = document.getElementById("vc-body");
+  const id = R.id, head = document.getElementById("vc-head"), body = document.getElementById("vc-body");
   if (!head || !body) return;
   let j;
-  try { j = await vSummary(slug, id, force); } catch (e) { head.innerHTML = `<div class="empty">No pude cargar este partido. Prueba de nuevo en un rato.</div>`; return; }
+  try { j = await vSummary(id, force); } catch (e) { head.innerHTML = `<div class="empty">No pude cargar este partido. Prueba de nuevo en un rato.</div>`; return; }
   if (R.v !== "envivo" || R.id !== id) return;
-  const H = vHeader(j), evs = vEvents(j, H), comp = (COMPS.find(c => c[0] === slug) || [])[1] || H.league, m = vModel(id);
-  const goals = l => evs.filter(e => (e.kind === "goal" && e.lado === l) || (e.kind === "og" && e.lado && e.lado !== l)).map(e => `${esc((e.who[0] || "").split(" ").slice(-1)[0])} ${esc(e.min)}${e.kind === "og" ? " (ec)" : ""}`).join(", ");
-  const status = H.state === "in" ? `<span class="vmin live big">${esc(/half|HT/i.test(H.detail) ? "Entretiempo" : H.clock || H.detail)}</span>` : H.state === "post" ? `<span class="vmin big">Final</span>` : `<span class="vmin big">${esc(new Date(H.date).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))} · ${hhmm(H.date)}</span>`;
-  head.innerHTML = `<div class="vhcomp">${esc(comp)}</div>
-    <div class="vhrow"><div class="vhteam">${vLogo(H.h, "xl")}<b>${esc(H.h.short)}</b><small>${goals("h")}</small></div>
+  await vComps();
+  const H = vHeader(j), evs = vEvents(j, H), c = VV.byId[H.lid], comp = c ? c.n : H.league, m = vModel(id); VV.state = H.state;
+  const goals = l => evs.filter(e => (e.kind === "goal" && e.lado === l) || (e.kind === "og" && e.lado && e.lado !== l)).map(e => `${esc((e.who[0] || "").split(" ").slice(-1)[0])} ${esc(e.min)}${e.kind === "og" ? " (ec)" : e.pen ? " (p)" : ""}`).join(", ");
+  const status = H.state === "in" ? `<span class="vmin live big">${esc(/half|HT/i.test(H.detail) ? "Entretiempo" : H.clock || H.detail)}</span>` : H.state === "post" ? `<span class="vmin big">${esc(H.detail && H.detail !== "FT" ? H.detail : "Final")}</span>` : `<span class="vmin big">${esc(new Date(H.date).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))} · ${hhmm(H.date)}</span>`;
+  const tl = (t, cls) => H.slug && t.id ? `<button class="vhteam tbtn" data-go="club" data-liga="${esc(H.slug)}" data-id="${esc(t.id)}">${vLogo(t, "xl")}<b>${esc(t.short)}</b><small>${goals(cls)}</small></button>` : `<div class="vhteam">${vLogo(t, "xl")}<b>${esc(t.short)}</b><small>${goals(cls)}</small></div>`;
+  const f = followed()[id];
+  head.innerHTML = `<div class="vhcomp">${H.slug ? `<button class="link" data-go="comp" data-liga="${esc(H.slug)}">${esc(comp)}</button>` : esc(comp)}${H.note ? ` · ${esc(H.note)}` : ""}</div>
+    <div class="vhrow">${tl(H.h, "h")}
       <div class="vhmid">${H.state === "pre" ? `<span class="vhsc num">vs</span>` : `<span class="vhsc num">${esc(H.h.score ?? 0)} – ${esc(H.a.score ?? 0)}</span>`}${status}</div>
-      <div class="vhteam">${vLogo(H.a, "xl")}<b>${esc(H.a.short)}</b><small>${goals("a")}</small></div></div>
-    ${m ? `<div class="row" style="justify-content:center;margin-top:10px"><button class="btn ghost sm" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">Análisis de Ballytics →</button></div>` : ""}`;
+      ${tl(H.a, "a")}</div>
+    <div class="row" style="justify-content:center;margin-top:10px;gap:8px">${H.state !== "post" ? `<button class="btn ghost sm vbell2${f ? " on" : ""}" data-follow="${esc(id)}">${f ? "🔔 Siguiendo" : "🔕 Avisarme de goles"}</button>` : ""}${m ? `<button class="btn ghost sm" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">Análisis de Ballytics →</button>` : ""}</div>`;
   const tab = R.tab || "resumen";
-  if (tab === "resumen") body.innerHTML = (m ? vProbPanel(m, H) : "") + vKeyStats(j, H) + vTimeline(evs, H);
+  if (tab === "resumen") body.innerHTML = (m ? vProbPanel(m, H) : "") + vKeyStats(j, H) + vTimeline(evs, H) + vInfo(j);
   if (tab === "alineaciones") body.innerHTML = vPitch(j, H);
-  if (tab === "estadisticas") body.innerHTML = vStats(j, H, false);
+  if (tab === "estadisticas") body.innerHTML = vStats(j, H);
+  if (tab === "previa") body.innerHTML = vPrevia(j, H, m);
+  if (tab === "tabla") { const g = ((j.standings || {}).groups || []); body.innerHTML = g.length ? stTable(g.map(x => ({ name: x.header, standings: x.standings })), [H.h.id, H.a.id], H.slug) : `<div class="panel empty">Sin tabla para esta competición.</div>`; }
   if (tab === "minuto") body.innerHTML = vComments(j);
-  VV.state = H.state;
+}
+function vInfo(j) {
+  const gi = j.gameInfo || {}, v = gi.venue || {}, ref = (gi.officials || [])[0], tv = ((j.broadcasts || [])[0] || {});
+  const items = [v.fullName ? `Estadio: <b>${esc(v.fullName)}</b>${v.address && v.address.city ? ` (${esc(v.address.city)})` : ""}` : "", ref ? `Árbitro: <b>${esc(ref.displayName || ref.fullName || "")}</b>` : "", gi.attendance ? `Público: <b>${Number(gi.attendance).toLocaleString("es-CL")}</b>` : ""].filter(Boolean);
+  return items.length ? `<div class="panel stack"><h3>Información</h3><p class="note" style="font-size:14px">${items.join(" · ")}</p></div>` : "";
+}
+function vPrevia(j, H, m) {
+  const L5 = j.lastFiveGames || [];
+  const form = t => { const g = L5.find(x => String((x.team || {}).id) === t.id); const ev = (g && g.events) || [];
+    return ev.length ? `<div class="vform">${ev.map(e => { const r = (e.gameResult || "").toUpperCase(), cl = r === "W" ? "G" : r === "L" ? "P" : r === "D" ? "E" : "";
+      return `<div class="vfr"><span class="form"><i class="${cl}">${cl || "·"}</i></span><span class="num">${esc(e.score || "")}</span><span>${esc(e.atVs || "")} ${esc((e.opponent || {}).displayName || (e.opponent || {}).abbreviation || "")}</span><small class="faint">${e.gameDate ? esc(new Date(e.gameDate).toLocaleDateString("es-CL", { day: "numeric", month: "short" })) : ""}</small></div>`; }).join("")}</div>` : `<p class="note">Sin datos.</p>`; };
+  const pc = (j.pickcenter || [])[0];
+  const odds = pc && pc.homeTeamOdds && pc.awayTeamOdds ? `<div class="panel stack"><h3>Cuotas (${esc((pc.provider || {}).name || "")})</h3><p class="note" style="font-size:14px">${esc(H.h.short)}: <b>${esc(pc.homeTeamOdds.moneyLine ?? "")}</b> · Empate: <b>${esc((pc.drawOdds || {}).moneyLine ?? "")}</b> · ${esc(H.a.short)}: <b>${esc(pc.awayTeamOdds.moneyLine ?? "")}</b>${pc.overUnder ? ` · Más/menos ${esc(pc.overUnder)}` : ""}</p><p class="note">Formato americano. Solo informativo.</p></div>` : "";
+  return (m ? `<div class="panel stack"><h3>Probabilidad Ballytics</h3><div class="hero-p">${bar3(m.p.pH, m.p.pD, m.p.pA)}</div><div class="nums vpn"><span><b>${pct(m.p.pH)}</b> ${esc(H.h.short)}</span><span>${pct(m.p.pD)} empate</span><span>${esc(H.a.short)} <b>${pct(m.p.pA)}</b></span></div><button class="link" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">Ver el análisis completo →</button></div>` : "")
+    + `<div class="grid2"><div class="panel stack"><h3>Últimos partidos de ${esc(H.h.short)}</h3>${form(H.h)}</div><div class="panel stack"><h3>Últimos partidos de ${esc(H.a.short)}</h3>${form(H.a)}</div></div>` + odds;
 }
 
 /* probabilidad en vivo: goles que faltan según el tiempo restante (Poisson) + marcador actual */
@@ -1758,6 +1999,7 @@ function vProbPanel(m, H) {
     <div class="hero-p">${bar3(pH, pD, pA)}</div><div class="nums vpn"><span><b>${pct(pH)}</b> ${esc(H1)}</span><span>${pct(pD)} empate</span><span>${esc(A1)} <b>${pct(pA)}</b></span></div>
     <p class="note">Antes del partido: ${pct(p.pH)} · ${pct(p.pD)} · ${pct(p.pA)}${H.state === "in" ? ` · minuto ${min}` : ""}.</p></div>`;
 }
+
 function vStatRows(j, H, only) {
   const T = (j.boxscore || {}).teams || [], th = T.find(t => String((t.team || {}).id) === H.h.id) || T[1] || {}, ta = T.find(t => String((t.team || {}).id) === H.a.id) || T[0] || {};
   const get = (t, k) => { const s = (t.statistics || []).find(x => x.name === k); return s ? s.displayValue : null; };
@@ -1769,7 +2011,7 @@ function vStatRows(j, H, only) {
       <span class="vbars"><span class="vb l"><i style="width:${100 * va / t}%"></i></span><span class="vb r"><i style="width:${100 * vb / t}%"></i></span></span></div>`;
   }).join("");
 }
-function vKeyStats(j, H) { const r = vStatRows(j, H, KEY); return r ? `<div class="panel stack"><h3>Estadísticas importantes</h3>${r}<button class="link" data-go="envivo" data-liga="${esc(R.liga)}" data-id="${esc(R.id)}" data-tab="estadisticas" data-keep>Todas las estadísticas →</button></div>` : ""; }
+function vKeyStats(j, H) { const r = vStatRows(j, H, KEY); return r ? `<div class="panel stack"><h3>Estadísticas importantes</h3>${r}<button class="link" data-go="envivo" data-id="${esc(R.id)}" data-tab="estadisticas" data-keep>Todas las estadísticas →</button></div>` : ""; }
 function vStats(j, H) { const r = vStatRows(j, H); return `<div class="panel stack"><h3>Estadísticas</h3>${r || `<p class="note">Las estadísticas aparecen cuando empieza el partido.</p>`}</div>`; }
 function vTimeline(evs, H) {
   if (!evs.length) return `<div class="panel stack"><h3>Incidencias</h3><p class="note">${H.state === "pre" ? "El partido aún no empieza." : "Sin goles ni tarjetas por ahora."}</p></div>`;
