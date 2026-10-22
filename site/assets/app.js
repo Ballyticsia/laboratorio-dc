@@ -1606,21 +1606,33 @@ function vParse(e, slug, comp) {
     return { id: tm.id, name: tm.shortDisplayName || tm.displayName || "", full: tm.displayName || "", abr: tm.abbreviation, logo: tm.logo, color: tm.color, score: x.score }; };
   return { id: e.id, slug, comp, date: e.date, state: t.state, detail: t.shortDetail || t.detail || "", clock: st.displayClock, period: st.period, h: side("home"), a: side("away") };
 }
+/* ESPN acepta una sola fecha por consulta (un rango da error 400). Se piden el día elegido y el
+   siguiente (por la diferencia horaria) y se filtra por la fecha local. Cada 30 s solo se vuelven a
+   pedir las competiciones con partidos en juego o por empezar; todo se refresca cada 5 minutos. */
+async function vFetchComp(slug, name, region, dates, key) {
+  try {
+    const rs = await Promise.all(dates.map(ds => fetch(`${ESPN}/${slug}/scoreboard?dates=${ds}`).then(r => r.ok ? r.json() : null).catch(() => null)));
+    let logo = null; const seen = new Set(), evs = [];
+    rs.filter(Boolean).forEach(j => { const lg = (j.leagues || [])[0] || {}; logo = logo || ((lg.logos || [])[0] || {}).href;
+      (j.events || []).forEach(e => { if (seen.has(e.id)) return; seen.add(e.id); const x = vParse(e, slug, name); if (localDay(x.date) === key) evs.push(x); }); });
+    evs.sort((a, b) => a.date.localeCompare(b.date) || a.h.name.localeCompare(b.h.name));
+    return { slug, name, region, logo, evs, ok: rs.some(Boolean) };
+  } catch (e) { return { slug, name, region, evs: [], ok: false }; }
+}
 async function vFetchDay(tab) {
   const d = dayOf(tab), key = ymd(d), c = VV.cache[key];
-  if (c && Date.now() - c.t < 25000) return c.data;
-  const d2 = new Date(d); d2.setDate(d2.getDate() + 1); const d0 = new Date(d); d0.setDate(d0.getDate() - 1);
-  const out = await Promise.all(COMPS.map(async ([slug, name, region]) => {
-    try {
-      const r = await fetch(`${ESPN}/${slug}/scoreboard?dates=${ymd(d0)}-${ymd(d2)}&limit=200`);
-      if (!r.ok) return null;
-      const j = await r.json(), lg = (j.leagues || [])[0] || {};
-      const evs = (j.events || []).map(e => vParse(e, slug, name)).filter(e => localDay(e.date) === key).sort((a, b) => a.date.localeCompare(b.date));
-      return evs.length ? { slug, name, region, logo: ((lg.logos || [])[0] || {}).href, evs } : null;
-    } catch (e) { return null; }
-  }));
-  const data = out.filter(Boolean);
-  VV.cache[key] = { t: Date.now(), data };
+  const d2 = new Date(d); d2.setDate(d2.getDate() + 1); const dates = [key, ymd(d2)];
+  if (c && Date.now() - c.t < 20000) return c.data;
+  let comps = COMPS;
+  if (c && Date.now() - c.full < 300000) {
+    const soon = Date.now() + 15 * 60e3;
+    comps = COMPS.filter(([slug]) => { const g = c.bySlug[slug]; return g && g.evs.some(e => e.state === "in" || (e.state === "pre" && new Date(e.date).getTime() <= soon)); });
+  }
+  const res = await Promise.all(comps.map(([slug, name, region]) => vFetchComp(slug, name, region, dates, key)));
+  const bySlug = c && comps !== COMPS ? { ...c.bySlug } : {};
+  res.forEach(g => { if (g.ok || !bySlug[g.slug]) bySlug[g.slug] = g; });
+  const data = COMPS.map(([slug]) => bySlug[slug]).filter(g => g && g.evs.length);
+  VV.cache[key] = { t: Date.now(), full: comps === COMPS ? Date.now() : c.full, bySlug, data };
   return data;
 }
 /* partido del modelo (mismo id de ESPN) */
@@ -1777,7 +1789,7 @@ function lineRank(ab) { ab = (ab || "").toUpperCase();
   if (/^(AM|CAM|LW|RW|SS)(-|$)/.test(ab)) return 4;
   return 5; }
 /* de izquierda a derecha: lateral/extremo izquierdo, centro-izquierda, centro, centro-derecha, lateral/extremo derecho */
-const lineSide = ab => { ab = (ab || "").toUpperCase(); return /^(LB|LWB|LM|LW)$/.test(ab) ? 0 : /-L$/.test(ab) ? 1 : /^(RB|RWB|RM|RW)$/.test(ab) ? 4 : /-R$/.test(ab) ? 3 : 2; };
+const lineSide = ab => { ab = (ab || "").toUpperCase(); return /^(LB|LWB|LM|LW|LF)$/.test(ab) ? 0 : /-L$/.test(ab) ? 1 : /^(RB|RWB|RM|RW|RF)$/.test(ab) ? 4 : /-R$/.test(ab) ? 3 : 2; };
 function vPitch(j, H) {
   const ros = (j.rosters || []).filter(t => (t.roster || []).some(x => x.starter));
   if (!ros.length) return `<div class="panel stack"><h3>Alineaciones</h3><p class="note">Aún no publicadas. Suelen salir cerca de una hora antes del partido.</p></div>`;
