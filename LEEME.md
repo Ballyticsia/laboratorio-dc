@@ -77,6 +77,12 @@ El robot usa la clave guardada en **Settings → Secrets and variables → Actio
 - El estado de la conexión (consultas usadas, restantes y errores) queda en `data/api_football/estado.json`.
 - Si la clave falta o la API falla, el sitio sigue funcionando sin bajas.
 
+## Probabilidad Ballytics, modelo propio y mercado
+- Si ESPN trae cuota (hoy DraftKings), `modelo.calibrar()` busca los goles esperados que reproducen la cuota sin margen (1X2 y más/menos). De ahí salen todos los mercados del partido.
+- Si no hay cuota, se usa el modelo propio (y el ajuste por bajas).
+- El modelo propio queda guardado en `p.modelo`, y el registro guarda las tres versiones: modelo propio (`pH…top`), mercado (`mH…mA`) y Ballytics (`fH…ftop`).
+- La razón está en `pipeline/backtest_mercado.json`: en 3.747 partidos de 2025-26 la cuota fue más precisa en el 1X2, y sus goles implícitos mejoraron el marcador exacto y "ambos marcan".
+
 ## Cambiar cosas
 - **Horario:** la línea `cron` del workflow (está en hora UTC; Chile es UTC-3).
 - **Ligas:** la lista `LIGAS` en `pipeline/generar.py` (códigos de ESPN como `eng.1`, `esp.1`, `por.1`, `ned.1`, `arg.1`, `chi.1`).
