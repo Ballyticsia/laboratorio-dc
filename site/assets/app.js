@@ -53,7 +53,7 @@ function face(L, t, jid, name, size = "", alt = "") {
   const src = espn || api, alt2 = espn && api ? api : "";
   const img = src ? `<span class="ph"><img src="${esc(src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${alt2 ? ` data-alt="${esc(alt2)}"` : ""} onerror="if(this.dataset.alt){this.src=this.dataset.alt;this.dataset.alt=''}else this.parentNode.remove()"></span>` : "";
   const crest = size !== "sm" && t ? `<span class="fb">${badge(L, t, "xs")}</span>` : "";
-  return `<span class="face ${size}" style="--fc:${bg};--ff:${fg}" aria-hidden="true"><i>${esc(ini)}</i>${img}${crest}</span>`;
+  return `<span class="pface ${size}" style="--fc:${bg};--ff:${fg}" aria-hidden="true"><i>${esc(ini)}</i>${img}${crest}</span>`;
 }
 function leagueMark(L, size = "") {
   const logo = L.logo && /^https:\/\//.test(L.logo) ? L.logo : null;
