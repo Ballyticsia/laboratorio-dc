@@ -1,7 +1,7 @@
 {
  "activa": true,
  "consultas": 10,
- "restantes": 90,
+ "restantes": 80,
  "errores": [],
  "fechas": {
   "2026-10-23": {
@@ -10,10 +10,10 @@
   },
   "2026-10-24": {
    "filas": 902,
-   "desde_cache": false
+   "desde_cache": true
   }
  },
  "partidos_con_bajas": 54,
  "partidos_ajustados": 34,
- "actualizado": "2026-10-23T01:00+00:00"
+ "actualizado": "2026-10-23T01:18+00:00"
 }
