@@ -310,6 +310,11 @@ export default {
     try {
       if (p === "/vapid") res = json({ publicKey: (await vapid(env)).pub });
       else if (p === "/estado") { const seg = (await env.SUBS.get("seguidos", "json")) || {}; res = json({ ok: true, partidos: Object.keys(seg).length }); }
+      else if (p === "/diag") {   // revisión rápida de acceso a ESPN
+        const urls = { scoreboard: `${ESPN}/all/scoreboard`, summary: `${ESPN}/eng.1/scoreboard`, athlete: `${ESPN_WEB}/athletes/253989`, overview: `${ESPN_WEB}/athletes/253989/overview`, core: "https://sports.core.api.espn.com/v2/sports/soccer/athletes/253989" };
+        const out = {}; for (const [k, url] of Object.entries(urls)) { try { const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36", Accept: "application/json" } }); out[k] = r.status; } catch (e) { out[k] = String(e); } }
+        res = json(out);
+      }
       else if (p === "/votos") res = await votos(env, (u.searchParams.get("ids") || "").split(",").filter(Boolean), u.searchParams.get("uid"));
       else if (p.startsWith("/jugador/")) res = await jugador(env, p.split("/")[2], ctx, req);
       else if (p.startsWith("/prode/") && req.method === "GET") res = await prodeVer(env, p.split("/")[2] || "", u.searchParams.get("uid"));
