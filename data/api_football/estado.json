@@ -1,19 +1,13 @@
 {
  "activa": true,
- "consultas": 0,
- "restantes": null,
- "errores": [],
- "fechas": {
-  "2026-10-23": {
-   "filas": 198,
-   "desde_cache": true
-  },
-  "2026-10-24": {
-   "filas": 912,
-   "desde_cache": true
-  }
- },
- "partidos_con_bajas": 54,
- "partidos_ajustados": 35,
- "actualizado": "2026-10-23T20:48+00:00"
+ "consultas": 4,
+ "restantes": 99,
+ "errores": [
+  "2026-10-23: {'access': 'Your account is suspended, check on https://dashboard.api-football.com.'}",
+  "2026-10-24: {'access': 'Your account is suspended, check on https://dashboard.api-football.com.'}"
+ ],
+ "fechas": {},
+ "partidos_con_bajas": 52,
+ "partidos_ajustados": 33,
+ "actualizado": "2026-10-23T22:45+00:00"
 }
