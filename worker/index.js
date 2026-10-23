@@ -311,7 +311,10 @@ export default {
       if (p === "/vapid") res = json({ publicKey: (await vapid(env)).pub });
       else if (p === "/estado") { const seg = (await env.SUBS.get("seguidos", "json")) || {}; res = json({ ok: true, partidos: Object.keys(seg).length }); }
       else if (p === "/diag") {   // revisión rápida de acceso a ESPN
-        const urls = { scoreboard: `${ESPN}/all/scoreboard`, summary: `${ESPN}/eng.1/scoreboard`, athlete: `${ESPN_WEB}/athletes/253989`, overview: `${ESPN_WEB}/athletes/253989/overview`, core: "https://sports.core.api.espn.com/v2/sports/soccer/athletes/253989" };
+        const urls = { a1: "https://site.api.espn.com/apis/common/v3/sports/soccer/athletes/253989", a2: "https://site.api.espn.com/apis/common/v3/sports/soccer/athletes/253989/overview",
+          a3: "https://site.api.espn.com/apis/common/v3/sports/soccer/athletes/253989/gamelog", a4: "http://sports.core.api.espn.com/v2/sports/soccer/athletes/253989",
+          a5: "https://site.web.api.espn.com/apis/common/v3/sports/soccer/athletes/253989?region=us&lang=en", a6: "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/athletes/253989/overview",
+          a7: "https://sports.core.api.espn.com/v3/sports/soccer/athletes/253989", a8: "https://site.api.espn.com/apis/common/v3/sports/soccer/eng.1/athletes/253989" };
         const out = {}; for (const [k, url] of Object.entries(urls)) { try { const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36", Accept: "application/json" } }); out[k] = r.status; } catch (e) { out[k] = String(e); } }
         res = json(out);
       }
