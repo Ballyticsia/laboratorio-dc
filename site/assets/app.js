@@ -2608,7 +2608,7 @@ function pmModal(pid, mid) {
   const body = (isGk ? sec("Arco", [["Atajadas", fmt(v("sv", "saves"))], ["Goles recibidos", fmt(v("gc", "goalsConceded"))]]) : "")
     + sec("Ataque", [["Goles", fmt(v("g", "totalGoals"))], ["Asistencias", fmt(v("as", "goalAssists"))], ["Tiros (al arco)", v("sh", "totalShots") == null ? "—" : `${v("sh", "totalShots")}<small> (${v("sot", "shotsOnTarget") ?? 0})</small>`],
         ["Regates exitosos", af && af.dr != null ? fmt(af.drs ?? 0, af.dr) : "—"], ["Fueras de juego", fmt(v("off", "offsides"))], ["Penales", af && (af.ps || af.pm) ? `${af.ps || 0} convertido${af.ps === 1 ? "" : "s"}${af.pm ? ` · ${af.pm} errado${af.pm === 1 ? "" : "s"}` : ""}` : "—"]])
-    + sec("Pases", [["Pases", fmt(af ? af.pas : null)], ["Precisión", af && af.acc != null ? `${af.acc} %` : "—"], ["Pases clave", fmt(af ? af.kp : null)]])
+    + sec("Pases", [["Pases", fmt(af ? af.pas : null)], ["Pases precisos", af && af.acc != null && af.pas ? (af.acc <= af.pas ? `${af.acc}<small> (${Math.round(100 * af.acc / af.pas)} %)</small>` : `${af.acc} %`) : "—"], ["Pases clave", fmt(af ? af.kp : null)]])
     + sec("Defensa", [["Quites", fmt(af ? af.tk : null)], ["Intercepciones", fmt(af ? af.int : null)], ["Tiros bloqueados", fmt(af ? af.blk : null)], ["Duelos ganados", af && af.du ? fmt(af.duw ?? 0, af.du) : "—"]])
     + sec("Faltas y tarjetas", [["Faltas cometidas", fmt(v("fc", "foulsCommitted"))], ["Faltas recibidas", fmt(v("fd", "foulsSuffered"))], ["Amarillas", fmt(v("yc", "yellowCards"))], ["Rojas", fmt(v("rc", "redCards"))]]);
   const m = document.createElement("div"); m.className = "vmodal pmodal";
