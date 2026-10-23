@@ -2579,17 +2579,17 @@ async function loadMatchPlayers(id, H, j) {
   let r;
   try { r = await vget(`${url}/jugadores?id=${encodeURIComponent(id)}&st=${H.state}&k=${encodeURIComponent(H.date || "")}&h=${encodeURIComponent(H.h.name)}&a=${encodeURIComponent(H.a.name)}`); }
   catch (e) { VV.afp[id] = { t: now, map: c ? c.map : {}, motivo: "error" }; return false; }
-  if (!r.ok) { VV.afp[id] = { t: now, map: c ? c.map : {}, motivo: r.motivo }; return !c; }
+  if (!r.ok) { VV.afp[id] = { t: r.motivo === "pendiente" ? now - (H.state === "in" ? 60000 : 540000) : now, map: c ? c.map : {}, motivo: r.motivo }; return !c; }
   const map = afCruce(j, H, r); guardarFotos(map);
-  VV.afp[id] = { t: now, fin: H.state === "post" && !r.viejo, map, data: r };
+  VV.afp[id] = { t: now, fin: !!r.fin, map, data: r, pendiente: r.pendiente };
   return true;
 }
 function pmNote(mid, H) {
   const c = VV.afp && VV.afp[mid];
   if (H.state === "pre") return `<p class="note">Toca un jugador para ver su ficha. Las estadísticas del partido aparecen cuando empieza.</p>`;
   if (!c) return `<p class="note">Cargando notas y estadísticas de cada jugador…</p>`;
-  if (Object.keys(c.map || {}).length) return `<p class="note">Toca un jugador para ver sus estadísticas en este partido. Nota de 0 a 10 (API-Football).</p>`;
-  return `<p class="note">Toca un jugador para ver sus estadísticas en este partido.${c.motivo === "limite" ? " Hoy se acabaron las consultas gratis de notas y pases; se muestran los datos de ESPN." : c.motivo === "sin_cruce" || c.motivo === "sin_datos" ? " Este partido no tiene notas ni pases disponibles; se muestran los datos de ESPN." : ""}</p>`;
+  if (Object.keys(c.map || {}).length) return `<p class="note">Toca un jugador para ver sus estadísticas en este partido. Nota de 0 a 10 (API-Football)${c.data && c.data.actualizado && !c.fin ? `, actualizada a las ${hhmm(new Date(c.data.actualizado).toISOString())}` : ""}.</p>`;
+  return `<p class="note">Toca un jugador para ver sus estadísticas en este partido.${c.motivo === "pendiente" ? " Las notas, los pases y las fotos se están pidiendo: aparecen en unos minutos." : c.motivo === "sin_cruce" || c.motivo === "sin_datos" ? " Este partido no tiene notas ni pases disponibles; se muestran los datos de ESPN." : ""}</p>`;
 }
 function pmModal(pid, mid) {
   const j = (VV.sum[mid] || {}).j; if (!j) { go({ v: "ficha", id: pid }); return; }

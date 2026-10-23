@@ -23,7 +23,6 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -75,10 +74,6 @@ jobs:
         if: steps.s.outputs.ok == 'si'
         working-directory: worker
         run: npx --yes wrangler@4 deploy
-      - name: Clave de API-Football para las estadísticas por jugador
-        if: steps.s.outputs.ok == 'si' && env.API_FOOTBALL_KEY != ''
-        working-directory: worker
-        run: printf '%s' "$API_FOOTBALL_KEY" | npx --yes wrangler@4 secret put API_FOOTBALL_KEY
       - name: Probar y guardar la dirección para el sitio
         if: steps.s.outputs.ok == 'si'
         run: |

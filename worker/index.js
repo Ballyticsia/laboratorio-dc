@@ -8,14 +8,14 @@
    3. Fichas de jugadores: intermediario para datos de ESPN que no se pueden leer desde el navegador.
    4. Prode: grupos privados de pronósticos con ranking.
    5. /dia: partidos del día de ESPN en formato corto y con caché (la lista En vivo carga mucho más rápido).
-   6. /jugadores: estadísticas por jugador dentro de un partido (nota, pases, tiros, duelos…) y fotos,
-      desde API-Football (secreto API_FOOTBALL_KEY). Se guarda en KV para gastar pocas consultas.
+   6. /jugadores: estadísticas por jugador dentro de un partido (nota, pases, tiros, duelos…) y fotos de
+      API-Football. Las baja el robot de GitHub (pipeline/jugadores_partido.py) y las deja en KV.
 
    Llaves en KV (binding SUBS):
      vapid, seguidos, sub:<h>, q:<h>                     avisos
      v:<id> -> {H,D,A}   vu:<id>:<h> -> "H"              votos
      p:<CODIGO> -> grupo   res:<id> -> "2-1"              prode
-     afd:<fecha> afm:<id> afj:<id> afrem                  API-Football (lista del día, cruce, jugadores, consultas)                                         */
+     afped afj:<id> afrem                               API-Football (pedidos, jugadores, consultas)                                         */
 
 const ORIGINS = ["https://ballyticsia.github.io", "http://localhost:8793", "http://localhost:8000"];
 const ESPN = "https://site.api.espn.com/apis/site/v2/sports/soccer";
@@ -249,75 +249,27 @@ async function dia(ctx, fechas) {
   return json({ ok: true, events: out.flat() }, 200, { "cache-control": "public, max-age=15" });
 }
 
-/* ================= jugadores dentro del partido (API-Football) ================= */
-const AF = "https://v3.football.api-sports.io";
-const AF_MIN = 20;   // consultas diarias que se dejan libres para el robot (bajas)
-const norm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ")
-  .split(/\s+/).filter(w => w && !["fc", "cf", "sc", "ac", "afc", "cd", "club", "de", "al", "the", "fk", "sk", "if", "bk", "united", "city", "deportivo", "atletico", "sporting", "real"].includes(w));
-function parecido(a, b) {
-  const A = norm(a), B = norm(b); if (!A.length || !B.length) return 0;
-  let n = 0; for (const w of A) if (B.some(x => x === w || (w.length > 3 && (x.startsWith(w) || w.startsWith(x))))) n++;
-  return n / Math.max(A.length, B.length);
-}
-async function afGet(env, path) {
-  const hoy = new Date().toISOString().slice(0, 10), rem = (await env.SUBS.get("afrem", "json")) || {};
-  if (rem.d === hoy && rem.n != null && rem.n < AF_MIN) throw new Error("limite");
-  const r = await fetch(AF + path, { headers: { "x-apisports-key": env.API_FOOTBALL_KEY } });
-  const n = parseInt(r.headers.get("x-ratelimit-requests-remaining") || "", 10), pm = r.headers.get("x-ratelimit-remaining");
-  const hd = {}; for (const [k2, v2] of r.headers) if (/rate|limit|retry|cf-|server/i.test(k2)) hd[k2] = v2;
-  await env.SUBS.put("afrem", JSON.stringify({ d: hoy, n: isNaN(n) ? (rem.d === hoy ? rem.n : null) : n, pm, t: new Date().toISOString(), path: path.split("?")[0], status: r.status, hd }));
-  if (!r.ok) throw new Error(`API-Football ${r.status}`);
-  const j = await r.json();
-  if (j.errors && Object.keys(j.errors).length) throw new Error(JSON.stringify(j.errors).slice(0, 120));
-  return j.response || [];
-}
-async function afFixture(env, id, k, h, a) {
-  const m = await env.SUBS.get(`afm:${id}`); if (m) return m === "0" ? null : +m;
-  const d = String(k).slice(0, 10); if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
-  let lista = await env.SUBS.get(`afd:${d}`, "json");
-  if (!lista) {
-    const r = await afGet(env, `/fixtures?date=${d}`);
-    lista = r.map(f => [f.fixture.id, f.fixture.timestamp, f.teams.home.name, f.teams.away.name]);
-    await env.SUBS.put(`afd:${d}`, JSON.stringify(lista), { expirationTtl: 3 * 86400 });
-  }
-  const ts = Date.parse(k) / 1000; let best = null, bs = 0;
-  for (const [fid, t, fh, fa] of lista) {
-    if (Math.abs(t - ts) > 20 * 60) continue;
-    const sc = parecido(h, fh) + parecido(a, fa);
-    if (sc > bs) { bs = sc; best = fid; }
-  }
-  const ok = best && bs >= 0.6 ? best : null;
-  await env.SUBS.put(`afm:${id}`, String(ok || 0), { expirationTtl: ok ? 30 * 86400 : 6 * 3600 });
-  return ok;
-}
+/* ================= jugadores dentro del partido (API-Football) =================
+   API-Football limita las consultas que salen de los servidores compartidos de Cloudflare, así que aquí
+   no se le pregunta directo: el sitio deja el pedido (afped) y el robot de GitHub (jugadores.yml, cada
+   10 minutos) baja las estadísticas y las deja en afj:<id>. Aquí solo se entregan.                       */
 async function jugadoresPartido(env, q) {
   const id = q.get("id") || "", st = q.get("st") || "", k = q.get("k") || "";
   if (!/^\d+$/.test(id)) return json({ ok: false, error: "id" }, 400);
-  if (!env.API_FOOTBALL_KEY) return json({ ok: false, motivo: "sin_clave" });
   if (st === "pre") return json({ ok: false, motivo: "pre" });
   const c = await env.SUBS.get(`afj:${id}`, "json");
-  if (c && (c.fin || Date.now() - c.t < (st === "in" ? 6 : 30) * 60000)) return json({ ok: true, ...c.data, cache: true });
-  try {
-    const fid = await afFixture(env, id, k, q.get("h"), q.get("a"));
-    if (!fid) return json({ ok: false, motivo: "sin_cruce" });
-    const r = await afGet(env, `/fixtures/players?fixture=${fid}`);
-    const n0 = v => v == null ? null : +v;
-    const data = { fixture: fid, equipos: r.map(t => ({ nombre: t.team.name, logo: t.team.logo, jugadores: (t.players || []).map(p => {
-      const s = (p.statistics || [])[0] || {}, g = s.games || {};
-      return { id: p.player.id, n: p.player.name, foto: p.player.photo, num: n0(g.number), pos: g.position, min: n0(g.minutes), r: g.rating ? +(+g.rating).toFixed(1) : null, cap: !!g.captain, sup: !!g.substitute,
-        sh: n0((s.shots || {}).total), sot: n0((s.shots || {}).on), g: n0((s.goals || {}).total), as: n0((s.goals || {}).assists), sv: n0((s.goals || {}).saves), gc: n0((s.goals || {}).conceded),
-        pas: n0((s.passes || {}).total), kp: n0((s.passes || {}).key), acc: (s.passes || {}).accuracy != null ? parseInt((s.passes || {}).accuracy, 10) : null,
-        tk: n0((s.tackles || {}).total), blk: n0((s.tackles || {}).blocks), int: n0((s.tackles || {}).interceptions), du: n0((s.duels || {}).total), duw: n0((s.duels || {}).won),
-        dr: n0((s.dribbles || {}).attempts), drs: n0((s.dribbles || {}).success), fd: n0((s.fouls || {}).drawn), fc: n0((s.fouls || {}).committed),
-        yc: n0((s.cards || {}).yellow), rc: n0((s.cards || {}).red), off: n0(s.offsides), pw: n0((s.penalty || {}).won), ps: n0((s.penalty || {}).scored), pm: n0((s.penalty || {}).missed) };
-    }) })) };
-    if (!data.equipos.length) return json({ ok: false, motivo: "sin_datos" });
-    await env.SUBS.put(`afj:${id}`, JSON.stringify({ t: Date.now(), fin: st === "post", data }), { expirationTtl: 30 * 86400 });
-    return json({ ok: true, ...data });
-  } catch (e) {
-    if (c) return json({ ok: true, ...c.data, cache: true, viejo: true });
-    return json({ ok: false, motivo: String(e.message || e).includes("limite") ? "limite" : "error", error: String(e.message || e).slice(0, 160) });
+  const viejo = !c || (!c.fin && (st === "post" || Date.now() - c.t > 12 * 60000));
+  if (viejo && !(c && c.sin)) {
+    const ped = (await env.SUBS.get("afped", "json")) || {}, now = Date.now(), prev = ped[id];
+    if (!prev || prev.st !== st || now - prev.t > 5 * 60000) {
+      ped[id] = { k: clean(k, 25), h: clean(q.get("h"), 60), a: clean(q.get("a"), 60), st, t: now };
+      for (const [x, v] of Object.entries(ped)) if (now - v.t > 36 * 3600e3) delete ped[x];
+      const ks = Object.keys(ped).sort((x, y) => ped[y].t - ped[x].t); ks.slice(60).forEach(x => delete ped[x]);
+      await env.SUBS.put("afped", JSON.stringify(ped));
+    }
   }
+  if (c && c.data) return json({ ok: true, ...c.data, actualizado: c.t, fin: !!c.fin, pendiente: viejo });
+  return json({ ok: false, motivo: c && c.sin ? (c.sin === "cruce" ? "sin_cruce" : "sin_datos") : "pendiente" });
 }
 
 /* ================= prode ================= */
@@ -413,7 +365,7 @@ export default {
       else if (p.startsWith("/jugador/")) res = await jugador(env, p.split("/")[2], ctx, req);
       else if (p === "/dia") res = await dia(ctx, (u.searchParams.get("d") || "").split(","));
       else if (p === "/jugadores") res = await jugadoresPartido(env, u.searchParams);
-      else if (p === "/afestado") res = json({ ok: true, clave: !!env.API_FOOTBALL_KEY, ...((await env.SUBS.get("afrem", "json")) || {}) });
+      else if (p === "/afestado") res = json({ ok: true, ...((await env.SUBS.get("afrem", "json")) || {}), pedidos: Object.keys((await env.SUBS.get("afped", "json")) || {}).length });
       else if (p.startsWith("/prode/") && req.method === "GET") res = await prodeVer(env, p.split("/")[2] || "", u.searchParams.get("uid"));
       else if (req.method === "POST") {
         const b = await req.json().catch(() => ({}));
