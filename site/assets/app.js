@@ -117,8 +117,11 @@ async function load() {
   (D.indice.portada && D.indice.portada.jugadores || []).slice(0, 2).forEach(x => prio.add(x.liga));
   prio.add(D.indice.ligas[0].id);
   if (["liga", "partido", "equipo", "jugador", "comparar", "partidos"].includes(h[0]) && D.meta[h[1]]) { prio.clear(); prio.add(h[1]); }
-  D.indice.ligas.forEach(l => ensure(l.id));
-  D.all = Promise.all(D.indice.ligas.map(l => ensure(l.id))).then(() => { D.allLoaded = true; });
+  // el resto de las ligas se baja un poco después y de a pocas, para no trabar el celular al abrir
+  D.all = new Promise(r => setTimeout(r, 1200)).then(async () => {
+    const ids = D.indice.ligas.map(l => l.id);
+    for (let i = 0; i < ids.length; i += 4) await Promise.all(ids.slice(i, i + 4).map(ensure));
+  }).then(() => { D.allLoaded = true; });
   await Promise.all([...prio].map(ensure));
   [D.registro, D.metodo] = await Promise.all([getJSON("data/registro.json").catch(() => null), getJSON("data/metodologia.json").catch(() => null)]);
   document.getElementById("foot-upd").innerHTML = `<span class="dot"></span>Actualizado ${new Date(D.indice.actualizado).toLocaleDateString("es-CL")} ${hhmm(D.indice.actualizado)}`;
