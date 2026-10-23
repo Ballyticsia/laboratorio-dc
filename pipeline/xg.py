@@ -18,7 +18,7 @@ CARPETA = os.path.join(os.path.dirname(__file__), "..", "data", "xg")
 ARCHIVO = os.path.join(CARPETA, "partidos.json")
 MIN_HORAS = float(os.environ.get("XG_MIN_HORAS", "6"))
 MAX_POR_CORRIDA = int(os.environ.get("XG_MAX_POR_CORRIDA", "15"))
-RESERVA = int(os.environ.get("XG_RESERVA", "25"))   # consultas diarias que se dejan libres
+RESERVA = int(os.environ.get("XG_RESERVA", "45"))   # consultas diarias que se dejan libres (bajas y estadísticas por jugador)
 # liga de ESPN -> id de liga en API-Football
 LIGAS = {"eng.1": 39, "esp.1": 140, "ita.1": 135, "ger.1": 78, "fra.1": 61, "eng.2": 40, "uefa.champions": 2, "uefa.europa": 3}
 ESTADO = {"errores": [], "nuevos": 0, "guardados": 0}

@@ -1059,3 +1059,29 @@ html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
   .mtabs::-webkit-scrollbar,.vdays::-webkit-scrollbar,.tabs2::-webkit-scrollbar{display:none}
   .mtabs button{flex:none}
 }
+
+/* ---------- v16: nota y estadísticas del jugador en el partido ---------- */
+.vpl{position:relative}
+.vrt{position:absolute;top:-4px;right:calc(50% - 34px);min-width:28px;padding:1px 5px;border-radius:7px;color:#fff;font:800 11px/1.45 var(--f-mono);text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.45);z-index:2}
+.vsb{position:relative}
+.vrt.sm{position:static;margin-left:auto;box-shadow:none}
+.pmodal>div{position:relative;width:min(520px,100%);max-height:88vh;overflow:auto;padding:22px 20px 18px}
+.pmx{position:absolute;top:10px;right:12px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:20px;line-height:1;cursor:pointer}
+.pmh{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding-right:30px}
+.pmh .pface.xl{width:76px;height:76px;font-size:24px}
+.pmh>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.pmh>div b{font:700 20px/1.15 var(--f-display);text-transform:uppercase;letter-spacing:.02em}
+.pmh .muted{display:flex;align-items:center;gap:6px;font-size:13.5px;flex-wrap:wrap}
+.pmh .vlogo.sm{width:18px;height:18px}
+.pmh .faint{font-size:12.5px}
+.pmrt{display:flex;flex-direction:column;align-items:center;justify-content:center;width:62px;height:62px;border-radius:14px;color:#fff;font:800 24px/1 var(--f-display)}
+.pmrt small{font:600 10px var(--f-body);text-transform:uppercase;letter-spacing:.08em;opacity:.85;margin-top:3px}
+.pmg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0 6px}
+.pms{background:rgba(148,163,184,.06);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.pms h4{margin:0 0 6px;font:700 11px var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.pmr{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:13.5px;border-top:1px solid rgba(148,163,184,.08)}
+.pmr:first-of-type{border-top:0}
+.pmr b small{color:var(--muted);font-weight:500}
+.pmodal .btn{width:100%;margin-top:6px}
+@media (max-width:520px){.pmg{grid-template-columns:1fr}.pmodal{place-items:end stretch;padding:0}.pmodal>div{border-radius:18px 18px 0 0;max-height:90vh}}
+:root[data-theme="light"] .pms{background:#f6f8fc}

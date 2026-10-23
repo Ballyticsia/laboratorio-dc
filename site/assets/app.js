@@ -49,6 +49,7 @@ function face(L, t, jid, name, size = "", alt = "") {
   const w = String(name || "").replace(/[^A-Za-zÀ-ÿ' -]/g, "").trim().split(/\s+/).filter(Boolean);
   const ini = ((w[0] || "?")[0] + (w.length > 1 ? w[w.length - 1][0] : "")).toUpperCase();
   const espn = /^\d+$/.test(String(jid || "")) ? `https://a.espncdn.com/i/headshots/soccer/players/full/${jid}.png` : "";
+  if (!alt && jid) alt = fotoDe(jid);
   const api = typeof alt === "string" && /^https:\/\/media\.api-sports\.io\//.test(alt) ? alt : "";
   const src = espn || api, alt2 = espn && api ? api : "";
   const img = src ? `<span class="ph"><img src="${esc(src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${alt2 ? ` data-alt="${esc(alt2)}"` : ""} onerror="if(this.dataset.alt){this.src=this.dataset.alt;this.dataset.alt=''}else this.parentNode.remove()"></span>` : "";
@@ -1708,18 +1709,37 @@ function vParse(e) {
     ronda: note.includes(",") ? note.split(",").slice(1).join(",").trim() : "", date: e.date, state: t.state, detail: t.shortDetail || t.detail || "",
     clock: st.displayClock, period: st.period, h: side("home"), a: side("away") };
 }
+/* evento en formato corto (servidor de Ballytics) → mismo formato que vParse */
+function vParseC(x) {
+  const lid = String(x.uid || "").split("~l:")[1]?.split("~")[0] || "", known = VV.byId[lid], note = x.note || "";
+  return { id: x.id, lid, comp: known ? known.n : (note.split(",")[0] || "Otras competiciones"), slug: known ? known.s : null,
+    ronda: note.includes(",") ? note.split(",").slice(1).join(",").trim() : "", date: x.date, state: x.state, detail: x.detail || "", clock: x.clock, period: x.period, h: x.h, a: x.a };
+}
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("tiempo")), ms))]);
+function vDayLocal(key) { const c = lsGet("bt_dia", null); return c && c.k === key ? c : null; }
 async function vFetchDay(key, onlyKey) {
   const c = VV.cache[key];
   if (c && Date.now() - c.t < 20000) return c.evs;
   await vComps();
   const d2 = fromYmd(key); d2.setDate(d2.getDate() + 1);
-  const dates = onlyKey && c ? [key] : [key, ymd(d2)];
-  const res = await Promise.all(dates.map(ds => vget(`${ESPN}/all/scoreboard?dates=${ds}&limit=1000`).catch(() => null)));
+  const dates = [key, ymd(d2)];
+  let evs = null;
+  // 1) servidor de Ballytics: lista corta y con caché (mucho más liviana que la de ESPN)
+  try {
+    const url = await withTimeout(pushCfg(), 2500);
+    if (url) { const j = await withTimeout(vget(`${url}/dia?d=${dates.join(",")}`), 6000); if (j && j.ok) evs = j.events.map(vParseC); }
+  } catch (e) { evs = null; }
+  // 2) directo a ESPN si el servidor no responde
+  if (!evs) {
+    const res = await Promise.all((onlyKey && c ? [key] : dates).map(ds => vget(`${ESPN}/all/scoreboard?dates=${ds}&limit=1000`).catch(() => null)));
+    evs = []; res.filter(Boolean).forEach(j => (j.events || []).forEach(e => evs.push(vParse(e))));
+  }
   const map = new Map(c ? c.evs.map(e => [e.id, e]) : []);
-  res.filter(Boolean).forEach(j => (j.events || []).forEach(e => { const x = vParse(e); if (!NCAA.has(x.lid) && localDay(x.date) === key) map.set(x.id, x); }));
-  const evs = [...map.values()];
-  VV.cache[key] = { t: Date.now(), evs };
-  return evs;
+  evs.forEach(x => { if (!NCAA.has(x.lid) && localDay(x.date) === key) map.set(x.id, x); });
+  const out = [...map.values()];
+  VV.cache[key] = { t: Date.now(), evs: out };
+  if (key === ymd(new Date())) lsSet("bt_dia", { k: key, t: Date.now(), evs: out });
+  return out;
 }
 function vModel(id) {
   for (const L of Object.values(D.ligas || {})) { const p = (L.partidos || []).find(x => String(x.id) === String(id)); if (p) return { L, p }; }
@@ -1761,11 +1781,12 @@ function vVivo() {
     <div id="vv-list"><div class="panel empty">Buscando partidos…</div></div>
     <p class="note">Marcadores y estadísticas en vivo de ESPN. Se actualiza solo cada 30 segundos. Toca la campana de un partido para recibir un aviso cuando haya gol (mientras tengas la página abierta).</p></section>`;
 }
-async function vFillList(key, solo, refresh) {
-  if (D.indice) D.indice.ligas.forEach(l => ensure(l.id));
+async function vFillList(key, solo, refresh, evsIn) {
   const box = document.getElementById("vv-list"); if (!box) return;
-  let evs;
-  try { evs = await vFetchDay(key, refresh); } catch (e) { evs = []; }
+  if (D.all && !D.allLoaded && !VV.allHook) { VV.allHook = 1; D.all.then(() => { VV.allHook = 0; if (R.v === "vivo" && VV.cache[key]) vFillList(key, solo, false, VV.cache[key].evs); }); }
+  if (!evsIn && !refresh && !VV.cache[key]) { const lc = vDayLocal(key); if (lc && Date.now() - lc.t < 6 * 3600e3) { await vComps(); vFillList(key, solo, false, lc.evs); } }
+  let evs = evsIn;
+  if (!evs) { try { evs = await vFetchDay(key, refresh); } catch (e) { evs = []; } }
   if (R.v !== "vivo" || !document.getElementById("vv-list")) return;
   const nLive = evs.filter(isLive).length, n = document.getElementById("vv-n"); if (n) n.textContent = nLive ? `(${nLive})` : "";
   const q = VV.q.trim().toLowerCase(), fav = favComps();
@@ -2073,8 +2094,13 @@ function vEnVivo() {
 async function vSummary(id, force) {
   const c = VV.sum[id];
   if (c && !force && Date.now() - c.t < 20000) return c.j;
-  const j = await vget(`${ESPN}/all/summary?event=${encodeURIComponent(id)}`); VV.sum[id] = { t: Date.now(), j }; return j;
+  VV.sumP = VV.sumP || {};
+  if (!force && VV.sumP[id]) return VV.sumP[id];
+  const pr = vget(`${ESPN}/all/summary?event=${encodeURIComponent(id)}`).then(j => { VV.sum[id] = { t: Date.now(), j }; return j; }).finally(() => { delete VV.sumP[id]; });
+  VV.sumP[id] = pr; return pr;
 }
+// al tocar un partido de la lista se empieza a bajar antes de que se abra
+document.addEventListener("pointerdown", e => { const r = e.target.closest && e.target.closest(".vrow[data-id]"); if (r) vSummary(r.dataset.id).catch(() => {}); }, { passive: true });
 function vHeader(j) {
   const c = ((j.header || {}).competitions || [])[0] || {}, st = c.status || {}, t = st.type || {}, lg = (j.header || {}).league || {};
   const side = k => { const x = (c.competitors || []).find(y => y.homeAway === k) || {}, tm = x.team || {};
@@ -2098,7 +2124,7 @@ async function vFillMatch(force) {
   const id = R.id, head = document.getElementById("vc-head"), body = document.getElementById("vc-body");
   if (!head || !body) return;
   let j;
-  try { j = await vSummary(id, force); } catch (e) { head.innerHTML = `<div class="empty">No pude cargar este partido. Prueba de nuevo en un rato.</div>`; return; }
+  try { [j] = await Promise.all([vSummary(id, force), vComps(), vSel()]); } catch (e) { head.innerHTML = `<div class="empty">No pude cargar este partido. Prueba de nuevo en un rato.</div>`; return; }
   if (R.v !== "envivo" || R.id !== id) return;
   await vComps();
   const H = vHeader(j), evs = vEvents(j, H), c = VV.byId[H.lid], comp = c ? c.n : H.league, m = vModel(id); VV.state = H.state;
@@ -2115,7 +2141,7 @@ async function vFillMatch(force) {
     <div class="row" style="justify-content:center;margin-top:10px;gap:8px">${H.state !== "post" ? `<button class="btn ghost sm vbell2${f ? " on" : ""}" data-follow="${esc(id)}">${f ? "🔔 Siguiendo" : "🔕 Avisarme de goles"}</button>` : ""}${m ? `<button class="btn ghost sm" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">Análisis de Ballytics →</button>` : ""}</div>`;
   const tab = R.tab || "resumen";
   if (tab === "resumen") { body.innerHTML = videosHtml(j) + vCurvePanel(j, H, evs, m) + (H.state !== "post" || true ? voteBox(id, H.date, H.h.short, H.a.short, m ? [m.p.pH, m.p.pD, m.p.pA] : null) : "") + vKeyStats(j, H) + vTimeline(evs, H) + vInfo(j); hydrateVotes(); }
-  if (tab === "alineaciones") body.innerHTML = vPitch(j, H);
+  if (tab === "alineaciones") { body.innerHTML = vPitch(j, H, id); loadMatchPlayers(id, H, j).then(ch => { if (ch && R.v === "envivo" && R.id === id && (R.tab || "resumen") === "alineaciones") body.innerHTML = vPitch(j, H, id); }); }
   if (tab === "estadisticas") body.innerHTML = vStats(j, H);
   if (tab === "previa") body.innerHTML = vPrevia(j, H, m);
   if (tab === "tabla") { const g = ((j.standings || {}).groups || []).map(x => ({ name: x.header, standings: x.standings }));
@@ -2185,7 +2211,8 @@ function lineRank(ab) { ab = (ab || "").toUpperCase();
   return 5; }
 /* de izquierda a derecha: lateral/extremo izquierdo, centro-izquierda, centro, centro-derecha, lateral/extremo derecho */
 const lineSide = ab => { ab = (ab || "").toUpperCase(); return /^(LB|LWB|LM|LW|LF)$/.test(ab) ? 0 : /-L$/.test(ab) ? 1 : /^(RB|RWB|RM|RW|RF)$/.test(ab) ? 4 : /-R$/.test(ab) ? 3 : 2; };
-function vPitch(j, H) {
+function vPitch(j, H, mid) {
+  const PM = (VV.afp && VV.afp[mid] && VV.afp[mid].map) || {};
   const ros = (j.rosters || []).filter(t => (t.roster || []).some(x => x.starter));
   if (!ros.length) return `<div class="panel stack"><h3>Alineaciones</h3><p class="note">Aún no publicadas. Suelen salir cerca de una hora antes del partido.</p></div>`;
   const lado = VV.team === "a" ? "away" : "home", T = ros.find(t => t.homeAway === lado) || ros[0], team = T.homeAway === "home" ? H.h : H.a;
@@ -2200,12 +2227,14 @@ function vPitch(j, H) {
   const chip = x => { const a = x.athlete || {}, id = String(a.id || ""), nm = a.shortName || a.displayName || "";
     const g = ev.filter(e => /goal|scored/i.test((e.type || {}).type || "") && !/own/i.test((e.type || {}).type || "") && ((e.participants || [])[0] || {}).athlete && String(e.participants[0].athlete.id) === id).length;
     const card = ev.some(e => /red/i.test((e.type || {}).type || "") && ((e.participants || [])[0] || {}).athlete && String(e.participants[0].athlete.id) === id) ? "red" : ev.some(e => /yellow/i.test((e.type || {}).type || "") && ((e.participants || [])[0] || {}).athlete && String(e.participants[0].athlete.id) === id) ? "yellow" : "";
-    return `<button class="vpl" data-go="ficha" data-id="${esc(id)}">${face(Lf, team.name, id, a.displayName, "lg")}<span class="vjn num">${esc(x.jersey || "")}</span>${g ? `<span class="vgl">${"⚽".repeat(Math.min(g, 3))}</span>` : ""}${card ? `<i class="${card === "red" ? "rcard" : "ycard"} vcd"></i>` : ""}${x.subbedOut ? `<span class="vso">⇄</span>` : ""}<b>${esc(nm.split(" ").slice(-1)[0] || nm)}</b></button>`; };
+    const af = PM[id];
+    return `<button class="vpl" data-pm="${esc(id)}" data-mid="${esc(mid || "")}">${face(Lf, team.name, id, a.displayName, "lg", af && af.foto)}<span class="vjn num">${esc(x.jersey || "")}</span>${af && af.r ? `<span class="vrt" style="background:${rtColor(af.r)}">${af.r.toFixed(1)}</span>` : ""}${g ? `<span class="vgl">${"⚽".repeat(Math.min(g, 3))}</span>` : ""}${card ? `<i class="${card === "red" ? "rcard" : "ycard"} vcd"></i>` : ""}${x.subbedOut ? `<span class="vso">⇄</span>` : ""}<b>${esc(nm.split(" ").slice(-1)[0] || nm)}</b></button>`; };
   const pitch = `<div class="vpitch"><div class="vlines"><i class="c"></i><i class="b t"></i><i class="b bt"></i></div>${rows.slice().reverse().map(r => `<div class="vprow">${r.map(chip).join("")}</div>`).join("")}</div>`;
   return `<div class="panel stack"><div class="row" style="justify-content:space-between"><h3>Alineaciones ${T.formation ? `<span class="tag">${esc(T.formation)}</span>` : ""}</h3>
       <div class="tabs2" role="group" aria-label="Equipo">${[["h", H.h], ["a", H.a]].map(([k, t]) => `<button data-vteam="${k}" aria-pressed="${(VV.team === "a" ? "a" : "h") === k}">${esc(t.short)}</button>`).join("")}</div></div>
     ${pitch}
-    ${subs.length ? `<h3 style="margin-top:6px">Suplentes</h3><div class="vsubs">${subs.map(x => `<button class="vsb ${x.subbedIn ? "in" : ""}" data-go="ficha" data-id="${esc((x.athlete || {}).id || "")}"><span class="num vjn2">${esc(x.jersey || "")}</span>${face(Lf, team.name, (x.athlete || {}).id, (x.athlete || {}).displayName, "sm")}<span>${esc((x.athlete || {}).displayName || "")}</span>${x.subbedIn ? `<small>entró</small>` : ""}</button>`).join("")}</div>` : ""}</div>`;
+    ${pmNote(mid, H)}
+    ${subs.length ? `<h3 style="margin-top:6px">Suplentes</h3><div class="vsubs">${subs.map(x => { const sid = String((x.athlete || {}).id || ""), af = PM[sid]; return `<button class="vsb ${x.subbedIn ? "in" : ""}" data-pm="${esc(sid)}" data-mid="${esc(mid || "")}"><span class="num vjn2">${esc(x.jersey || "")}</span>${face(Lf, team.name, sid, (x.athlete || {}).displayName, "sm", af && af.foto)}<span>${esc((x.athlete || {}).displayName || "")}</span>${x.subbedIn ? `<small>entró</small>` : ""}${af && af.r && af.min ? `<span class="vrt sm" style="background:${rtColor(af.r)}">${af.r.toFixed(1)}</span>` : ""}</button>`; }).join("")}</div>` : ""}</div>`;
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-vteam]"); if (!b) return; VV.team = b.dataset.vteam; vFillMatch(); });
 
@@ -2512,6 +2541,88 @@ document.addEventListener("click", async e => {
   try { if (navigator.share && /Mobi|iPad|iPhone|Android/.test(navigator.userAgent)) await navigator.share({ title: "Prode Ballytics", text: "Únete a mi prode en Ballytics", url: txt }); else { await navigator.clipboard.writeText(txt); toast("Invitación copiada. Pégala en WhatsApp."); } }
   catch (x) { try { await navigator.clipboard.writeText(txt); toast("Invitación copiada."); } catch (y) { toast(txt); } }
 });
+
+/* ---------- estadísticas de cada jugador dentro del partido ---------- */
+function fotoDe(jid) { if (!VV.fotos) VV.fotos = lsGet("bt_fotos", {}); return VV.fotos[jid] || ""; }
+function guardarFotos(m) {
+  if (!VV.fotos) VV.fotos = lsGet("bt_fotos", {});
+  let n = 0; for (const [k, v] of Object.entries(m)) if (v.foto && VV.fotos[k] !== v.foto) { VV.fotos[k] = v.foto; n++; }
+  if (!n) return; const ks = Object.keys(VV.fotos); if (ks.length > 3000) ks.slice(0, ks.length - 3000).forEach(k => delete VV.fotos[k]);
+  lsSet("bt_fotos", VV.fotos);
+}
+const rtColor = r => r >= 8 ? "#2e7cf6" : r >= 7 ? "#1fa865" : r >= 6.5 ? "#b9a01f" : r >= 6 ? "#e0832a" : "#dc4a4a";
+const nrm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z ]/g, " ").split(/\s+/).filter(w => w.length > 1);
+function simNombre(a, b) { const A = nrm(a), B = nrm(b); if (!A.length || !B.length) return 0; let n = 0; A.forEach(w => { if (B.some(x => x === w || (w.length > 3 && (x.startsWith(w) || w.startsWith(x))))) n++; }); return n / Math.min(A.length, B.length) + (A[A.length - 1] === B[B.length - 1] ? 0.5 : 0); }
+function afCruce(j, H, data) {
+  const map = {}, eqs = data.equipos || [];
+  (j.rosters || []).forEach(T => {
+    const nm = T.homeAway === "home" ? H.h.name : H.a.name;
+    let E = eqs.slice().sort((x, y) => simNombre(y.nombre, nm) - simNombre(x.nombre, nm))[0];
+    if (!E || simNombre(E.nombre, nm) < 0.3) E = eqs[T.homeAway === "home" ? 0 : 1];
+    if (!E) return;
+    const libres = new Set(E.jugadores);
+    (T.roster || []).forEach(x => {
+      const a = x.athlete || {}, num = parseInt(x.jersey, 10);
+      let best = null, bs = 0;
+      for (const p of libres) { const sc = simNombre(a.displayName || a.fullName, p.n) + (p.num === num && !isNaN(num) ? 1 : 0); if (sc > bs) { bs = sc; best = p; } }
+      if (best && bs >= 1) { map[String(a.id)] = best; libres.delete(best); }
+    });
+  });
+  return map;
+}
+async function loadMatchPlayers(id, H, j) {
+  const c = VV.afp && VV.afp[id], now = Date.now();
+  if (c && (c.fin || now - c.t < (H.state === "in" ? 120000 : 600000))) return false;
+  if (H.state === "pre") return false;
+  const url = await pushCfg(); if (!url) return false;
+  VV.afp = VV.afp || {};
+  let r;
+  try { r = await vget(`${url}/jugadores?id=${encodeURIComponent(id)}&st=${H.state}&k=${encodeURIComponent(H.date || "")}&h=${encodeURIComponent(H.h.name)}&a=${encodeURIComponent(H.a.name)}`); }
+  catch (e) { VV.afp[id] = { t: now, map: c ? c.map : {}, motivo: "error" }; return false; }
+  if (!r.ok) { VV.afp[id] = { t: now, map: c ? c.map : {}, motivo: r.motivo }; return !c; }
+  const map = afCruce(j, H, r); guardarFotos(map);
+  VV.afp[id] = { t: now, fin: H.state === "post" && !r.viejo, map, data: r };
+  return true;
+}
+function pmNote(mid, H) {
+  const c = VV.afp && VV.afp[mid];
+  if (H.state === "pre") return `<p class="note">Toca un jugador para ver su ficha. Las estadísticas del partido aparecen cuando empieza.</p>`;
+  if (!c) return `<p class="note">Cargando notas y estadísticas de cada jugador…</p>`;
+  if (Object.keys(c.map || {}).length) return `<p class="note">Toca un jugador para ver sus estadísticas en este partido. Nota de 0 a 10 (API-Football).</p>`;
+  return `<p class="note">Toca un jugador para ver sus estadísticas en este partido.${c.motivo === "limite" ? " Hoy se acabaron las consultas gratis de notas y pases; se muestran los datos de ESPN." : c.motivo === "sin_cruce" || c.motivo === "sin_datos" ? " Este partido no tiene notas ni pases disponibles; se muestran los datos de ESPN." : ""}</p>`;
+}
+function pmModal(pid, mid) {
+  const j = (VV.sum[mid] || {}).j; if (!j) { go({ v: "ficha", id: pid }); return; }
+  const H = vHeader(j); let x = null, T = null;
+  (j.rosters || []).forEach(t => (t.roster || []).forEach(y => { if (String((y.athlete || {}).id) === String(pid)) { x = y; T = t; } }));
+  if (!x) { go({ v: "ficha", id: pid }); return; }
+  const a = x.athlete || {}, team = T.homeAway === "home" ? H.h : H.a, af = ((VV.afp || {})[mid] || {}).map ? VV.afp[mid].map[pid] : null;
+  const es = {}; (x.stats || []).forEach(s => { es[s.name] = s.value; });
+  const v = (afk, esk) => af && af[afk] != null ? af[afk] : esk && es[esk] != null ? es[esk] : null;
+  const isGk = /^G/.test((x.position || {}).abbreviation || "") || (af && af.pos === "G");
+  const Lf = { equipos: { [team.name]: { color: team.color, logo: team.logo } } };
+  const ev = (j.keyEvents || []).filter(e => ((e.participants || [])[0] || {}).athlete && String(e.participants[0].athlete.id) === String(pid));
+  const fmt = (n, d) => n == null ? "—" : d != null && d !== "" ? `${n}<small> / ${d}</small>` : String(n);
+  const sec = (t, rows) => { const R0 = rows.filter(r => r[1] !== "—"); return R0.length ? `<div class="pms"><h4>${t}</h4>${R0.map(([l, val]) => `<div class="pmr"><span>${l}</span><b class="num">${val}</b></div>`).join("")}</div>` : ""; };
+  const min = af && af.min != null ? af.min : null, pos = POS_ES[(x.position || {}).displayName] || (x.position || {}).displayName || "";
+  const body = (isGk ? sec("Arco", [["Atajadas", fmt(v("sv", "saves"))], ["Goles recibidos", fmt(v("gc", "goalsConceded"))]]) : "")
+    + sec("Ataque", [["Goles", fmt(v("g", "totalGoals"))], ["Asistencias", fmt(v("as", "goalAssists"))], ["Tiros (al arco)", v("sh", "totalShots") == null ? "—" : `${v("sh", "totalShots")}<small> (${v("sot", "shotsOnTarget") ?? 0})</small>`],
+        ["Regates exitosos", af && af.dr != null ? fmt(af.drs ?? 0, af.dr) : "—"], ["Fueras de juego", fmt(v("off", "offsides"))], ["Penales", af && (af.ps || af.pm) ? `${af.ps || 0} convertido${af.ps === 1 ? "" : "s"}${af.pm ? ` · ${af.pm} errado${af.pm === 1 ? "" : "s"}` : ""}` : "—"]])
+    + sec("Pases", [["Pases", fmt(af ? af.pas : null)], ["Precisión", af && af.acc != null ? `${af.acc} %` : "—"], ["Pases clave", fmt(af ? af.kp : null)]])
+    + sec("Defensa", [["Quites", fmt(af ? af.tk : null)], ["Intercepciones", fmt(af ? af.int : null)], ["Tiros bloqueados", fmt(af ? af.blk : null)], ["Duelos ganados", af && af.du ? fmt(af.duw ?? 0, af.du) : "—"]])
+    + sec("Faltas y tarjetas", [["Faltas cometidas", fmt(v("fc", "foulsCommitted"))], ["Faltas recibidas", fmt(v("fd", "foulsSuffered"))], ["Amarillas", fmt(v("yc", "yellowCards"))], ["Rojas", fmt(v("rc", "redCards"))]]);
+  const m = document.createElement("div"); m.className = "vmodal pmodal";
+  m.innerHTML = `<div role="dialog" aria-label="${esc(a.displayName || "")}"><button class="pmx" data-modal-x aria-label="Cerrar">×</button>
+    <div class="pmh">${face(Lf, team.name, pid, a.displayName, "xl", af && af.foto)}<div><b>${esc(a.displayName || "")}</b><span class="muted">${vLogo(team, "sm")} ${esc(team.short)}${x.jersey ? ` · #${esc(x.jersey)}` : ""}${pos ? ` · ${esc(pos)}` : ""}</span>
+      <span class="faint">${min != null ? `${min}' jugados` : x.starter ? "Titular" : x.subbedIn ? "Entró desde la banca" : "Suplente"}${x.subbedOut ? " · salió" : ""}${ev.length ? " · " + ev.map(e => `${/goal|scored/i.test((e.type || {}).type || "") ? "⚽" : /red/i.test((e.type || {}).type || "") ? "🟥" : /yellow/i.test((e.type || {}).type || "") ? "🟨" : "•"} ${esc((e.clock || {}).displayValue || "")}`).join(" ") : ""}</span></div>
+      ${af && af.r ? `<span class="pmrt" style="background:${rtColor(af.r)}">${af.r.toFixed(1)}<small>nota</small></span>` : ""}</div>
+    <div class="pmg">${body || `<p class="note">Sin estadísticas de este jugador todavía.</p>`}</div>
+    <p class="note">${af ? "Datos del partido de API-Football y ESPN." : "Datos del partido de ESPN. La nota, los pases y los duelos aparecen cuando API-Football los publica para este partido."}</p>
+    <button class="btn" data-go="ficha" data-id="${esc(pid)}">Ver ficha completa</button></div>`;
+  m.addEventListener("click", ev2 => { if (ev2.target === m || ev2.target.closest("[data-modal-x]") || ev2.target.closest("[data-go]")) m.remove(); });
+  document.body.appendChild(m);
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-pm]"); if (!b) return; e.preventDefault(); e.stopPropagation(); if (b.dataset.mid) pmModal(b.dataset.pm, b.dataset.mid); else go({ v: "ficha", id: b.dataset.pm }); }, true);
 
 /* ---------- deslizar entre pestañas y días (celular y tablet) ---------- */
 (() => {
