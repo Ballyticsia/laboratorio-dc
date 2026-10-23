@@ -40,6 +40,11 @@ HOME_L2 = 20.0      # localía propia de cada equipo, encogida hacia el promedio
 
 # zonas: (desde, hasta, etiqueta, clase CSS). "inicio": mes en que empieza la temporada.
 EUROPA = "Europa"
+try:
+    LOGOS = {c["s"]: c.get("l") for c in json.load(open(os.path.join(os.path.dirname(__file__), "..", "site", "assets", "competiciones.json"), encoding="utf-8"))}
+except Exception:
+    LOGOS = {}
+
 LIGAS = [
     dict(id="premier", nombre="Premier League", pais="Inglaterra", region=EUROPA, s1="eng.1", s2=["eng.2"], inicio=7,
          zonas=[(1, 4, "Champions League", "cl"), (5, 5, "Europa League", "el"), (6, 6, "Conference League", "ecl"), (18, 20, "Descenso", "desc")]),
@@ -57,7 +62,7 @@ LIGAS = [
          zonas=[(1, 2, "Champions League", "cl"), (3, 3, "Champions (previa)", "cl"), (4, 4, "Europa League", "el"), (16, 16, "Promoción", "promo"), (17, 18, "Descenso", "desc")]),
     dict(id="eredivisie", peso=0.85, nombre="Eredivisie", pais="Países Bajos", region=EUROPA, s1="ned.1", s2=[], inicio=7,
          zonas=[(1, 2, "Champions League", "cl"), (3, 3, "Champions (previa)", "cl"), (4, 4, "Europa League", "el"), (16, 16, "Promoción", "promo"), (17, 18, "Descenso", "desc")]),
-    dict(id="chile", peso=0.9, nombre="Primera División", pais="Chile", region="Sudamérica", s1="chi.1", s2=[], inicio=1,
+    dict(id="chile", peso=0.9, nombre="Liga de Primera", pais="Chile", region="Sudamérica", s1="chi.1", s2=[], inicio=1,
          zonas=[(1, 1, "Libertadores (fase de grupos)", "cl"), (2, 3, "Libertadores (previa)", "el"), (4, 7, "Sudamericana", "ecl"), (15, 16, "Descenso", "desc")]),
     dict(id="argentina", peso=0.85, nombre="Liga Profesional", pais="Argentina", region="Sudamérica", s1="arg.1", s2=[], inicio=1, tabla=False, oficial=True),
     dict(id="brasil", peso=0.85, nombre="Brasileirão", pais="Brasil", region="Sudamérica", s1="bra.1", s2=[], inicio=1,
@@ -673,7 +678,9 @@ def main():
                 copa = copas.llaves(model, d1, hoy)
         except Exception as e:
             print(f"  (sin simulación de copa: {e})")
-        meta = datos.meta(L["s1"])
+        meta = dict(datos.meta(L["s1"]))
+        if LOGOS.get(L["s1"]):          # logo revisado a mano (ESPN tiene algunos viejos o genéricos)
+            meta["logo"] = LOGOS[L["s1"]]
         out = dict(id=L["id"], nombre=L["nombre"], pais=L["pais"], region=L["region"], logo=meta.get("logo"),
                    actualizado=now.isoformat(timespec="minutes"), datos_hasta=str(p1.date.max().date()) if len(p1) else None,
                    usa_tiros=model.usa_tiros, usa_xg=bool(n_xg), tabla_ok=tiene_tabla, zonas=[dict(desde=a, hasta=b, nombre=n, cls=c) for a, b, n, c in L.get("zonas", [])],

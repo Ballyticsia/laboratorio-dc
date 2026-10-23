@@ -1637,7 +1637,7 @@ const followed = () => lsGet("bt_vfollow", {});
 
 async function vComps() {
   if (VV.comps) return VV.comps;
-  try { VV.comps = await vget("assets/competiciones.json?v=1"); } catch (e) { VV.comps = []; }
+  try { VV.comps = await vget("assets/competiciones.json?v=2"); } catch (e) { VV.comps = []; }
   VV.comps.forEach(c => { VV.byId[c.id] = c; VV.bySlug[c.s] = c; });
   return VV.comps;
 }
