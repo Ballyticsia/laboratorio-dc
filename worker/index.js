@@ -263,8 +263,8 @@ async function afGet(env, path) {
   const hoy = new Date().toISOString().slice(0, 10), rem = (await env.SUBS.get("afrem", "json")) || {};
   if (rem.d === hoy && rem.n != null && rem.n < AF_MIN) throw new Error("limite");
   const r = await fetch(AF + path, { headers: { "x-apisports-key": env.API_FOOTBALL_KEY } });
-  const n = parseInt(r.headers.get("x-ratelimit-requests-remaining") || "", 10);
-  if (!isNaN(n)) await env.SUBS.put("afrem", JSON.stringify({ d: hoy, n }));
+  const n = parseInt(r.headers.get("x-ratelimit-requests-remaining") || "", 10), pm = r.headers.get("x-ratelimit-remaining");
+  if (!isNaN(n)) await env.SUBS.put("afrem", JSON.stringify({ d: hoy, n, pm, t: new Date().toISOString(), path: path.split("?")[0] }));
   if (!r.ok) throw new Error(`API-Football ${r.status}`);
   const j = await r.json();
   if (j.errors && Object.keys(j.errors).length) throw new Error(JSON.stringify(j.errors).slice(0, 120));
@@ -412,6 +412,7 @@ export default {
       else if (p.startsWith("/jugador/")) res = await jugador(env, p.split("/")[2], ctx, req);
       else if (p === "/dia") res = await dia(ctx, (u.searchParams.get("d") || "").split(","));
       else if (p === "/jugadores") res = await jugadoresPartido(env, u.searchParams);
+      else if (p === "/afestado") res = json({ ok: true, clave: !!env.API_FOOTBALL_KEY, ...((await env.SUBS.get("afrem", "json")) || {}) });
       else if (p.startsWith("/prode/") && req.method === "GET") res = await prodeVer(env, p.split("/")[2] || "", u.searchParams.get("uid"));
       else if (req.method === "POST") {
         const b = await req.json().catch(() => ({}));
