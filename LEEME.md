@@ -91,9 +91,15 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 
 ## App instalable y avisos de gol
 - `site/manifest.webmanifest` y `site/sw.js` hacen que Ballytics se pueda instalar (en iPhone/iPad: Safari → Compartir → Agregar a inicio).
-- `worker/index.js` es el servidor de avisos (Cloudflare Workers, plan gratis): cada minuto revisa en ESPN los partidos que alguien sigue y manda un push al haber gol, al empezar y al terminar.
+- `worker/index.js` es el servidor de avisos (Cloudflare Workers, plan gratis): cada minuto revisa en ESPN los partidos que alguien sigue y manda un push al haber gol, roja, alineaciones, 15 minutos antes, al empezar y al terminar (cada persona elige cuáles en "🔔 Avisos").
 - `.github/workflows/avisos.yml` lo instala solo con los secretos `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`, y escribe su dirección en `site/avisos.json`.
 - En iPhone/iPad los avisos con la app cerrada solo funcionan si Ballytics está instalada en la pantalla de inicio.
+
+## Votos, prode y fichas
+- El mismo servidor guarda los votos de "¿Quién gana?" (`/voto`, `/votos`) y los prodes con amigos (`/prode/...`): 3 puntos por marcador exacto y 1 por acertar el ganador o el empate. Los pronósticos de los demás se muestran cuando empieza el partido.
+- El robot lee los votos al guardar cada predicción, y la página Registro compara a la gente con Ballytics.
+- La ficha de jugador (`#/ficha/<id>`) lee directo de ESPN; la curva de probabilidad en vivo se calcula en el navegador con el marcador, el minuto y las rojas.
+- `pipeline/copas.py` simula la fase de liga de las copas UEFA y las llaves de ida y vuelta de CONMEBOL.
 
 ## Cambiar cosas
 - **Horario:** la línea `cron` del workflow (está en hora UTC; Chile es UTC-3).
