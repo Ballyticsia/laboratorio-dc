@@ -325,6 +325,17 @@ function bindCarousels() {
       document.querySelectorAll(`.car[data-sync="${c.dataset.car}"] .car-slide`).forEach((s, j) => s.hidden = j !== i); };
     if (c.dataset.sync) return;
     dots.forEach(d => d.addEventListener("click", e => { e.stopPropagation(); show(+d.dataset.i); paused = true; }));
+    // deslizar con el dedo
+    let sx = null, sy = 0, st = 0;
+    c.addEventListener("touchstart", e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; st = Date.now(); paused = true; }, { passive: true });
+    c.addEventListener("touchend", e => {
+      if (sx === null) return; const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; sx = null;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > 1.4 * Math.abs(dy) && Date.now() - st < 800) {
+        c.dataset.swiped = String(Date.now()); const dir = dx < 0 ? 1 : -1; show(i + dir);
+        const sl = slides[i]; sl.classList.remove("in-l", "in-r"); void sl.offsetWidth; sl.classList.add(dir > 0 ? "in-r" : "in-l");
+      }
+    }, { passive: true });
+    c.addEventListener("click", e => { if (Date.now() - (+c.dataset.swiped || 0) < 400) { e.stopPropagation(); e.preventDefault(); } }, true);
     c.addEventListener("mouseenter", () => paused = true);
     c.addEventListener("mouseleave", () => paused = false);
     c.addEventListener("focusin", () => paused = true);
@@ -2498,6 +2509,29 @@ document.addEventListener("click", async e => {
   try { if (navigator.share && /Mobi|iPad|iPhone|Android/.test(navigator.userAgent)) await navigator.share({ title: "Prode Ballytics", text: "Únete a mi prode en Ballytics", url: txt }); else { await navigator.clipboard.writeText(txt); toast("Invitación copiada. Pégala en WhatsApp."); } }
   catch (x) { try { await navigator.clipboard.writeText(txt); toast("Invitación copiada."); } catch (y) { toast(txt); } }
 });
+
+/* ---------- deslizar entre pestañas y días (celular y tablet) ---------- */
+(() => {
+  let sx = null, sy = 0, st = 0, ok = false;
+  const NO = ".car,.vdays,.chips,.tabs2,.mtabs,.days,.vhub,nav,input,textarea,select,.vmodal,.vpitch,.curve,.dd-menu,.sres,.top,.tabbar,#combobar";
+  document.addEventListener("touchstart", e => {
+    if (e.touches.length !== 1) { sx = null; return; }
+    const t = e.touches[0]; sx = t.clientX; sy = t.clientY; st = Date.now();
+    ok = !(e.target.closest && e.target.closest(NO));
+    // también se descarta si el dedo parte sobre algo que se desplaza de lado
+    for (let el = e.target; ok && el && el !== document.body; el = el.parentElement) if (el.scrollWidth > el.clientWidth + 4 && /auto|scroll/.test(getComputedStyle(el).overflowX)) ok = false;
+  }, { passive: true });
+  document.addEventListener("touchend", e => {
+    if (sx === null || !ok) return; const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; sx = null;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < 2 * Math.abs(dy) || Date.now() - st > 700) return;
+    if (document.querySelector(".vmodal")) return;
+    const bars = [...document.querySelectorAll(".mtabs[role=tablist], .tabs2.wide, .vdays")].filter(b => b.offsetParent);
+    const bar = bars[bars.length - 1]; if (!bar) return;
+    const btns = [...bar.querySelectorAll("button")], cur = btns.findIndex(b => b.getAttribute("aria-selected") === "true" || b.getAttribute("aria-pressed") === "true");
+    const nx = btns[cur + (dx < 0 ? 1 : -1)]; if (cur < 0 || !nx) return;
+    nx.click(); nx.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+  }, { passive: true });
+})();
 
 load().then(() => { R = fromHash(); render(); pollLive(); setInterval(pollLive, 60000);
   D.all.then(() => { if (R.v === "inicio" || R.v === "registro") { const y = window.scrollY; render(); window.scrollTo(0, y); } }); })

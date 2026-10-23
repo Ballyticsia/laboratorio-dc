@@ -1035,3 +1035,27 @@ form.panel input{background:var(--panel2);border:1px solid var(--line);color:var
 
 #vc-body>*+*,#fi-box>*+*,#pr-box>*+*,#pr-fx>*+*{margin-top:14px}
 #fi-box .ffacts{margin:14px 0 0}
+
+/* ---------- v15: táctil (celular y iPad) ---------- */
+html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+.car-track{touch-action:pan-y}
+.car-slide.in-r{animation:carR .28s ease-out}.car-slide.in-l{animation:carL .28s ease-out}
+@keyframes carR{from{opacity:.2;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes carL{from{opacity:.2;transform:translateX(-28px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.car-slide.in-r,.car-slide.in-l{animation:none}}
+.car-dots button{position:relative}
+.car-dots button::after{content:"";position:absolute;inset:-10px -4px}
+.scroll,.vdays,.chips,.tabs2,.mtabs,nav.main{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+@media (hover:none),(pointer:coarse){
+  /* el desenfoque de fondo y el fondo fijo hacen que Safari en iPhone/iPad se trabe al desplazar */
+  .panel,.tabbar,.top,.mbar,.cb-in,.vmodal,.dd-menu{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+  .panel{background:linear-gradient(180deg,var(--panel2),var(--panel))}
+  .bg{display:none}
+  .vcm{max-height:none;overflow:visible}
+  .mtabs{display:flex!important;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;gap:2px;scroll-snap-type:x proximity}
+  .mtabs button{padding:10px 12px!important;font-size:12.5px!important;scroll-snap-align:center;white-space:nowrap}
+  .tabbar{background:rgba(8,11,20,.985)!important}
+  :root[data-theme="light"] .tabbar{background:rgba(255,255,255,.985)!important}
+  .mtabs::-webkit-scrollbar,.vdays::-webkit-scrollbar,.tabs2::-webkit-scrollbar{display:none}
+  .mtabs button{flex:none}
+}
