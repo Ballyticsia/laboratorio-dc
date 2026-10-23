@@ -149,6 +149,12 @@ def parse_events(data):
             row["ag"] = _num(a.get("score")) if done else None
             row["hst"] = _stat(h, "shotsOnTarget", "ST", "SOT") if done else None
             row["ast"] = _stat(a, "shotsOnTarget", "ST", "SOT") if done else None
+            if done and row["hg"] is not None and row["hg"] == row["ag"]:   # definido por penales
+                so = (_num(h.get("shootoutScore")), _num(a.get("shootoutScore")))
+                if so[0] is not None and so[1] is not None and so[0] != so[1]:
+                    row["pen"] = "h" if so[0] > so[1] else "a"
+                elif h.get("winner") is True or a.get("winner") is True:
+                    row["pen"] = "h" if h.get("winner") is True else "a"
             if done:  # todas las estadísticas que ESPN publique (córners, faltas, posesión…)
                 row["hstats"], row["astats"] = _all_stats(h), _all_stats(a)
                 row["eventos"] = _events(comp, str(h.get("id")), str(a.get("id")))

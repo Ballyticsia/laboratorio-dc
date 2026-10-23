@@ -34,6 +34,10 @@ DEPORTES = {
     "chile": ["soccer_chile_campeonato"], "argentina": ["soccer_argentina_primera_division"],
     "brasil": ["soccer_brazil_campeonato"], "mls": ["soccer_usa_mls"], "champions": ["soccer_uefa_champs_league"],
     "libertadores": ["soccer_conmebol_copa_libertadores"],
+    # ampliación (al final: si faltan créditos, se priorizan las de arriba)
+    "europaleague": ["soccer_uefa_europa_league"], "conference": ["soccer_uefa_europa_conference_league"],
+    "sudamericana": ["soccer_conmebol_copa_sudamericana"], "ligamx": ["soccer_mexico_ligamx"], "turquia": ["soccer_turkey_super_league"],
+    "escocia": ["soccer_spl"], "belgica": ["soccer_belgium_first_div"],
 }
 ESTADO = {"activa": False, "creditos_usados": 0, "restantes": None, "consultas": {}, "errores": [], "ligas": {}, "partidos_con_cuota": 0}
 _EVENTOS = {}   # liga -> lista de partidos con probabilidades

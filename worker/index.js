@@ -15,7 +15,7 @@
 
 const ORIGINS = ["https://ballyticsia.github.io", "http://localhost:8793", "http://localhost:8000"];
 const ESPN = "https://site.api.espn.com/apis/site/v2/sports/soccer";
-const ESPN_WEB = "https://site.web.api.espn.com/apis/common/v3/sports/soccer";
+const ESPN_WEB = "https://site.api.espn.com/apis/common/v3/sports/soccer";   // site.web.api y core bloquean a Cloudflare
 const MAX_SEGUIDOS = 300;
 const PREFS_DEF = { gol: 1, roja: 1, inicio: 1, final: 1, alin: 1, prev: 1 };
 
@@ -182,8 +182,9 @@ async function jugador(env, id, ctx, req) {
   if (!/^\d+$/.test(id)) return json({ error: "id" }, 400);
   const cache = caches.default, ck = new Request(`https://cache.ballytics/jugador/${id}`);
   const hit = await cache.match(ck); if (hit) return new Response(hit.body, hit);
-  const [ath, ov, core, gl] = await Promise.all([espn(`${ESPN_WEB}/athletes/${id}`).catch(() => null), espn(`${ESPN_WEB}/athletes/${id}/overview`).catch(() => null),
-    espn(`https://sports.core.api.espn.com/v2/sports/soccer/athletes/${id}`).catch(() => null), espn(`${ESPN_WEB}/athletes/${id}/gamelog`).catch(() => null)]);
+  const [ath, ov, gl] = await Promise.all([espn(`${ESPN_WEB}/athletes/${id}`).catch(() => null), espn(`${ESPN_WEB}/athletes/${id}/overview`).catch(() => null),
+    espn(`${ESPN_WEB}/athletes/${id}/gamelog`).catch(() => null)]);
+  const core = null;
   if (!ath && !core) return json({ error: "no encontrado" }, 404);
   const A = (ath && ath.athlete) || {}, C = core || {};
   const st = (ov && ov.statistics) || {}, names = st.names || [];
@@ -207,7 +208,7 @@ async function jugador(env, id, ctx, req) {
   } catch (x) {}
   const out = {
     id, nombre: A.displayName || C.displayName, corto: A.shortName || C.shortName, camiseta: A.jersey || C.jersey,
-    posicion: (A.position || C.position || {}).displayName || (A.position || C.position || {}).name || "", edad: C.age || A.age, nacimiento: C.dateOfBirth || A.dateOfBirth,
+    posicion: (A.position || C.position || {}).displayName || (A.position || C.position || {}).name || "", edad: C.age || A.age, nacimiento: C.dateOfBirth || A.displayDOB,
     lugar: C.birthPlace ? [C.birthPlace.city, C.birthPlace.country].filter(Boolean).join(", ") : "", altura: C.displayHeight || A.displayHeight, peso: C.displayWeight || A.displayWeight,
     nacionalidad: C.citizenship || A.citizenship, bandera: (C.flag || A.flag || {}).href, foto: (A.headshot || {}).href || `https://a.espncdn.com/i/headshots/soccer/players/full/${id}.png`,
     equipo: team ? { id: String(team.value), nombre: team.displayValue, logo: `https://a.espncdn.com/i/teamlogos/soccer/500/${team.value}.png` } : null,
@@ -310,14 +311,6 @@ export default {
     try {
       if (p === "/vapid") res = json({ publicKey: (await vapid(env)).pub });
       else if (p === "/estado") { const seg = (await env.SUBS.get("seguidos", "json")) || {}; res = json({ ok: true, partidos: Object.keys(seg).length }); }
-      else if (p === "/diag") {   // revisión rápida de acceso a ESPN
-        const urls = { a1: "https://site.api.espn.com/apis/common/v3/sports/soccer/athletes/253989", a2: "https://site.api.espn.com/apis/common/v3/sports/soccer/athletes/253989/overview",
-          a3: "https://site.api.espn.com/apis/common/v3/sports/soccer/athletes/253989/gamelog", a4: "http://sports.core.api.espn.com/v2/sports/soccer/athletes/253989",
-          a5: "https://site.web.api.espn.com/apis/common/v3/sports/soccer/athletes/253989?region=us&lang=en", a6: "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/athletes/253989/overview",
-          a7: "https://sports.core.api.espn.com/v3/sports/soccer/athletes/253989", a8: "https://site.api.espn.com/apis/common/v3/sports/soccer/eng.1/athletes/253989" };
-        const out = {}; for (const [k, url] of Object.entries(urls)) { try { const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36", Accept: "application/json" } }); out[k] = r.status; } catch (e) { out[k] = String(e); } }
-        res = json(out);
-      }
       else if (p === "/votos") res = await votos(env, (u.searchParams.get("ids") || "").split(",").filter(Boolean), u.searchParams.get("uid"));
       else if (p.startsWith("/jugador/")) res = await jugador(env, p.split("/")[2], ctx, req);
       else if (p.startsWith("/prode/") && req.method === "GET") res = await prodeVer(env, p.split("/")[2] || "", u.searchParams.get("uid"));

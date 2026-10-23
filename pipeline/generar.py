@@ -23,6 +23,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
 import datos  # noqa: E402
+import copas  # noqa: E402
 import cuotas  # noqa: E402
 import lesiones  # noqa: E402
 import xg  # noqa: E402
@@ -64,7 +65,28 @@ LIGAS = [
     dict(id="mls", peso=0.75, nombre="MLS", pais="Estados Unidos", region="Norteamérica", s1="usa.1", s2=[], inicio=1, tabla=False, oficial=True),
     dict(id="champions", peso=1.2, nombre="Champions League", pais="UEFA", region="Copas", s1="uefa.champions", s2=["uefa.europa", "uefa.europa.conf", "eng.1", "esp.1", "ita.1", "ger.1", "fra.1", "por.1", "ned.1"], inicio=7, tabla=False, oficial=True,
          zonas=[(1, 8, "Octavos de final", "cl"), (9, 24, "Playoff de octavos", "el"), (25, 36, "Eliminado", "desc")]),
-    dict(id="libertadores", peso=1.0, nombre="Copa Libertadores", pais="CONMEBOL", region="Copas", s1="conmebol.libertadores", s2=["conmebol.sudamericana", "arg.1", "bra.1", "chi.1"], inicio=1, tabla=False, oficial=True),
+    dict(id="libertadores", peso=1.0, nombre="Copa Libertadores", pais="CONMEBOL", region="Copas", s1="conmebol.libertadores", s2=["conmebol.sudamericana", "arg.1", "bra.1", "chi.1", "col.1", "ecu.1", "uru.1", "par.1", "per.1"], inicio=1, tabla=False, oficial=True),
+    # ---- ampliación: más ligas y copas ----
+    dict(id="europaleague", peso=1.0, nombre="Europa League", pais="UEFA", region="Copas", s1="uefa.europa", s2=["uefa.champions", "uefa.europa.conf", "eng.1", "esp.1", "ita.1", "ger.1", "fra.1", "por.1", "ned.1", "tur.1", "sco.1", "bel.1"], inicio=7, tabla=False, oficial=True,
+         zonas=[(1, 8, "Octavos de final", "cl"), (9, 24, "Playoff de octavos", "el"), (25, 36, "Eliminado", "desc")]),
+    dict(id="conference", peso=0.85, nombre="Conference League", pais="UEFA", region="Copas", s1="uefa.europa.conf", s2=["uefa.champions", "uefa.europa", "eng.1", "esp.1", "ita.1", "ger.1", "fra.1", "por.1", "ned.1", "tur.1", "sco.1", "bel.1"], inicio=7, tabla=False, oficial=True,
+         zonas=[(1, 8, "Octavos de final", "cl"), (9, 24, "Playoff de octavos", "el"), (25, 36, "Eliminado", "desc")]),
+    dict(id="sudamericana", peso=0.9, nombre="Copa Sudamericana", pais="CONMEBOL", region="Copas", s1="conmebol.sudamericana", s2=["conmebol.libertadores", "arg.1", "bra.1", "chi.1", "col.1", "ecu.1", "uru.1", "par.1", "per.1"], inicio=1, tabla=False, oficial=True),
+    dict(id="ligamx", peso=0.85, nombre="Liga MX", pais="México", region="Norteamérica", s1="mex.1", s2=[], inicio=7, tabla=False, oficial=True),
+    dict(id="colombia", peso=0.8, nombre="Liga BetPlay", pais="Colombia", region="Sudamérica", s1="col.1", s2=[], inicio=1, tabla=False, oficial=True),
+    dict(id="uruguay", peso=0.75, nombre="Primera División", pais="Uruguay", region="Sudamérica", s1="uru.1", s2=[], inicio=1, tabla=False, oficial=True),
+    dict(id="peru", peso=0.7, nombre="Liga 1", pais="Perú", region="Sudamérica", s1="per.1", s2=[], inicio=1, tabla=False, oficial=True),
+    dict(id="ecuador", peso=0.75, nombre="LigaPro", pais="Ecuador", region="Sudamérica", s1="ecu.1", s2=[], inicio=1, tabla=False, oficial=True),
+    dict(id="paraguay", peso=0.7, nombre="Primera División", pais="Paraguay", region="Sudamérica", s1="par.1", s2=[], inicio=1, tabla=False, oficial=True),
+    dict(id="chile2", peso=0.7, nombre="Primera B", pais="Chile", region="Sudamérica", s1="chi.2", s2=["chi.1"], inicio=1,
+         zonas=[(1, 1, "Ascenso directo", "cl"), (2, 8, "Liguilla de ascenso", "el"), (16, 16, "Descenso", "desc")]),
+    dict(id="turquia", peso=0.85, nombre="Süper Lig", pais="Turquía", region=EUROPA, s1="tur.1", s2=[], inicio=7,
+         zonas=[(1, 1, "Champions League", "cl"), (2, 2, "Champions (previa)", "cl"), (3, 3, "Europa League", "el"), (4, 4, "Conference League", "ecl"), (16, 18, "Descenso", "desc")]),
+    dict(id="escocia", peso=0.8, nombre="Premiership", pais="Escocia", region=EUROPA, s1="sco.1", s2=["sco.2"], inicio=7,
+         zonas=[(1, 1, "Champions League", "cl"), (2, 2, "Champions (previa)", "cl"), (3, 3, "Europa League", "el"), (11, 11, "Promoción", "promo"), (12, 12, "Descenso", "desc")]),
+    dict(id="belgica", peso=0.8, nombre="Pro League", pais="Bélgica", region=EUROPA, s1="bel.1", s2=[], inicio=7, tabla=False, oficial=True),
+    dict(id="arabia", peso=0.75, nombre="Liga Profesional Saudí", pais="Arabia Saudita", region="Asia", s1="ksa.1", s2=[], inicio=7,
+         zonas=[(1, 2, "AFC Champions League Elite", "cl"), (16, 18, "Descenso", "desc")]),
 ]
 
 
@@ -271,7 +293,7 @@ def players(df):
     gol = [dict(jid=k[0], jugador=eq[k], equipo=k[1], goles=n, penales=pens[k], ult5=last5(k)) for k, n in goles.most_common(25)]
     amo = sorted(set(tarj) | set(rojas), key=lambda k: (-(tarj[k] + 2 * rojas[k]), eq[k]))[:20]
     tar = [dict(jid=k[0], jugador=eq[k], equipo=k[1], amarillas=tarj[k], rojas=rojas[k]) for k in amo]
-    return gol, tar, goles, team_games
+    return gol, tar, goles, team_games, tarj
 
 
 def scorer_probs(model, home, away, goles, team_goals, lam=None):
@@ -284,6 +306,22 @@ def scorer_probs(model, home, away, goles, team_goals, lam=None):
         for (jid, _), n in cands:
             share = min(n / (tot + 2.0), 0.6)
             out.append(dict(jid=jid, lado=lado, goles=n, p=r(1 - math.exp(-lam * share), 3)))
+    return out
+
+
+def card_probs(home, away, tarj, team_games, th, ta):
+    """Probabilidad de que cada jugador reciba amarilla: su ritmo de amarillas en la temporada, ajustado por
+    las tarjetas que se esperan para su equipo en este partido (modelo de tarjetas)."""
+    out = []
+    for team, exp_t, lado in ((home, th, "h"), (away, ta, "a")):
+        pj = max(len(team_games.get(team, [])), 1)
+        cands = sorted(((k, n) for k, n in tarj.items() if k[1] == team and n >= 2), key=lambda kv: -kv[1])[:4]
+        tot = sum(n for (k, n) in tarj.items() if k[1] == team)
+        prom = max(tot / pj, 0.5)                    # amarillas por partido del equipo en la temporada
+        f = min(max((exp_t or prom) / prom, 0.6), 1.8)
+        for (jid, _), n in cands:
+            rate = min(n / pj, 0.9)
+            out.append(dict(jid=jid, lado=lado, amarillas=n, p=r(min(1 - math.exp(-rate * f), 0.65), 3)))
     return out
 
 
@@ -314,10 +352,32 @@ def side_model(played, today, col):
 
 
 # ---------------- registro público ----------------
-def ledger_update(pred_rows, jugados, now_iso):
+def votos_gente(ids):
+    """Votos de '¿Quién gana?' guardados en el servidor de Cloudflare (dirección en site/avisos.json)."""
+    try:
+        with open(os.path.join(RAIZ, "site", "avisos.json"), encoding="utf-8") as f:
+            url = json.load(f).get("url")
+    except (OSError, ValueError):
+        url = None
+    if not url or not ids:
+        return {}
+    import urllib.request
+    out = {}
+    for i in range(0, len(ids), 60):
+        try:
+            req = urllib.request.Request(url + "/votos?ids=" + ",".join(ids[i:i + 60]), headers={"User-Agent": "Ballytics robot"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                out.update(json.loads(r.read().decode("utf-8")))
+        except Exception as e:
+            print(f"  (sin votos de la gente: {e})")
+            break
+    return out
+
+
+def ledger_update(pred_rows, jugados, now_iso, votos=None):
     # lh…top = modelo propio; m* = mercado sin margen; f* = probabilidad Ballytics (ajustada a la cuota si la hay)
     cols = ["id", "liga", "kickoff", "home", "away", "lh", "la", "pH", "pD", "pA", "pO25", "pBTTS", "top", "predicho", "hg", "ag", "mH", "mD", "mA",
-            "fH", "fD", "fA", "fO25", "fBTTS", "ftop", "jH", "jD", "jA", "jO25"]
+            "fH", "fD", "fA", "fO25", "fBTTS", "ftop", "jH", "jD", "jA", "jO25", "vH", "vD", "vA", "vN"]
     reg = pd.read_csv(REGISTRO, dtype={"id": str}) if os.path.exists(REGISTRO) else pd.DataFrame(columns=cols)
     reg = reg.reindex(columns=cols).set_index("id", drop=False)
     for a, b in (("fH", "pH"), ("fD", "pD"), ("fA", "pA"), ("fO25", "pO25"), ("fBTTS", "pBTTS"), ("ftop", "top")):
@@ -328,6 +388,9 @@ def ledger_update(pred_rows, jugados, now_iso):
         own = p.get("modelo") or p
         reg.loc[p["id"], cols[:14]] = [p[c] for c in cols[:5]] + [own[c] for c in cols[5:13]] + [now_iso]
         reg.loc[p["id"], ["fH", "fD", "fA", "fO25", "fBTTS", "ftop"]] = [p["pH"], p["pD"], p["pA"], p["pO25"], p["pBTTS"], p["top"]]
+        v = (votos or {}).get(str(p["id"]))
+        if v and v.get("n"):
+            reg.loc[p["id"], ["vH", "vD", "vA", "vN"]] = [v["H"], v["D"], v["A"], v["n"]]
         aj = p.get("ajuste")
         reg.loc[p["id"], ["jH", "jD", "jA", "jO25"]] = [aj["pH"], aj["pD"], aj["pA"], aj["pO25"]] if aj else [np.nan] * 4
         q, _, _ = mercado_q(p.get("cuotas"), p.get("mercado"))
@@ -392,6 +455,16 @@ def ledger_summary(reg, base):
             kj = gj.res.map({"H": 0, "D": 1, "A": 2}).values
             llj = lambda cs: r(-np.log(np.clip(gj[cs].astype(float).values[np.arange(len(kj)), kj], 1e-9, None)).mean())
             out["bajas"] = dict(n=int(len(gj)), modelo=llj(["pH", "pD", "pA"]), con_bajas=llj(["jH", "jD", "jA"]))
+        gv = g[pd.to_numeric(g.vN, errors="coerce").fillna(0) >= 3]
+        if len(gv):
+            kv = gv.res.map({"H": 0, "D": 1, "A": 2}).values
+            V = gv[["vH", "vD", "vA"]].astype(float).values
+            Vp = (V + 1) / (V.sum(1, keepdims=True) + 3)          # con un voto "de prior" por resultado
+            Fb = gv[["fH", "fD", "fA"]].astype(float).values
+            out["gente"] = dict(n=int(len(gv)), votos=int(V.sum()),
+                                logloss_gente=r(-np.log(np.clip(Vp[np.arange(len(kv)), kv], 1e-9, None)).mean()),
+                                logloss_ballytics=r(-np.log(np.clip(Fb[np.arange(len(kv)), kv], 1e-9, None)).mean()),
+                                acierto_gente=r((V.argmax(1) == kv).mean()), acierto_ballytics=r((Fb.argmax(1) == kv).mean()))
         probs, hits = P.ravel(), np.eye(3)[k].ravel()
         cal = []
         for lo in np.arange(0, 1, .1):
@@ -490,7 +563,7 @@ def main():
             s.update(proy.get(s["equipo"], {}), ataque=r(np.exp(a_ - att_avg), 3), defensa=r(np.exp(-(d_ - def_avg)), 3))
         stats_eq = team_stats(jug, teams)
         rachas = streaks(jug, teams)
-        goleadores, amonestados, goles_cnt, team_games = players(jug)
+        goleadores, amonestados, goles_cnt, team_games, tarj_cnt = players(jug)
         team_goals = Counter()
         for (jid, team), n in goles_cnt.items():
             team_goals[team] += n
@@ -537,6 +610,10 @@ def main():
                     p["th"], p["ta"] = (r(v, 3) for v in mt.rates(x.home, x.away))
                 p["goleadores"] = [dict(s, jugador=name_of.get(s["jid"], "")) for s in scorer_probs(model, x.home, x.away, goles_cnt, team_goals, lam)]
                 p["h2h"] = h2h(both, x.home, x.away)
+                if mt and tarj_cnt:
+                    ct = card_probs(x.home, x.away, tarj_cnt, team_games, p.get("th"), p.get("ta"))
+                    if ct:
+                        p["tarjetas_jug"] = [dict(c, jugador=name_of.get(c["jid"], "")) for c in ct]
             if x.estado == "pendiente":
                 h = hist.setdefault(str(p["id"]), {"k": p["kickoff"], "s": []})
                 last = h["s"][-1] if h["s"] else None
@@ -587,13 +664,22 @@ def main():
             portada["rachas"].append(dict(rr, liga=L["id"]))
 
         grupos = datos.standings(L["s1"]) if L.get("oficial") else []
+        copa = None
+        try:
+            if L["s1"].startswith("uefa.") and grupos and len(grupos[0]["filas"]) >= 30:
+                pend = [p for p in partidos if p["estado"] == "pendiente"]
+                copa = copas.fase_liga(model, grupos[0]["filas"], pend, rng)
+            elif L["s1"].startswith("conmebol."):
+                copa = copas.llaves(model, d1, hoy)
+        except Exception as e:
+            print(f"  (sin simulación de copa: {e})")
         meta = datos.meta(L["s1"])
         out = dict(id=L["id"], nombre=L["nombre"], pais=L["pais"], region=L["region"], logo=meta.get("logo"),
                    actualizado=now.isoformat(timespec="minutes"), datos_hasta=str(p1.date.max().date()) if len(p1) else None,
                    usa_tiros=model.usa_tiros, usa_xg=bool(n_xg), tabla_ok=tiene_tabla, zonas=[dict(desde=a, hasta=b, nombre=n, cls=c) for a, b, n, c in L.get("zonas", [])],
                    modelo=mj, modelo_corners=mc.to_json() if mc else None, modelo_tarjetas=mt.to_json() if mt else None,
                    slug=L["s1"], grupos=grupos, equipos=info, tabla=tabla, stats=stats_eq, rachas=rachas, goleadores=goleadores, amonestados=amonestados,
-                   partidos=partidos, resultados=resultados)
+                   partidos=partidos, resultados=resultados, copa=copa)
         pendientes.append((L, out, dict(model=model, goles=goles_cnt, team_goals=team_goals, name_of=name_of)))
         indice.append(dict(id=L["id"], slug=L["s1"], nombre=L["nombre"], pais=L["pais"], region=L["region"], logo=meta.get("logo"),
                            datos_hasta=out["datos_hasta"], proximos=len(partidos)))
@@ -650,7 +736,7 @@ def main():
         print(f"  Bajas asignadas a {len(asign)} partidos · {n_aj} con ajuste por goleadores ausentes")
     # registro público (después de las bajas, para guardar también el modelo con bajas)
     jug_df = pd.concat(jugados_all, ignore_index=True) if jugados_all else pd.DataFrame(columns=["id", "hg", "ag"])
-    reg = ledger_update(preds_reg, jug_df, now.isoformat(timespec="minutes"))
+    reg = ledger_update(preds_reg, jug_df, now.isoformat(timespec="minutes"), votos_gente([str(p["id"]) for p in preds_reg]))
     with open(os.path.join(SALIDA, "registro.json"), "w", encoding="utf-8") as f:
         json.dump(ledger_summary(reg, base), f, ensure_ascii=False, separators=(",", ":"))
     for L, out, _ in pendientes:

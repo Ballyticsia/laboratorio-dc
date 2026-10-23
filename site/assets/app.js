@@ -198,6 +198,8 @@ function toHash(r) {
   if (r.v === "inicio") return r.liga && r.liga !== "todas" ? `#/partidos/${r.liga}` : "#/";
   if (r.v === "vivo") return `#/vivo${r.tab || r.id === "envivo" ? "/" + (r.tab || "hoy") : ""}${r.id === "envivo" ? "/envivo" : ""}`;
   if (r.v === "envivo") return `#/envivo/${encodeURIComponent(r.id)}${r.tab && r.tab !== "resumen" ? "/" + r.tab : ""}`;
+  if (r.v === "ficha") return `#/ficha/${encodeURIComponent(r.id)}`;
+  if (r.v === "prode") return `#/prode${r.id ? "/" + encodeURIComponent(r.id) + (r.tab && r.tab !== "pronosticar" ? "/" + r.tab : "") : ""}`;
   if (r.v === "comp") return `#/comp/${r.liga}${r.tab && r.tab !== "partidos" ? "/" + r.tab : ""}`;
   if (r.v === "club") return `#/club/${r.liga}/${encodeURIComponent(r.id)}${r.tab && r.tab !== "partidos" ? "/" + r.tab : ""}`;
   return `#/${r.v}`;
@@ -222,6 +224,8 @@ function fromHash() {
     case "envivo": return /^\d+$/.test(p[1] || "") ? { v: "envivo", id: p[1], tab: p[2] || "resumen" } : { v: "envivo", id: p[2], tab: p[3] || "resumen" };
     case "competiciones": return { v: "competiciones" };
     case "selecciones": return { v: "selecciones" };
+    case "ficha": return { v: "ficha", id: p[1] };
+    case "prode": return { v: "prode", id: p[1], tab: p[2] };
     case "noticias": return { v: "noticias" };
     case "comp": return { v: "comp", liga: p[1], tab: p[2] || "partidos" };
     case "club": return { v: "club", liga: p[1], id: p[2], tab: p[3] || "partidos" };
@@ -248,17 +252,18 @@ function render() {
   timers.splice(0).forEach(clearInterval);
   const need = ["liga", "partido", "equipo", "jugador", "comparar"].includes(R.v) && R.liga && D.meta && D.meta[R.liga] && !D.ligas[R.liga] ? R.liga : null;
   if (need) { $app.innerHTML = skeleton(); ensure(need).then(() => render()); return; }
-  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", combinada: "seguimiento", envivo: "vivo", competiciones: "vivo", comp: "vivo", club: "vivo", noticias: "vivo", selecciones: "vivo" }[R.v] || R.v);
+  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", combinada: "seguimiento", envivo: "vivo", competiciones: "vivo", comp: "vivo", club: "vivo", noticias: "vivo", selecciones: "vivo", ficha: "vivo", prode: "vivo" }[R.v] || R.v);
   document.querySelectorAll("[data-nav]").forEach(b => b.setAttribute("aria-current", b.dataset.nav === sec ? "page" : "false"));
   const f = { inicio: vInicio, liga: vLiga, partido: vPartido, equipo: vEquipo, registro: vRegistro, metodo: vMetodo,
     sobre: vSobre, responsable: vResponsable, jugador: vJugador, comparar: vComparar, combinada: vCombinada, seguimiento: vSeguimiento,
-    vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias, selecciones: vSelecciones }[R.v] || vInicio;
+    vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias, selecciones: vSelecciones, ficha: vFicha, prode: vProde }[R.v] || vInicio;
   $app.innerHTML = staleBanner() + f();
   if (R.v === "partido") { if (R.tab === "mercados") bindOdds(); if (R.tab === "alineaciones" || document.getElementById("xi-adj")) loadSummary(); }
   if (R.v === "comparar") bindCompare();
   if (R.v === "combinada") bindCombinada();
   if (R.v === "seguimiento") bindSeguimiento();
   paintComboBar();
+  hydrateVotes();
   bindCarousels();
   paintLive();
   paintCountdown();
@@ -530,6 +535,7 @@ function vInicio() {
       ${card("Tabla", `<div class="scroll">${tabla}</div><button class="link" data-go="liga" data-liga="${hl}" data-tab="tabla">Tabla completa →</button>`, sw("tb"))}
       ${card("Próximos partidos", `<div class="nlist">${prox}</div>`)}
       ${card("Trío más probable", `<div class="trio">${trio}</div>`, `<span class="tag">Esta semana</span>`, "dark")}
+      ${cupCard()}
       ${card("Modelo vs mercado", vmc, `<span class="tag">Mayores diferencias</span>`)}
       ${card("Rachas activas", `<div class="slist">${rach}</div>`)}
       ${card("Rendimiento del modelo", `${perf}<button class="link" data-go="registro">Ver registro →</button>`, `<span class="tag">Público</span>`)}
@@ -555,9 +561,10 @@ function vLiga() {
   const tabs = [["resumen", "Resumen"], ["tabla", "Tabla"], ["partidos", "Partidos"], ["estadisticas", "Estadísticas"], ["jugadores", "Jugadores"],
     ["rachas", "Rachas"], ["corners", "Córners y tarjetas"], ["proyeccion", "Proyección"], ["fuerza", "Fuerza"], ["comparar", "Comparar"]]
     .filter(([k]) => L.tabla_ok || k === "comparar" || (k === "tabla" && (L.grupos || []).length) || !["tabla", "proyeccion", "fuerza"].includes(k));
+  if (L.copa) tabs.splice(2, 0, ["copa", "Simulación"]);
   if (R.tab === "comparar") { R = { v: "comparar", liga: L.id }; return vComparar(); }
   const tab = tabs.some(t => t[0] === R.tab) ? R.tab : "resumen";
-  const body = ({ resumen: lResumen, tabla: lTabla, partidos: lPartidos, estadisticas: lStats, jugadores: lJug, rachas: lRachas, corners: lCorners, proyeccion: lProy, fuerza: lFuerza }[tab])(L);
+  const body = ({ resumen: lResumen, tabla: lTabla, partidos: lPartidos, estadisticas: lStats, jugadores: lJug, rachas: lRachas, corners: lCorners, proyeccion: lProy, fuerza: lFuerza, copa: lCopa }[tab])(L);
   return `<section class="view" aria-labelledby="h-liga">
     <div class="lhead panel">${leagueMark(L, "xl")}<div><h1 id="h-liga">${esc(L.nombre)}</h1><span class="muted">${esc(L.pais)} · datos hasta ${L.datos_hasta ? fecha(L.datos_hasta + "T12:00") : "—"}</span></div><span class="lh-act">${starBtn("l", L.id, "Seguir esta liga")}</span></div>
     <div class="tabs2 wide" role="group" aria-label="Sección">${tabs.map(([k, n]) => `<button data-go="liga" data-liga="${L.id}" data-tab="${k}" aria-pressed="${k === tab}">${n}</button>`).join("")}</div>
@@ -710,6 +717,7 @@ function vPartido() {
   ];
   if (ct != null) groups.push(["Córners (total)", [8.5, 9.5, 10.5].flatMap(l => [[`CO${l}`, `Más de ${String(l).replace(".", ",")}`, poisOver(l, ct)], [`CU${l}`, `Menos de ${String(l).replace(".", ",")}`, 1 - poisOver(l, ct)]])]);
   if (tt != null) groups.push(["Tarjetas (total)", [3.5, 4.5].flatMap(l => [[`TO${l}`, `Más de ${String(l).replace(".", ",")}`, poisOver(l, tt)], [`TU${l}`, `Menos de ${String(l).replace(".", ",")}`, 1 - poisOver(l, tt)]])]);
+  (p.tarjetas_jug || []).filter(c => c.p).forEach((c, i) => { if (i === 0) groups.push(["Recibe amarilla", []]); groups[groups.length - 1][1].push([`Y${c.jid}`, `${c.jugador} (${c.lado === "h" ? H : A})`, c.p]); });
   (p.goleadores || []).filter(g => g.p).forEach((g, i) => { if (i === 0) groups.push(["Marca en cualquier momento", []]); groups[groups.length - 1][1].push([`G${g.jid}`, `${g.jugador} (${g.lado === "h" ? H : A})`, g.p]); });
   const st = ODDS[p.id] || (ODDS[p.id] = {});
   const cq = p.cuotas;
@@ -755,6 +763,8 @@ function vPartido() {
       <div class="panel stack"><h3>Goles totales</h3>${goalsDist(m)}</div>
       <div class="panel stack"><h3>Cómo cambió la probabilidad</h3>${histChart(L, p)}</div>
     </div>
+    ${voteBox(p.id, p.kickoff, H, A, [k.H, k.D, k.A])}
+    ${(p.tarjetas_jug || []).length ? `<div class="panel stack"><h3>Probabilidad de amarilla ${help("Ritmo de amarillas de cada jugador en la temporada, ajustado por las tarjetas que el modelo espera para su equipo en este partido. Supone que juega el partido completo.")}</h3><div class="slist">${p.tarjetas_jug.map(c => `<div class="srow" data-go="ficha" data-id="${esc(c.jid)}">${face(L, c.lado === "h" ? p.home : p.away, c.jid, c.jugador)}<span><b>${esc(c.jugador)}</b><small>${c.amarillas} amarillas en la temporada</small></span><span class="sn num ycol">${pct(c.p)}</span></div>`).join("")}</div></div>` : ""}
     <div class="panel stack"><h3>Goleadores probables</h3><div class="slist">${scorers}</div><p class="note">Probabilidad de marcar según sus goles en la temporada y los goles esperados de su equipo.</p></div>`;
   if (tab === "mercados") body = `
     <div class="panel stack"><h3>Mercados y valor</h3>
@@ -864,6 +874,7 @@ function vRegistro() {
     <p class="muted">Cada predicción se guarda antes de que empiece el partido y no se puede cambiar después. Así se mide si el modelo sirve, con resultados reales y no con capturas de los aciertos. Los números de arriba son de la probabilidad Ballytics; también se guardan el modelo propio y la cuota para compararlos.${g.desde ? ` Registro desde el ${fecha(g.desde + "T12:00")}.` : ""}</p>
     <div class="kpis">${kpi("m", "Partidos calificados", g.n || 0, "")}${kpi("", "Acierto 1X2", pct(g.acierto_1x2, 1), "el resultado más probable")}${kpi("k", `Log-loss ${help(TIPS.logloss)}`, dec(g.logloss, 3), `ingenuo ${dec(g.logloss_ingenuo, 3)} · menos es mejor`)}${kpi("", "Más/Menos 2,5", pct(g.acierto_o25, 1), "acierto")}${kpi("", "Marcador exacto", pct(g.marcador_exacto, 1), "el más probable")}</div>
     ${g.vs_mercado ? `<div class="panel stack"><h3>Ballytics, modelo propio y mercado</h3><div class="kpis">${kpi("m", "Log-loss Ballytics", dec(g.vs_mercado.ballytics, 3), g.vs_mercado.acierto_ballytics != null ? `acierto ${pct(g.vs_mercado.acierto_ballytics, 1)}` : "")}${kpi("", "Log-loss modelo propio", dec(g.vs_mercado.modelo, 3), g.vs_mercado.acierto_modelo != null ? `acierto ${pct(g.vs_mercado.acierto_modelo, 1)}` : "")}${kpi("k", "Log-loss mercado", dec(g.vs_mercado.mercado, 3), g.vs_mercado.acierto_mercado != null ? `acierto ${pct(g.vs_mercado.acierto_mercado, 1)}` : "")}${kpi("", "Partidos con cuota", g.vs_mercado.n, "")}</div><p class="note">Solo partidos en que ESPN publicó cuotas antes del inicio. Menos es mejor.</p></div>` : ""}
+    <div class="panel stack"><h3>La gente contra Ballytics</h3>${g.gente && g.gente.n ? `<div class="kpis">${kpi("m", "Acierto Ballytics", pct(g.gente.acierto_ballytics, 1), `log-loss ${dec(g.gente.logloss_ballytics, 3)}`)}${kpi(g.gente.acierto_gente > g.gente.acierto_ballytics ? "k" : "", "Acierto de la gente", pct(g.gente.acierto_gente, 1), `log-loss ${dec(g.gente.logloss_gente, 3)}`)}${kpi("", "Partidos con votos", g.gente.n, `${g.gente.votos} votos`)}</div>` : ""}<p class="note">${g.gente && g.gente.n ? "Partidos con al menos 3 votos en “¿Quién gana?”. El voto más repetido cuenta como el pronóstico de la gente." : "Se llena cuando la gente vote en “¿Quién gana?” y se jueguen esos partidos (mínimo 3 votos por partido)."}</p></div>
     <div class="panel stack"><h3>¿Sirve el ajuste por bajas?</h3>${g.bajas && g.bajas.n ? `<div class="kpis">${kpi("m", "Log-loss modelo propio", dec(g.bajas.modelo, 3), "")}${kpi(g.bajas.con_bajas <= g.bajas.modelo ? "k" : "", "Log-loss con bajas", dec(g.bajas.con_bajas, 3), g.bajas.con_bajas <= g.bajas.modelo ? "mejora" : "no mejora")}${kpi("", "Partidos con bajas", g.bajas.n, "")}</div>` : ""}<p class="note">${g.bajas && g.bajas.n ? "Solo partidos en que faltó algún goleador. Menos es mejor." : "Se llena cuando se jueguen partidos en que faltó algún goleador por lesión o suspensión."}</p></div>
     ${g.n ? `<div class="grid2">
       <div class="panel flush scroll"><div class="ph"><h3>Por liga</h3></div><table class="t"><thead><tr><th>Liga</th><th class="n">Partidos</th><th class="n">Acierto</th><th class="n">Log-loss</th></tr></thead><tbody>${(g.por_liga || []).map(x => `<tr><td class="team">${D.ligas[x.liga] ? leagueMark(D.ligas[x.liga]) + esc(D.ligas[x.liga].nombre) : esc(x.liga)}</td><td class="n">${x.n}</td><td class="n">${pct(x.acierto, 1)}</td><td class="n">${dec(x.logloss, 3)}</td></tr>`).join("")}</tbody></table></div>
@@ -1240,7 +1251,7 @@ function vJugador() {
   const otras = ligasIds().filter(id => id !== L.id).map(id => ({ L: D.ligas[id], p: findPlayer(D.ligas[id], pl.jid) })).filter(x => x.p);
   return `<section class="view" aria-labelledby="h-j">
     <button class="back" data-go="equipo" data-liga="${L.id}" data-team="${esc(pl.equipo)}">← ${esc(corto(L, pl.equipo))}</button>
-    <div class="lhead panel">${face(L, pl.equipo, pl.jid, pl.jugador, "xl")}<div><h1 id="h-j">${esc(pl.jugador)}</h1><span class="muted">${esc(corto(L, pl.equipo))} · ${esc(L.nombre)}</span></div></div>
+    <div class="lhead panel">${face(L, pl.equipo, pl.jid, pl.jugador, "xl")}<div><h1 id="h-j">${esc(pl.jugador)}</h1><span class="muted">${esc(corto(L, pl.equipo))} · ${esc(L.nombre)}</span></div>${/^\d+$/.test(String(pl.jid)) ? `<button class="btn ghost sm" style="margin-left:auto" data-go="ficha" data-id="${esc(pl.jid)}">Ficha completa →</button>` : ""}</div>
     <div class="kpis">${kpi("k", "Goles", pl.goles, pj ? `${dec(pl.goles / pj, 2)} por partido del equipo` : "")}${kpi("", "Penales", pl.penales, "")}${kpi("", "Amarillas", pl.amarillas, "")}${kpi("", "Rojas", pl.rojas, "")}
       ${np ? kpi("m", "Marca en el próximo", pct(np.p), `vs ${esc(corto(L, next.home === pl.equipo ? next.away : next.home))}`) : ""}</div>
     ${pl.ult5 && pl.ult5.length ? `<div class="panel row" style="justify-content:space-between"><h3>Goles en los últimos 5 partidos del equipo</h3><span class="l5">${pl.ult5.map(v => `<i class="${v ? "on" : ""}">${v || "·"}</i>`).join("")}</span></div>` : ""}
@@ -1387,6 +1398,7 @@ function otherProb(L, p, key) {
   if ((m = key.match(/^C([OU])([\d.]+)$/)) && ct != null) return m[1] === "O" ? poisOver(+m[2], ct) : 1 - poisOver(+m[2], ct);
   if ((m = key.match(/^T([OU])([\d.]+)$/)) && tt != null) return m[1] === "O" ? poisOver(+m[2], tt) : 1 - poisOver(+m[2], tt);
   if (key[0] === "G") { const g = (p.goleadores || []).find(x => "G" + x.jid === key); return g ? g.p : null; }
+  if (key[0] === "Y") { const c = (p.tarjetas_jug || []).find(x => "Y" + x.jid === key); return c ? c.p : null; }
   return null;
 }
 function comboProb(sels) {
@@ -1623,6 +1635,13 @@ async function vSel() {
 const favSel = () => lsGet("bt_vsel", []);
 const selImg = (t, cls = "") => t && t.l ? `<img class="cimg flagimg ${cls}" src="${esc(t.l)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : `<span class="cflag">🏳️</span>`;
 const NAT_SLUGS = ["fifa.friendly", "uefa.nations", "concacaf.nations.league", "fifa.worldq.conmebol", "fifa.worldq.uefa", "fifa.worldq.concacaf", "fifa.worldq.afc", "fifa.worldq.caf", "fifa.worldq.ofc", "conmebol.america", "uefa.euroq", "caf.nations", "afc.asian.cup", "fifa.world"];
+function cupCard() {
+  const L = D.ligas.champions || D.ligas.libertadores, C = L && L.copa; if (!C) return "";
+  const rows = C.tipo === "fase_liga" ? C.equipos.slice().sort((a, b) => b.p_campeon - a.p_campeon).slice(0, 6).map(r => [r.equipo, r.p_campeon]) : (C.campeon || []).slice(0, 6).map(r => [r.equipo, r.p]);
+  if (!rows.length) return "";
+  const mx = rows[0][1] || 1;
+  return card(`Favoritos: ${esc(L.nombre)}`, `<div class="slist">${rows.map(([t, p]) => `<button class="srow" data-go="liga" data-liga="${L.id}" data-tab="copa">${badge(L, t)}<span><b>${esc(corto(L, t))}</b><span class="pbar gold" style="display:block;margin-top:5px"><i style="width:${100 * p / mx}%"></i></span></span><span class="sn num">${pct(p)}</span></button>`).join("")}</div><p class="note">Probabilidad de salir campeón según ${C.tipo === "fase_liga" ? C.sims.toLocaleString("es-CL") + " simulaciones" : "las llaves que quedan"}.</p>`, `<span class="tag">Simulación</span>`, "accent");
+}
 function vSelecciones() {
   setTimeout(vFillSel, 0);
   return `<section class="view" aria-labelledby="h-sel"><h1 id="h-sel">Selecciones</h1>${vHub("selecciones")}
@@ -1707,7 +1726,7 @@ function vRow(e) {
     <span class="vside">${m && e.state !== "post" ? `<span class="vmodel" title="Probabilidad Ballytics">${pct(m.p.pH)} · ${pct(m.p.pD)} · ${pct(m.p.pA)}</span>` : ""}${e.state !== "post" ? `<button class="vbell${f ? " on" : ""}" data-follow="${esc(e.id)}" title="${f ? "Dejar de seguir" : "Avisarme de goles"}" aria-label="Avisarme de goles">${f ? "🔔" : "🔕"}</button>` : ""}</span></div>`;
 }
 function vHub(active) {
-  return `<div class="vhub" role="tablist">${[["vivo", "Partidos"], ["competiciones", "Competiciones"], ["selecciones", "Selecciones"], ["noticias", "Noticias"]].map(([v, n]) => `<button role="tab" data-go="${v}" aria-selected="${v === active}">${n}</button>`).join("")}</div>`;
+  return `<div class="vhub" role="tablist">${[["vivo", "Partidos"], ["competiciones", "Competiciones"], ["selecciones", "Selecciones"], ["prode", "Prode"], ["noticias", "Noticias"]].map(([v, n]) => `<button role="tab" data-go="${v}" aria-selected="${v === active}">${n}</button>`).join("")}</div>`;
 }
 function vVivo() {
   const today = ymd(new Date()), key = /^\d{8}$/.test(R.tab || "") ? R.tab : today, solo = R.id === "envivo";
@@ -1721,6 +1740,7 @@ function vVivo() {
     <div class="vdays" role="group" aria-label="Día">${days.map(d => `<button data-go="vivo" data-tab="${ymd(d)}" data-id="${solo ? "envivo" : ""}" data-keep aria-pressed="${ymd(d) === key}">${esc(lab(d))}</button>`).join("")}
       <label class="vcal" title="Elegir fecha"><span class="sr">Elegir fecha</span><input type="date" id="vv-date" value="${key.slice(0, 4)}-${key.slice(4, 6)}-${key.slice(6)}"></label></div>
     <div class="vbar">
+      <button class="vlivebtn prefsb" data-prefs title="Elegir qué avisos recibir">🔔 Avisos</button>
       <button class="vlivebtn" data-go="vivo" data-tab="${key}" data-id="${solo ? "" : "envivo"}" data-keep aria-pressed="${solo}"><span class="dot"></span>En vivo <b id="vv-n"></b></button>
       <div class="vsearch"><input id="vv-q" type="search" placeholder="Filtrar por equipo o competición" value="${esc(VV.q)}" autocomplete="off"></div>
     </div>
@@ -1867,7 +1887,8 @@ async function vFillComp(slug, tab) {
     let j = null; try { j = await vStandings(slug); } catch (e) {}
     if (R.v !== "comp" || R.liga !== slug) return;
     const groups = j ? (j.children && j.children.length ? j.children : [j]) : [];
-    const t = stTable(groups, [], slug);
+    const lives = (VV.sched[slug] ? VV.sched[slug].evs : []).filter(isLive).map(e => ({ hId: e.h.id, aId: e.a.id, hs: +e.h.score || 0, as: +e.a.score || 0 }));
+    const t = lives.length ? liveTableHtml(groups, lives, slug) : stTable(groups, [], slug);
     body.innerHTML = t || `<div class="panel empty">Esta competición no tiene tabla de posiciones (o aún no empieza).</div>`;
   }
   if (tab === "noticias") { const a = await vNews(slug); if (R.v === "comp" && R.liga === slug) body.innerHTML = newsCards(a.slice(0, 18)); }
@@ -1915,7 +1936,7 @@ async function vFillClub(slug, id, tab) {
     const A = (ros && ros.athletes) || [], ord = { G: 0, D: 1, M: 2, F: 3 }, grp = { G: "Arqueros", D: "Defensas", M: "Mediocampistas", F: "Delanteros" };
     const by = {}; A.forEach(a => { const p = ((a.position || {}).abbreviation || "M")[0]; (by[p in ord ? p : "M"] ||= []).push(a); });
     const Lf = { equipos: { [t.displayName]: { color: t.color, logo } } };
-    body.innerHTML = A.length ? Object.keys(by).sort((a, b) => ord[a] - ord[b]).map(p => `<div class="panel stack"><h3>${grp[p]}</h3><div class="vsquad">${by[p].map(a => `<div class="vsq">${face(Lf, t.displayName, a.id, a.displayName, "")}<span><b>${esc(a.displayName)}</b><small>${a.jersey ? "#" + esc(a.jersey) + " · " : ""}${a.age ? esc(a.age) + " años" : ""}${a.citizenship ? " · " + esc(a.citizenship) : ""}</small></span></div>`).join("")}</div></div>`).join("")
+    body.innerHTML = A.length ? Object.keys(by).sort((a, b) => ord[a] - ord[b]).map(p => `<div class="panel stack"><h3>${grp[p]}</h3><div class="vsquad">${by[p].map(a => `<button class="vsq" data-go="ficha" data-id="${esc(a.id)}">${face(Lf, t.displayName, a.id, a.displayName, "")}<span><b>${esc(a.displayName)}</b><small>${a.jersey ? "#" + esc(a.jersey) + " · " : ""}${a.age ? esc(a.age) + " años" : ""}${a.citizenship ? " · " + esc(a.citizenship) : ""}</small></span></button>`).join("")}</div></div>`).join("")
       + (ros.coach && ros.coach[0] ? `<p class="note">Entrenador: <b>${esc([ros.coach[0].firstName, ros.coach[0].lastName].filter(Boolean).join(" "))}</b></p>` : "")
       : `<div class="panel empty">Plantel no disponible.</div>`;
   }
@@ -1971,7 +1992,7 @@ async function vToggleFollow(id, btn) {
     const p = await pushSub();
     if (p) {
       const r = await fetch(p.url + "/follow", { method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ subscription: p.sub.toJSON(), id, slug: (ev && ev.slug) || "all", name: f[id].n, s: f[id].s, st: (ev && ev.state) || "", date: f[id].d }) });
+        body: JSON.stringify({ subscription: p.sub.toJSON(), prefs: myPrefs(), id, slug: (ev && ev.slug) || "all", name: f[id].n, s: f[id].s, st: (ev && ev.state) || "", date: f[id].d }) });
       remoto = r.ok;
       if (remoto) { const g = followed(); if (g[id]) { g[id].r = true; lsSet("bt_vfollow", g); } }
     }
@@ -2079,11 +2100,13 @@ async function vFillMatch(force) {
       ${tl(H.a, "a")}</div>
     <div class="row" style="justify-content:center;margin-top:10px;gap:8px">${H.state !== "post" ? `<button class="btn ghost sm vbell2${f ? " on" : ""}" data-follow="${esc(id)}">${f ? "🔔 Siguiendo" : "🔕 Avisarme de goles"}</button>` : ""}${m ? `<button class="btn ghost sm" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">Análisis de Ballytics →</button>` : ""}</div>`;
   const tab = R.tab || "resumen";
-  if (tab === "resumen") body.innerHTML = (m ? vProbPanel(m, H) : "") + vKeyStats(j, H) + vTimeline(evs, H) + vInfo(j);
+  if (tab === "resumen") { body.innerHTML = videosHtml(j) + vCurvePanel(j, H, evs, m) + (H.state !== "post" || true ? voteBox(id, H.date, H.h.short, H.a.short, m ? [m.p.pH, m.p.pD, m.p.pA] : null) : "") + vKeyStats(j, H) + vTimeline(evs, H) + vInfo(j); hydrateVotes(); }
   if (tab === "alineaciones") body.innerHTML = vPitch(j, H);
   if (tab === "estadisticas") body.innerHTML = vStats(j, H);
   if (tab === "previa") body.innerHTML = vPrevia(j, H, m);
-  if (tab === "tabla") { const g = ((j.standings || {}).groups || []); body.innerHTML = g.length ? stTable(g.map(x => ({ name: x.header, standings: x.standings })), [H.h.id, H.a.id], H.slug) : `<div class="panel empty">Sin tabla para esta competición.</div>`; }
+  if (tab === "tabla") { const g = ((j.standings || {}).groups || []).map(x => ({ name: x.header, standings: x.standings }));
+    const lives = H.state === "in" ? [{ hId: H.h.id, aId: H.a.id, hs: +H.h.score || 0, as: +H.a.score || 0 }] : [];
+    body.innerHTML = !g.length ? `<div class="panel empty">Sin tabla para esta competición.</div>` : lives.length ? liveTableHtml(g, lives, H.slug, [H.h.id, H.a.id]) : stTable(g, [H.h.id, H.a.id], H.slug); }
   if (tab === "minuto") body.innerHTML = vComments(j);
 }
 function vInfo(j) {
@@ -2163,14 +2186,318 @@ function vPitch(j, H) {
   const chip = x => { const a = x.athlete || {}, id = String(a.id || ""), nm = a.shortName || a.displayName || "";
     const g = ev.filter(e => /goal|scored/i.test((e.type || {}).type || "") && !/own/i.test((e.type || {}).type || "") && ((e.participants || [])[0] || {}).athlete && String(e.participants[0].athlete.id) === id).length;
     const card = ev.some(e => /red/i.test((e.type || {}).type || "") && ((e.participants || [])[0] || {}).athlete && String(e.participants[0].athlete.id) === id) ? "red" : ev.some(e => /yellow/i.test((e.type || {}).type || "") && ((e.participants || [])[0] || {}).athlete && String(e.participants[0].athlete.id) === id) ? "yellow" : "";
-    return `<div class="vpl">${face(Lf, team.name, id, a.displayName, "lg")}<span class="vjn num">${esc(x.jersey || "")}</span>${g ? `<span class="vgl">${"⚽".repeat(Math.min(g, 3))}</span>` : ""}${card ? `<i class="${card === "red" ? "rcard" : "ycard"} vcd"></i>` : ""}${x.subbedOut ? `<span class="vso">⇄</span>` : ""}<b>${esc(nm.split(" ").slice(-1)[0] || nm)}</b></div>`; };
+    return `<button class="vpl" data-go="ficha" data-id="${esc(id)}">${face(Lf, team.name, id, a.displayName, "lg")}<span class="vjn num">${esc(x.jersey || "")}</span>${g ? `<span class="vgl">${"⚽".repeat(Math.min(g, 3))}</span>` : ""}${card ? `<i class="${card === "red" ? "rcard" : "ycard"} vcd"></i>` : ""}${x.subbedOut ? `<span class="vso">⇄</span>` : ""}<b>${esc(nm.split(" ").slice(-1)[0] || nm)}</b></button>`; };
   const pitch = `<div class="vpitch"><div class="vlines"><i class="c"></i><i class="b t"></i><i class="b bt"></i></div>${rows.slice().reverse().map(r => `<div class="vprow">${r.map(chip).join("")}</div>`).join("")}</div>`;
   return `<div class="panel stack"><div class="row" style="justify-content:space-between"><h3>Alineaciones ${T.formation ? `<span class="tag">${esc(T.formation)}</span>` : ""}</h3>
       <div class="tabs2" role="group" aria-label="Equipo">${[["h", H.h], ["a", H.a]].map(([k, t]) => `<button data-vteam="${k}" aria-pressed="${(VV.team === "a" ? "a" : "h") === k}">${esc(t.short)}</button>`).join("")}</div></div>
     ${pitch}
-    ${subs.length ? `<h3 style="margin-top:6px">Suplentes</h3><div class="vsubs">${subs.map(x => `<div class="vsb ${x.subbedIn ? "in" : ""}"><span class="num vjn2">${esc(x.jersey || "")}</span>${face(Lf, team.name, (x.athlete || {}).id, (x.athlete || {}).displayName, "sm")}<span>${esc((x.athlete || {}).displayName || "")}</span>${x.subbedIn ? `<small>entró</small>` : ""}</div>`).join("")}</div>` : ""}</div>`;
+    ${subs.length ? `<h3 style="margin-top:6px">Suplentes</h3><div class="vsubs">${subs.map(x => `<button class="vsb ${x.subbedIn ? "in" : ""}" data-go="ficha" data-id="${esc((x.athlete || {}).id || "")}"><span class="num vjn2">${esc(x.jersey || "")}</span>${face(Lf, team.name, (x.athlete || {}).id, (x.athlete || {}).displayName, "sm")}<span>${esc((x.athlete || {}).displayName || "")}</span>${x.subbedIn ? `<small>entró</small>` : ""}</button>`).join("")}</div>` : ""}</div>`;
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-vteam]"); if (!b) return; VV.team = b.dataset.vteam; vFillMatch(); });
+
+/* ================= v14: probabilidad durante el partido, tabla en vivo, "¿Quién gana?", fichas, videos, prode ================= */
+function myUid() { let u = lsGet("bt_uid", null); if (!u) { u = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36); lsSet("bt_uid", u); } return u; }
+const PREFS_DEF = { gol: 1, roja: 1, inicio: 1, final: 1, alin: 1, prev: 1 };
+const myPrefs = () => ({ ...PREFS_DEF, ...lsGet("bt_prefs", {}) });
+
+/* ---------- probabilidad minuto a minuto ---------- */
+function outcome3(hs, as, lh, la) {
+  let H = 0, X = 0, A = 0;
+  for (let i = 0; i <= 10; i++) { const pi = pois(i, lh); for (let k = 0; k <= 10; k++) { const q = pi * pois(k, la), x = hs + i, y = as + k; if (x > y) H += q; else if (x === y) X += q; else A += q; } }
+  const s = H + X + A || 1; return { H: H / s, D: X / s, A: A / s };
+}
+const parseMin = s => { const m = String(s || "").match(/(\d+)\s*'?\s*(?:\+\s*(\d+))?/); return m ? +m[1] + (m[2] ? Math.min(+m[2], 15) / 16 : 0) : 0; };
+function lambdasFromProbs(pH, pA) {
+  let best = [1.45, 1.15], bd = 1e9;
+  for (let lh = 0.3; lh <= 3.4; lh += 0.05) for (let la = 0.2; la <= 3.0; la += 0.05) {
+    const o = outcome3(0, 0, lh, la), d = (o.H - pH) ** 2 + (o.A - pA) ** 2; if (d < bd) { bd = d; best = [lh, la]; } }
+  return best;
+}
+function preLambdas(j, m) {
+  if (m && m.p.lh) return { lh: m.p.lh, la: m.p.la, src: "Ballytics" };
+  const pc = (j.pickcenter || [])[0], am = x => { x = +x; return !x ? null : x > 0 ? 1 + x / 100 : 1 + 100 / -x; };
+  if (pc && pc.homeTeamOdds && pc.awayTeamOdds) {
+    const h = am(pc.homeTeamOdds.moneyLine), a = am(pc.awayTeamOdds.moneyLine), d = am((pc.drawOdds || {}).moneyLine);
+    if (h && a && d) { const s = 1 / h + 1 / a + 1 / d, [lh, la] = lambdasFromProbs(1 / h / s, 1 / a / s); return { lh, la, src: `cuota de ${(pc.provider || {}).name || "la casa"}` }; }
+  }
+  return { lh: 1.45, la: 1.15, src: "promedio de la liga" };
+}
+function curveData(lh, la, evs, minNow, done) {
+  const goals = evs.filter(e => e.kind === "goal" || e.kind === "og").map(e => ({ m: parseMin(e.min), side: e.kind === "og" ? (e.lado === "h" ? "a" : "h") : e.lado, who: e.who[0] || "" })).filter(g => g.side);
+  const reds = evs.filter(e => e.kind === "red").map(e => ({ m: parseMin(e.min), side: e.lado, who: e.who[0] || "" })).filter(r => r.side);
+  const end = done ? Math.max(90, Math.ceil(minNow)) : Math.max(1, Math.ceil(minNow)), pts = [];
+  for (let m = 0; m <= end; m++) {
+    const hs = goals.filter(g => g.side === "h" && g.m <= m).length, as = goals.filter(g => g.side === "a" && g.m <= m).length;
+    let fh = 1, fa = 1; reds.forEach(r => { if (r.m <= m) { if (r.side === "h") { fh *= 0.72; fa *= 1.18; } else { fa *= 0.72; fh *= 1.18; } } });
+    const rem = done && m === end ? 0 : Math.max(0, (93 - m) / 93);
+    pts.push({ m, ...outcome3(hs, as, lh * rem * fh, la * rem * fa) });
+  }
+  return { pts, goals, reds, end };
+}
+function curveSvg(cd, H1, A1) {
+  const sm = matchMedia("(max-width:600px)").matches, W = sm ? 360 : 900, Hh = sm ? 230 : 250, pl = 34, pr = 10, pt = 26, pb = 22, end = Math.max(cd.end, 90);
+  const x = m => pl + (m / end) * (W - pl - pr), y = v => pt + (1 - v) * (Hh - pt - pb);
+  const P = cd.pts, band = (lo, hi) => `${P.map(p => `${x(p.m).toFixed(1)},${y(hi(p)).toFixed(1)}`).join(" ")} ${P.slice().reverse().map(p => `${x(p.m).toFixed(1)},${y(lo(p)).toFixed(1)}`).join(" ")}`;
+  let s = `<svg class="curve" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Probabilidad durante el partido">
+    <defs><linearGradient id="gH" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--pitch)" stop-opacity=".95"/><stop offset="1" stop-color="var(--pitch)" stop-opacity=".55"/></linearGradient>
+    <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--away)" stop-opacity=".55"/><stop offset="1" stop-color="var(--away)" stop-opacity=".95"/></linearGradient></defs>`;
+  [0, .25, .5, .75, 1].forEach(v => { s += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" class="cg"/><text x="${pl - 6}" y="${y(v) + 4}" text-anchor="end" class="ct">${v * 100}%</text>`; });
+  [0, 15, 30, 45, 60, 75, 90].filter(m => m <= end).forEach(m => { s += `<text x="${x(m)}" y="${Hh - 6}" text-anchor="middle" class="ct">${m}'</text>`; });
+  s += `<line x1="${x(45)}" x2="${x(45)}" y1="${pt}" y2="${Hh - pb}" class="cht"/>`;
+  s += `<polygon points="${band(p => 0, p => p.H)}" fill="url(#gH)"/><polygon points="${band(p => p.H, p => p.H + p.D)}" fill="var(--draw)" opacity=".75"/><polygon points="${band(p => p.H + p.D, p => 1)}" fill="url(#gA)"/>`;
+  cd.goals.forEach(g => { const gx = x(Math.min(g.m, end)); s += `<line x1="${gx}" x2="${gx}" y1="${pt - 4}" y2="${Hh - pb}" class="cgl"/><g class="cmark ${g.side}"><circle cx="${gx}" cy="${pt - 13}" r="9"/><text x="${gx}" y="${pt - 9.5}" text-anchor="middle">⚽</text><title>${esc(g.who)} ${Math.floor(g.m)}'</title></g>`; });
+  cd.reds.forEach(r => { const rx = x(Math.min(r.m, end)); s += `<rect x="${rx - 4}" y="${pt - 19}" width="8" height="11" rx="1.5" class="cred"><title>Roja: ${esc(r.who)} ${Math.floor(r.m)}'</title></rect>`; });
+  const last = P[P.length - 1];
+  if (last && last.m < end) s += `<line x1="${x(last.m)}" x2="${x(last.m)}" y1="${pt}" y2="${Hh - pb}" class="cnow"/>`;
+  return s + `</svg>`;
+}
+function vCurvePanel(j, H, evs, m) {
+  const L0 = preLambdas(j, m), done = H.state === "post", min = done ? 95 : minOf(H);
+  const cd = curveData(L0.lh, L0.la, evs, H.state === "pre" ? 0 : min, done), last = cd.pts[cd.pts.length - 1], pre = cd.pts[0];
+  const H1 = H.h.short, A1 = H.a.short;
+  return `<div class="panel stack cpanel"><div class="row" style="justify-content:space-between;align-items:baseline"><h3>${H.state === "pre" ? "Probabilidad antes del partido" : done ? "Cómo cambió la probabilidad" : "Probabilidad en vivo"} ${help("Se parte de los goles esperados antes del partido y, minuto a minuto, se considera el marcador y el tiempo que queda: los goles que faltan se reparten según los goles esperados de cada equipo. Una tarjeta roja baja los goles esperados de ese equipo y sube los del rival.")}</h3><span class="note">Base: ${esc(L0.src)}</span></div>
+    <div class="cnums"><span class="h"><b>${pct(last.H)}</b>${esc(H1)}</span><span class="d"><b>${pct(last.D)}</b>Empate</span><span class="a"><b>${pct(last.A)}</b>${esc(A1)}</span></div>
+    ${H.state === "pre" ? "" : curveSvg(cd, H1, A1)}
+    <p class="note">${H.state === "pre" ? "" : `Antes del partido: ${pct(pre.H)} · ${pct(pre.D)} · ${pct(pre.A)}.`} No considera el dominio ni las ocasiones; solo marcador, minutos y expulsiones.</p></div>`;
+}
+
+/* ---------- tabla en vivo ---------- */
+function liveEntries(entries, lives) {
+  const val = (e, k) => { const s = (e.stats || []).find(x => x.name === k); return s ? +(s.value ?? parseFloat(s.displayValue)) || 0 : 0; };
+  const rows = entries.map((e, i) => { const t = typeof e.team === "string" ? { displayName: e.team, id: e.id } : (e.team || {});
+    return { e, t, id: String(t.id || e.id || ""), prev: +val(e, "rank") || i + 1, pj: val(e, "gamesPlayed"), g: val(e, "wins"), d: val(e, "ties"), l: val(e, "losses"), gf: val(e, "pointsFor"), gc: val(e, "pointsAgainst"), pts: val(e, "points"), live: null }; });
+  const by = Object.fromEntries(rows.map(r => [r.id, r]));
+  lives.forEach(x => { const a = by[x.hId], b = by[x.aId]; if (!a || !b) return;
+    [[a, x.hs, x.as], [b, x.as, x.hs]].forEach(([r, f, c]) => { r.pj++; r.gf += f; r.gc += c; if (f > c) { r.g++; r.pts += 3; } else if (f === c) { r.d++; r.pts += 1; } else r.l++; r.live = `${f}-${c}`; }); });
+  rows.sort((p, q) => q.pts - p.pts || (q.gf - q.gc) - (p.gf - p.gc) || q.gf - p.gf || p.prev - q.prev);
+  rows.forEach((r, i) => r.pos = i + 1);
+  return rows;
+}
+function liveTableHtml(groups, lives, slug, hi = []) {
+  return groups.map(g => {
+    const E = (g.standings || {}).entries || []; if (!E.length) return "";
+    const R0 = liveEntries(E, lives);
+    return `<div class="panel flush scroll">${g.name && groups.length > 1 ? `<div class="ph"><h3>${esc(g.name)}</h3></div>` : ""}<table class="t vstt live"><thead><tr><th>#</th><th></th><th>Equipo</th><th class="n">PJ</th><th class="n hide-m">G</th><th class="n hide-m">E</th><th class="n hide-m">P</th><th class="n hide-m">GF</th><th class="n hide-m">GC</th><th class="n">DG</th><th class="n">Pts</th></tr></thead><tbody>${R0.map(r => {
+      const mv = r.prev - r.pos, logo = ((r.t.logos || [])[0] || {}).href, col = r.e.note && r.e.note.color ? `style="box-shadow:inset 3px 0 0 ${esc(r.e.note.color)}"` : "";
+      return `<tr class="${hi.includes(r.id) ? "hl" : ""}${r.live ? " isl" : ""}"><td ${col}><span class="pos">${r.pos}</span></td><td class="mv">${mv > 0 ? `<span class="up">▲${mv}</span>` : mv < 0 ? `<span class="dn">▼${-mv}</span>` : ""}</td>
+        <td class="vtm">${slug && r.id ? `<button class="link tlink" data-go="club" data-liga="${esc(slug)}" data-id="${esc(r.id)}">` : "<span>"}${logo ? `<img class="tlogo" src="${esc(logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}${esc(r.t.shortDisplayName || r.t.displayName || "")}${slug && r.id ? "</button>" : "</span>"}${r.live ? `<span class="lvb">${r.live}</span>` : ""}</td>
+        <td class="n">${r.pj}</td><td class="n hide-m">${r.g}</td><td class="n hide-m">${r.d}</td><td class="n hide-m">${r.l}</td><td class="n hide-m">${r.gf}</td><td class="n hide-m">${r.gc}</td><td class="n">${r.gf - r.gc > 0 ? "+" : ""}${r.gf - r.gc}</td><td class="n"><b>${r.pts}</b></td></tr>`; }).join("")}</tbody></table></div>`;
+  }).join("") + `<p class="note"><span class="lvb">1-0</span> marcador en vivo. La tabla se recalcula como si los partidos terminaran ahora.</p>`;
+}
+
+/* ---------- ¿Quién gana? ---------- */
+const voteBox = (id, k, h, a, mp) => `<div class="vote panel" data-vote="${esc(id)}" data-k="${esc(k || "")}" data-h="${esc(h)}" data-a="${esc(a)}" data-m="${mp ? mp.map(x => (+x).toFixed(4)).join(",") : ""}"><div class="vq"><h3>¿Quién gana?</h3><span class="note">Cargando votos…</span></div></div>`;
+async function hydrateVotes() {
+  const els = [...document.querySelectorAll("[data-vote]:not([data-ok])")]; if (!els.length) return;
+  const url = await pushCfg(); if (!url) { els.forEach(e => e.remove()); return; }
+  els.forEach(e => e.dataset.ok = "1");
+  let data = {};
+  try { data = await vget(`${url}/votos?ids=${els.map(e => e.dataset.vote).join(",")}&uid=${encodeURIComponent(myUid())}`); } catch (e) { els.forEach(x => x.remove()); return; }
+  els.forEach(el => paintVote(el, data[el.dataset.vote] || { H: 0, D: 0, A: 0, n: 0 }));
+}
+function paintVote(el, v) {
+  const open = !el.dataset.k || Date.now() < new Date(el.dataset.k).getTime(), mio = v.mio, n = v.n || 0;
+  const m = el.dataset.m ? el.dataset.m.split(",").map(Number) : null, lab = { H: el.dataset.h, D: "Empate", A: el.dataset.a };
+  const sh = k => n ? v[k] / n : 0;
+  const btns = open ? `<div class="vbtns">${["H", "D", "A"].map(k => `<button class="vbtn${mio === k ? " on" : ""}" data-votar="${k}">${esc(lab[k])}</button>`).join("")}</div>` : "";
+  const bars = (mio || !open) && n ? `<div class="vres">${["H", "D", "A"].map((k, i) => `<div class="vr"><span class="vl">${esc(lab[k])}</span><div class="vtbs">
+      <div class="vtb"><span class="vbarw"><i class="g" style="width:${100 * sh(k)}%"></i></span><b class="num">${pct(sh(k))}</b></div>${m ? `<div class="vtb"><span class="vbarw"><i class="b" style="width:${100 * m[i]}%"></i></span><b class="num bt">${pct(m[i])}</b></div>` : ""}</div></div>`).join("")}
+      <div class="vleg"><span><i class="g"></i>La gente (${n} ${n === 1 ? "voto" : "votos"})</span>${m ? `<span><i class="b"></i>Ballytics</span>` : ""}</div></div>` : "";
+  el.innerHTML = `<div class="vq"><h3>¿Quién gana?</h3><span class="note">${open ? (mio ? "Tu voto quedó guardado; puedes cambiarlo hasta que empiece." : "Vota y compara con la gente y con Ballytics.") : "Votación cerrada."}</span></div>${btns}${bars || (!n && !open ? `<p class="note">Nadie votó en este partido.</p>` : "")}`;
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-votar]"); if (!b) return;
+  const el = b.closest("[data-vote]"), url = await pushCfg(); if (!el || !url) return;
+  e.stopPropagation(); el.querySelectorAll(".vbtn").forEach(x => x.disabled = true);
+  try {
+    const r = await fetch(url + "/voto", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: el.dataset.vote, v: b.dataset.votar, uid: myUid(), k: el.dataset.k }) });
+    const j = await r.json(); if (j.ok) paintVote(el, { ...j.votos, n: j.votos.H + j.votos.D + j.votos.A, mio: j.mio }); else toast(j.error || "No se pudo votar.");
+  } catch (x) { toast("No se pudo votar. Revisa tu conexión."); el.querySelectorAll(".vbtn").forEach(x => x.disabled = false); }
+}, true);
+
+/* ---------- ficha de jugador (cualquier jugador de ESPN) ---------- */
+const ESPN_C = "https://site.api.espn.com/apis/common/v3/sports/soccer";
+const POS_ES = { Forward: "Delantero", Midfielder: "Mediocampista", Defender: "Defensa", Goalkeeper: "Arquero", "Attacking Midfielder": "Volante ofensivo", "Defensive Midfielder": "Volante defensivo", "Center Back": "Defensa central", "Left Back": "Lateral izquierdo", "Right Back": "Lateral derecho", Striker: "Centrodelantero", Winger: "Extremo" };
+const toM = s => { const m = String(s || "").match(/(\d+)'\s*(\d+)/); return m ? ((+m[1] * 12 + +m[2]) * 0.0254).toFixed(2).replace(".", ",") + " m" : s || ""; };
+const toKg = s => { const m = String(s || "").match(/(\d+)/); return m ? Math.round(+m[1] * 0.4536) + " kg" : s || ""; };
+const ficha = (id, html) => /^\d+$/.test(String(id || "")) ? `<button class="link flink" data-go="ficha" data-id="${esc(id)}">${html}</button>` : html;
+function vFicha() {
+  setTimeout(() => vFillFicha(R.id), 0);
+  return `<section class="view"><button class="back" onclick="history.back()">← Volver</button><div id="fi-box"><div class="panel empty">Cargando jugador…</div></div></section>`;
+}
+async function vFillFicha(id) {
+  const box = document.getElementById("fi-box"); if (!box) return;
+  let a, o, g;
+  try { [a, o, g] = await Promise.all([vget(`${ESPN_C}/athletes/${id}`), vget(`${ESPN_C}/athletes/${id}/overview`).catch(() => null), vget(`${ESPN_C}/athletes/${id}/gamelog`).catch(() => null)]); }
+  catch (e) { box.innerHTML = `<div class="panel empty">No encontré a este jugador.</div>`; return; }
+  if (R.v !== "ficha" || R.id !== id) return;
+  const A = a.athlete || {}, st = (o && o.statistics) || {}, names = st.names || [], t = A.team || {};
+  const splits = (st.splits || []), dom = splits.find(s => s.leagueSlug && !/fifa|uefa\.nations|uefa\.euro|conmebol\.america|friendly|charity/.test(s.leagueSlug));
+  const tslug = (dom && dom.leagueSlug) || (t.slug || "").split(".").slice(0, 2).join(".");
+  const tlogo = ((t.logos || [])[0] || {}).href || (t.id ? `https://a.espncdn.com/i/teamlogos/soccer/500/${t.id}.png` : "");
+  const pos = POS_ES[(A.position || {}).displayName] || (A.position || {}).displayName || "";
+  const idx = k => names.indexOf(k), gv = (s, k) => idx(k) >= 0 ? s.stats[idx(k)] : "—";
+  const sum = k => splits.filter(s => !/charity|friendly/.test(s.leagueSlug || "")).reduce((x, s) => x + (+gv(s, k) || 0), 0);
+  const Lf = { equipos: { [t.displayName || ""]: { color: t.color, logo: tlogo } } };
+  const facts = [["Edad", A.age ? `${A.age} años` : ""], ["Nacionalidad", A.citizenship ? `${(A.flag || {}).href ? `<img class="fflag" src="${esc(A.flag.href)}" alt="">` : ""}${esc(A.citizenship)}` : ""], ["Posición", esc(pos)],
+    ["Camiseta", A.jersey ? "#" + esc(A.jersey) : ""], ["Altura", esc(toM(A.displayHeight))], ["Peso", esc(toKg(A.displayWeight))], ["Nacimiento", esc(A.displayDOB || "")]].filter(f => f[1]);
+  const evs = (g && g.events) || {}, lnames = (g && g.names) || [], log = [];
+  ((g && g.seasonTypes) || []).forEach(sx => (sx.categories || []).forEach(c => (c.events || []).forEach(e => { const m = evs[e.eventId]; if (m) log.push({ e, m, liga: c.displayName || "" }); })));
+  log.sort((x, y) => String(y.m.gameDate).localeCompare(String(x.m.gameDate)));
+  const li = k => lnames.indexOf(k);
+  const next = o && o.nextGame && o.nextGame.league && (o.nextGame.league.events || [])[0];
+  const news = ((o && o.news) || []).slice(0, 4);
+  box.innerHTML = `<div class="panel fhero">${face(Lf, t.displayName || "", id, A.displayName, "xl")}
+      <div class="fh-txt"><span class="lbl">${esc(pos)}</span><h1>${esc(A.displayName || "")}</h1>
+      ${t.id ? `<button class="link fteam" data-go="club" data-liga="${esc(tslug || "all")}" data-id="${esc(t.id)}">${tlogo ? `<img src="${esc(tlogo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}${esc(t.displayName || "")}</button>` : ""}</div>
+      <div class="fh-k">${[["Goles", sum("totalGoals")], ["Asist.", sum("goalAssists")], ["Partidos", sum("starts") + sum("subIns") || sum("starts")]].map(([l, v]) => `<div><b class="num">${v}</b><span>${l}</span></div>`).join("")}</div></div>
+    <div class="ffacts">${facts.map(([l, v]) => `<div><span class="lbl">${l}</span><b>${v}</b></div>`).join("")}</div>
+    ${next ? `<button class="panel fnext" data-go="envivo" data-id="${esc(next.id)}"><span class="lbl">Próximo partido</span><b>${esc((next.name || "").replace(" at ", " vs "))}</b><span class="muted">${esc(new Date(next.date).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))} · ${hhmm(next.date)} · ${esc(o.nextGame.league.shortName || "")}</span></button>` : ""}
+    ${splits.length ? `<div class="panel flush scroll"><div class="ph"><h3>Temporada por competición</h3></div><table class="t"><thead><tr><th>Competición</th><th class="n">Tit.</th><th class="n">Goles</th><th class="n">Asist.</th><th class="n hide-m">Remates</th><th class="n hide-m">Al arco</th><th class="n">🟨</th><th class="n">🟥</th></tr></thead><tbody>${splits.map(s => `<tr><td>${esc((s.displayName || "").replace(/^\d{4}(-\d{2})?\s*/, ""))}</td><td class="n">${esc(gv(s, "starts"))}</td><td class="n"><b>${esc(gv(s, "totalGoals"))}</b></td><td class="n">${esc(gv(s, "goalAssists"))}</td><td class="n hide-m">${esc(gv(s, "totalShots"))}</td><td class="n hide-m">${esc(gv(s, "shotsOnTarget"))}</td><td class="n">${esc(gv(s, "yellowCards"))}</td><td class="n">${esc(gv(s, "redCards"))}</td></tr>`).join("")}</tbody></table></div>` : ""}
+    ${log.length ? `<div class="panel flush"><div class="ph"><h3>Últimos partidos</h3></div>${log.slice(0, 10).map(({ e, m, liga }) => { const r = (m.gameResult || "").toUpperCase(), cl = r === "W" ? "G" : r === "L" ? "P" : r === "D" ? "E" : "";
+        const sv = k => li(k) >= 0 ? +(e.stats || [])[li(k)] || 0 : 0, gl = sv("totalGoals"), as = sv("goalAssists"), yc = sv("yellowCards"), rc = sv("redCards");
+        return `<button class="flog" data-go="envivo" data-id="${esc(m.id || e.eventId)}"><span class="faint num">${esc(new Date(m.gameDate).toLocaleDateString("es-CL", { day: "numeric", month: "short" }))}</span><span class="form"><i class="${cl}">${cl || "·"}</i></span>
+          <span class="fop">${(m.opponent || {}).logo ? `<img src="${esc(m.opponent.logo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}${m.atVs === "@" ? "en " : "vs "}${esc((m.opponent || {}).displayName || "")}</span><span class="num">${esc(m.score || "")}</span>
+          <span class="fst">${"⚽".repeat(Math.min(gl, 4))}${as ? ` <small>${as} asist.</small>` : ""}${yc ? " 🟨" : ""}${rc ? " 🟥" : ""}</span></button>`; }).join("")}</div>` : ""}
+    ${news.length ? `<h2>Noticias</h2>${newsCards(news)}` : ""}
+    <p class="note">Datos de ESPN.</p>`;
+}
+
+/* ---------- videos del partido ---------- */
+function videosHtml(j) {
+  const V = (j.videos || []).filter(v => v.links && v.headline).slice(0, 6); if (!V.length) return "";
+  return `<div class="panel stack"><h3>Videos</h3><div class="vvids">${V.map((v, i) => { const src = ((v.links.source || {}).HD || {}).href || (v.links.source || {}).href || ((v.links.mobile || {}).source || {}).href || "", web = ((v.links.web || {}).href) || "";
+    return `<button class="vvid" data-vsrc="${esc(src)}" data-vweb="${esc(web)}" data-vt="${esc(v.headline)}">${v.thumbnail ? `<img src="${esc(v.thumbnail)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ""}<span class="vplay">▶</span><span class="vvt">${esc(v.headline)}</span>${v.duration ? `<small>${Math.floor(v.duration / 60)}:${String(v.duration % 60).padStart(2, "0")}</small>` : ""}</button>`; }).join("")}</div></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-vsrc]"); if (!b) return;
+  if (!b.dataset.vsrc) { if (b.dataset.vweb) window.open(b.dataset.vweb, "_blank", "noopener"); return; }
+  const m = document.createElement("div"); m.className = "vmodal vplayer";
+  m.innerHTML = `<div role="dialog" aria-label="Video"><video src="${esc(b.dataset.vsrc)}" controls autoplay playsinline></video><div class="row" style="justify-content:space-between;margin-top:10px"><b>${esc(b.dataset.vt)}</b><button class="btn ghost sm" data-modal-x>Cerrar</button></div></div>`;
+  m.addEventListener("click", ev => { if (ev.target === m || ev.target.closest("[data-modal-x]")) m.remove(); });
+  document.body.appendChild(m);
+});
+
+/* ---------- preferencias de avisos ---------- */
+function prefsModal() {
+  const p = myPrefs(), L = [["gol", "⚽ Goles"], ["roja", "🟥 Tarjetas rojas"], ["inicio", "▶️ Inicio del partido"], ["final", "🏁 Resultado final"], ["alin", "📋 Alineaciones confirmadas"], ["prev", "⏰ 15 minutos antes"]];
+  const m = document.createElement("div"); m.className = "vmodal";
+  m.innerHTML = `<div role="dialog" aria-label="Avisos"><h3>¿De qué te aviso?</h3><p class="note">Vale para todos los partidos que sigues con la campana.</p><div class="prefs">${L.map(([k, n]) => `<label class="pref"><input type="checkbox" data-pref="${k}" ${p[k] ? "checked" : ""}><span>${n}</span></label>`).join("")}</div>
+    <p class="note">${isIOS() && !isStandalone() ? "En iPhone/iPad, instala Ballytics en la pantalla de inicio para recibir avisos con la app cerrada." : ""}</p><button class="btn" data-modal-x>Listo</button></div>`;
+  m.addEventListener("change", async ev => { const k = ev.target.dataset.pref; if (!k) return; const q = myPrefs(); q[k] = ev.target.checked ? 1 : 0; lsSet("bt_prefs", q);
+    try { const s = await pushSub(); if (s) await fetch(s.url + "/prefs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ endpoint: s.sub.endpoint, prefs: q }) }); } catch (x) {} });
+  m.addEventListener("click", ev => { if (ev.target === m || ev.target.closest("[data-modal-x]")) m.remove(); });
+  document.body.appendChild(m);
+}
+document.addEventListener("click", e => { if (e.target.closest("[data-prefs]")) prefsModal(); });
+
+/* ---------- simulación de copas ---------- */
+function lCopa(L) {
+  const C = L.copa; if (!C) return `<div class="panel empty">Sin simulación disponible.</div>`;
+  const bar = (v, cls = "") => `<span class="pbar ${cls}"><i style="width:${Math.max(0, Math.min(100, 100 * v))}%"></i></span><span class="num">${v >= 0.995 ? ">99 %" : v > 0 && v < 0.005 ? "<1 %" : pct(v)}</span>`;
+  if (C.tipo === "fase_liga") return `<div class="panel stack"><h3>Simulación de la copa ${help("Se simulan los partidos que faltan de la fase de liga con las probabilidades del modelo y luego la fase final con un cuadro simplificado por posiciones (sin sorteo). Sirve para dimensionar opciones, no como pronóstico exacto.")}</h3>
+      <p class="note">${C.sims.toLocaleString("es-CL")} simulaciones · quedan ${C.quedan} partidos de la fase de liga.</p></div>
+    <div class="panel flush scroll"><table class="t copa"><thead><tr><th>#</th><th>Equipo</th><th class="n">Pts</th><th class="n">Pts esp.</th><th>Top 8</th><th class="hide-m">Playoff</th><th class="hide-m">Eliminado</th><th class="hide-m">Final</th><th>Campeón</th></tr></thead><tbody>${C.equipos.map((r, i) => `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(r.equipo)}"><td><span class="pos">${i + 1}</span></td><td class="team">${badge(L, r.equipo)}${esc(corto(L, r.equipo))}</td><td class="n">${r.pts}</td><td class="n"><b>${dec(r.pts_esp, 1)}</b></td>
+      <td class="pc">${bar(r.p_directo, "cl")}</td><td class="pc hide-m">${bar(r.p_playoff, "el")}</td><td class="pc hide-m">${bar(r.p_elim, "desc")}</td><td class="pc hide-m">${bar(r.p_final)}</td><td class="pc">${bar(r.p_campeon, "gold")}</td></tr>`).join("")}</tbody></table></div>`;
+  const ties = (C.llaves || []).map(t => `<div class="tie panel"><div class="tie-t"><span class="${t.p_a >= .5 ? "fav" : ""}">${badge(L, t.a)}<b>${esc(corto(L, t.a))}</b></span><span class="tie-s num">${t.ida ? `Ida ${esc(t.ida)}` : "Ida —"}<br>${t.vuelta ? `Vuelta ${esc(t.vuelta)}` : "Vuelta —"}</span><span class="r ${t.p_a < .5 ? "fav" : ""}"><b>${esc(corto(L, t.b))}</b>${badge(L, t.b)}</span></div>
+      ${t.decidida && (t.p_a === 1 || t.p_a === 0) ? `<p class="tie-d">Avanzó <b>${esc(corto(L, t.p_a === 1 ? t.a : t.b))}</b>${t.penales ? " por penales" : ""}</p>` : `<div class="tie-b"><i style="width:${100 * t.p_a}%"></i></div><div class="tie-n num"><span>${pct(t.p_a)}</span><span>avanza</span><span>${pct(1 - t.p_a)}</span></div>`}</div>`).join("");
+  const camp = (C.campeon || []).map(c => `<div class="crow">${badge(L, c.equipo)}<b>${esc(corto(L, c.equipo))}</b>${bar(c.p, "gold")}</div>`).join("");
+  return `${C.final ? `<div class="panel stack"><h3>Final</h3><p>${esc(corto(L, C.final.a))} vs ${esc(corto(L, C.final.b))} · ${esc(cuando(C.final.fecha))}</p></div>` : ""}
+    ${ties ? `<h2>Llaves de la ronda</h2><div class="ties">${ties}</div>` : ""}
+    ${camp ? `<div class="panel stack"><h3>Probabilidad de campeón</h3>${camp}</div>` : ""}
+    <p class="note">Probabilidades del modelo para cada llave de ida y vuelta (con el resultado de la ida si ya se jugó). Empate en el global: penales al 50 %.</p>`;
+}
+
+/* ---------- prode ---------- */
+const myProdes = () => lsGet("bt_prodes", []);
+function saveProde(code, nombre) { const l = myProdes().filter(x => x.code !== code); l.unshift({ code, nombre }); lsSet("bt_prodes", l.slice(0, 20)); }
+function vProde() {
+  const code = (R.id || "").toUpperCase();
+  setTimeout(() => code ? vFillProde(code) : null, 0);
+  if (code) return `<section class="view"><button class="back" data-go="prode">← Mis prodes</button><div id="pr-box"><div class="panel empty">Cargando prode…</div></div></section>`;
+  const L = myProdes(), alias = lsGet("bt_alias", "");
+  return `<section class="view" aria-labelledby="h-prode"><h1 id="h-prode">Prode</h1>${vHub("prode")}
+    <div class="panel prode-hero"><div><h2>Juega a pronosticar con tus amigos</h2><p class="muted">Crea un prode, comparte el código y pronostiquen los marcadores. <b>3 puntos</b> por marcador exacto y <b>1</b> por acertar el ganador o el empate. Los pronósticos de los demás se ven cuando empieza cada partido.</p></div></div>
+    ${L.length ? `<div class="panel stack"><h3>Mis prodes</h3><div class="slist">${L.map(p => `<button class="srow" data-go="prode" data-id="${esc(p.code)}"><span class="pcode num">${esc(p.code)}</span><span><b>${esc(p.nombre)}</b><small>Toca para pronosticar y ver el ranking</small></span><span class="sn">→</span></button>`).join("")}</div></div>` : ""}
+    <div class="grid2"><form class="panel stack" id="pr-new"><h3>Crear un prode</h3><label class="f"><span class="lbl">Nombre del prode</span><input name="nombre" maxlength="40" placeholder="Los del curso" required></label><label class="f"><span class="lbl">Tu apodo</span><input name="alias" maxlength="24" value="${esc(alias)}" placeholder="Benja" required></label><button class="btn">Crear</button></form>
+      <form class="panel stack" id="pr-join"><h3>Unirme con un código</h3><label class="f"><span class="lbl">Código</span><input name="code" maxlength="6" placeholder="ABC234" style="text-transform:uppercase" required></label><label class="f"><span class="lbl">Tu apodo</span><input name="alias" maxlength="24" value="${esc(alias)}" required></label><button class="btn">Unirme</button></form></div></section>`;
+}
+document.addEventListener("submit", async e => {
+  const f = e.target; if (!["pr-new", "pr-join", "pr-join2"].includes(f.id)) return;
+  e.preventDefault();
+  const url = await pushCfg(); if (!url) { toast("El servidor del prode no está disponible."); return; }
+  const fd = Object.fromEntries(new FormData(f)); lsSet("bt_alias", fd.alias || "");
+  const path = f.id === "pr-new" ? "/prode/crear" : "/prode/unirse";
+  try {
+    const r = await (await fetch(url + path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...fd, code: (fd.code || f.dataset.code || "").toUpperCase(), uid: myUid() }) })).json();
+    if (!r.ok) { toast(r.error || "No se pudo."); return; }
+    saveProde(r.code, fd.nombre || f.dataset.nombre || r.code); go({ v: "prode", id: r.code });
+  } catch (x) { toast("No se pudo conectar con el servidor."); }
+});
+async function prodeFixtures() {
+  await vComps();
+  const fav = favComps(), today = new Date(), out = [];
+  for (let i = 0; i < 7; i++) { const d = new Date(today); d.setDate(d.getDate() + i); try { out.push(...(await vFetchDay(ymd(d)))); } catch (e) {} }
+  return out.filter(e => e.state === "pre" && new Date(e.date).getTime() > Date.now() && (fav.includes(e.slug) || (VV.byId[e.lid] && VV.byId[e.lid].o < 25)))
+    .sort((a, b) => a.date.localeCompare(b.date)).slice(0, 80);
+}
+async function vFillProde(code) {
+  const box = document.getElementById("pr-box"), url = await pushCfg(); if (!box) return;
+  if (!url) { box.innerHTML = `<div class="panel empty">El servidor del prode no está disponible.</div>`; return; }
+  let g;
+  try { g = await vget(`${url}/prode/${code}?uid=${encodeURIComponent(myUid())}&t=${Date.now()}`); } catch (e) { box.innerHTML = `<div class="panel empty">No pude cargar el prode.</div>`; return; }
+  if (R.v !== "prode" || (R.id || "").toUpperCase() !== code) return;
+  if (!g.ok) { box.innerHTML = `<div class="panel empty">${esc(g.error || "No existe ese prode.")}</div>`; return; }
+  saveProde(code, g.nombre);
+  const link = `${location.origin}${location.pathname}#/prode/${code}`;
+  if (!g.miembro) { box.innerHTML = `<div class="panel prode-hero"><div><span class="lbl">Te invitaron a</span><h2>${esc(g.nombre)}</h2><p class="muted">${g.tabla.length} participantes.</p></div></div>
+    <form class="panel stack" id="pr-join2" data-code="${esc(code)}" data-nombre="${esc(g.nombre)}"><h3>Unirme</h3><label class="f"><span class="lbl">Tu apodo</span><input name="alias" maxlength="24" value="${esc(lsGet("bt_alias", ""))}" required></label><button class="btn">Unirme al prode</button></form>`; return; }
+  const tab = ["pronosticar", "ranking", "resultados"].includes(R.tab) ? R.tab : "pronosticar";
+  const head = `<div class="panel prode-hero"><div><span class="lbl">Prode</span><h2>${esc(g.nombre)}</h2><p class="muted">Código <b class="num pcode">${esc(code)}</b> · ${g.tabla.length} participantes</p></div><button class="btn ghost sm" data-copy="${esc(link)}">Copiar invitación</button></div>
+    <div class="mtabs vtabs" role="tablist">${[["pronosticar", "Pronosticar"], ["ranking", "Ranking"], ["resultados", "Resultados"]].map(([k, n]) => `<button role="tab" data-go="prode" data-id="${esc(code)}" data-tab="${k}" data-keep aria-selected="${k === tab}">${n}</button>`).join("")}</div>`;
+  if (tab === "ranking") {
+    box.innerHTML = head + `<div class="panel flush scroll"><table class="t"><thead><tr><th>#</th><th>Jugador</th><th class="n">Pts</th><th class="n">Exactos</th><th class="n">Aciertos</th><th class="n hide-m">Jugados</th></tr></thead><tbody>${g.tabla.map((r, i) => `<tr class="${r.yo ? "hl" : ""}"><td><span class="pos ${i === 0 && r.pts ? "gold" : ""}">${i + 1}</span></td><td><b>${esc(r.alias)}</b>${r.yo ? ' <span class="tag">tú</span>' : ""}</td><td class="n"><b>${r.pts}</b></td><td class="n">${r.exactos}</td><td class="n">${r.aciertos}</td><td class="n hide-m">${r.jugados}</td></tr>`).join("")}</tbody></table></div>`;
+    return;
+  }
+  if (tab === "resultados") {
+    const done = g.eventos.filter(e => e.otros).reverse();
+    const pts = (p, r) => { if (!p || !r) return ""; const [a, b] = p.split("-").map(Number), [c, d] = r.split("-").map(Number); return a === c && b === d ? "3" : Math.sign(a - b) === Math.sign(c - d) ? "1" : "0"; };
+    box.innerHTML = head + (done.length ? done.map(e => `<div class="panel stack pres"><div class="row" style="justify-content:space-between"><b>${esc(e.h)} ${e.res ? `<span class="num">${esc(e.res)}</span>` : "vs"} ${esc(e.a)}</b><span class="note">${esc(e.comp || "")} · ${esc(cuando(e.k))}</span></div>
+      <div class="ppicks">${e.otros.map(o => `<span class="pp p${pts(o.pick, e.res)}"><b>${esc(o.alias)}</b> ${esc(o.pick)}${e.res ? ` · ${pts(o.pick, e.res)} ${pts(o.pick, e.res) === "1" ? "pt" : "pts"}` : ""}</span>`).join("")}</div></div>`).join("") : `<div class="panel empty">Aún no empieza ningún partido pronosticado.</div>`);
+    return;
+  }
+  box.innerHTML = head + `<div id="pr-fx"><div class="panel empty">Buscando partidos de los próximos 7 días…</div></div>`;
+  const fx = await prodeFixtures(); if (R.v !== "prode") return;
+  const mine = Object.fromEntries(g.eventos.filter(e => e.mio).map(e => [e.id, e.mio]));
+  const byDay = {}; fx.forEach(e => (byDay[localDay(e.date)] ||= []).push(e));
+  const el = document.getElementById("pr-fx"); if (!el) return;
+  el.innerHTML = fx.length ? Object.keys(byDay).map(k => `<div class="panel flush vcomp"><div class="vch"><b>${esc(fromYmd(k).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))}</b></div>${byDay[k].map(e => { const [a, b] = (mine[e.id] || "-").split("-");
+      return `<div class="prow" data-pid="${esc(e.id)}" data-k="${esc(e.date)}" data-slug="${esc(e.slug || "all")}" data-h="${esc(e.h.name)}" data-a="${esc(e.a.name)}" data-comp="${esc(e.comp)}"><span class="ptime num">${hhmm(e.date)}</span>
+        <span class="pteam r">${esc(e.h.name)}${e.h.logo ? `<img src="${esc(e.h.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}</span>
+        <input class="pin" inputmode="numeric" maxlength="2" value="${esc(a || "")}" aria-label="Goles de ${esc(e.h.name)}"><span class="faint">–</span><input class="pin" inputmode="numeric" maxlength="2" value="${esc(b || "")}" aria-label="Goles de ${esc(e.a.name)}">
+        <span class="pteam">${e.a.logo ? `<img src="${esc(e.a.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}${esc(e.a.name)}</span><span class="pok">${mine[e.id] ? "✓" : ""}</span><small class="pcomp">${esc(e.comp)}</small></div>`; }).join("")}</div>`).join("")
+    : `<div class="panel empty">No hay partidos de las competiciones principales en los próximos 7 días. Marca competiciones con ⭐ para incluirlas.</div>`;
+}
+document.addEventListener("input", e => {
+  if (!e.target.classList || !e.target.classList.contains("pin")) return;
+  e.target.value = e.target.value.replace(/\D/g, "").slice(0, 2);
+  const row = e.target.closest(".prow"), ins = row.querySelectorAll(".pin");
+  if (ins[0].value === "" || ins[1].value === "") return;
+  clearTimeout(row._t);
+  row._t = setTimeout(async () => {
+    const url = await pushCfg(); const ok = row.querySelector(".pok"); ok.textContent = "…";
+    try {
+      const r = await (await fetch(url + "/prode/pick", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code: (R.id || "").toUpperCase(), uid: myUid(), id: row.dataset.pid, pick: `${+ins[0].value}-${+ins[1].value}`, k: row.dataset.k, slug: row.dataset.slug, h: row.dataset.h, a: row.dataset.a, comp: row.dataset.comp }) })).json();
+      ok.textContent = r.ok ? "✓" : "✕"; if (!r.ok) toast(r.error || "No se pudo guardar.");
+    } catch (x) { ok.textContent = "✕"; toast("No se pudo guardar. Revisa tu conexión."); }
+  }, 500);
+});
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-copy]"); if (!b) return;
+  const txt = b.dataset.copy;
+  try { if (navigator.share && /Mobi|iPad|iPhone|Android/.test(navigator.userAgent)) await navigator.share({ title: "Prode Ballytics", text: "Únete a mi prode en Ballytics", url: txt }); else { await navigator.clipboard.writeText(txt); toast("Invitación copiada. Pégala en WhatsApp."); } }
+  catch (x) { try { await navigator.clipboard.writeText(txt); toast("Invitación copiada."); } catch (y) { toast(txt); } }
+});
 
 load().then(() => { R = fromHash(); render(); pollLive(); setInterval(pollLive, 60000);
   D.all.then(() => { if (R.v === "inicio" || R.v === "registro") { const y = window.scrollY; render(); window.scrollTo(0, y); } }); })
