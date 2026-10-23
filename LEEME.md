@@ -89,6 +89,12 @@ Secreto `ODDS_API_KEY`. Con el plan gratis (500 créditos al mes) cada liga se a
 ## xG (goles esperados)
 El robot guarda el xG de los partidos terminados desde las estadísticas de API-Football (`data/xg/partidos.json`); como el plan gratis solo deja consultar de ayer a mañana, la historia se arma día a día. `pipeline/backtest_xg.py` (workflow "Backtest de xG", mensual o a mano) compara el modelo con y sin xG, y el robot lo usa solo si `data/backtest_xg.json` dice `"usar": true`. Understat no se usa porque no permite descargas automáticas.
 
+## App instalable y avisos de gol
+- `site/manifest.webmanifest` y `site/sw.js` hacen que Ballytics se pueda instalar (en iPhone/iPad: Safari → Compartir → Agregar a inicio).
+- `worker/index.js` es el servidor de avisos (Cloudflare Workers, plan gratis): cada minuto revisa en ESPN los partidos que alguien sigue y manda un push al haber gol, al empezar y al terminar.
+- `.github/workflows/avisos.yml` lo instala solo con los secretos `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID`, y escribe su dirección en `site/avisos.json`.
+- En iPhone/iPad los avisos con la app cerrada solo funcionan si Ballytics está instalada en la pantalla de inicio.
+
 ## Cambiar cosas
 - **Horario:** la línea `cron` del workflow (está en hora UTC; Chile es UTC-3).
 - **Ligas:** la lista `LIGAS` en `pipeline/generar.py` (códigos de ESPN como `eng.1`, `esp.1`, `por.1`, `ned.1`, `arg.1`, `chi.1`).

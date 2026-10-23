@@ -1,0 +1,92 @@
+name: Servidor de avisos (Cloudflare)
+
+# Instala o actualiza el servidor de avisos de gol en Cloudflare Workers (plan gratis).
+# Necesita los secretos CLOUDFLARE_API_TOKEN y CLOUDFLARE_ACCOUNT_ID. Sin ellos no hace nada.
+on:
+  push:
+    branches: [main]
+    paths: ["worker/**", ".github/workflows/avisos.yml"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: actualizar
+  cancel-in-progress: false
+
+jobs:
+  desplegar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: Revisar secretos
+        id: s
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "Faltan los secretos de Cloudflare: no se instala nada."; echo "ok=no" >> "$GITHUB_OUTPUT"
+          else echo "ok=si" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-node@v6
+        if: steps.s.outputs.ok == 'si'
+        with:
+          node-version: "22"
+      - name: Preparar Cloudflare (almacenamiento y subdominio)
+        if: steps.s.outputs.ok == 'si'
+        id: cf
+        run: |
+          set -e
+          API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID"
+          H="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          NS=$(curl -s -H "$H" "$API/storage/kv/namespaces?per_page=100" | jq -r '.result[]? | select(.title=="ballytics-avisos") | .id' | head -1)
+          if [ -z "$NS" ]; then
+            NS=$(curl -s -X POST -H "$H" -H "Content-Type: application/json" -d '{"title":"ballytics-avisos"}' "$API/storage/kv/namespaces" | jq -r '.result.id // empty')
+          fi
+          [ -n "$NS" ] || { echo "No pude crear el almacenamiento KV (revisa los permisos del token)."; exit 1; }
+          SUB=$(curl -s -H "$H" "$API/workers/subdomain" | jq -r '.result.subdomain // empty')
+          if [ -z "$SUB" ]; then
+            for cand in ballytics ballyticsia "ballytics-$RANDOM"; do
+              SUB=$(curl -s -X PUT -H "$H" -H "Content-Type: application/json" -d "{\"subdomain\":\"$cand\"}" "$API/workers/subdomain" | jq -r '.result.subdomain // empty')
+              [ -n "$SUB" ] && break
+            done
+          fi
+          [ -n "$SUB" ] || { echo "No pude activar el subdominio workers.dev."; exit 1; }
+          cat > worker/wrangler.toml <<EOF
+          name = "ballytics-avisos"
+          main = "index.js"
+          compatibility_date = "2025-01-01"
+          workers_dev = true
+          [[kv_namespaces]]
+          binding = "SUBS"
+          id = "$NS"
+          [triggers]
+          crons = ["* * * * *"]
+          EOF
+          sed -i 's/^          //' worker/wrangler.toml
+          echo "url=https://ballytics-avisos.$SUB.workers.dev" >> "$GITHUB_OUTPUT"
+      - name: Instalar el servidor
+        if: steps.s.outputs.ok == 'si'
+        working-directory: worker
+        run: npx --yes wrangler@4 deploy
+      - name: Probar y guardar la dirección para el sitio
+        if: steps.s.outputs.ok == 'si'
+        run: |
+          URL="${{ steps.cf.outputs.url }}"
+          for i in 1 2 3 4 5 6; do curl -sf "$URL/vapid" && break; sleep 10; done
+          echo "{\"url\": \"$URL\"}" > site/avisos.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add site/avisos.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Dirección del servidor de avisos"
+            for i in 1 2 3; do git pull --rebase -X theirs origin main && git push origin HEAD:main && break; sleep 10; done
+            gh workflow run actualizar.yml --ref main
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}

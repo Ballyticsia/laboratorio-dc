@@ -906,3 +906,18 @@ svg .dotg:hover .pt{fill:var(--card)}
 .vconf[open] summary::after{transform:rotate(90deg)}
 .vconf[open] summary{margin-bottom:6px}
 #vs-next{margin-bottom:14px}
+
+/* ---------- v13: app instalable ---------- */
+@supports (padding:env(safe-area-inset-top)){ @media (display-mode:standalone){ .top{padding-top:env(safe-area-inset-top)} } }
+.pwa-ban{position:relative;display:flex;align-items:flex-start;gap:14px;margin-bottom:16px;background:linear-gradient(110deg,rgba(61,139,255,.18),var(--panel) 60%)}
+.pwa-ban img{width:44px;height:44px;border-radius:11px;flex:none}
+.pwa-ban div{flex:1;min-width:0}
+.pwa-ban b{display:block;font-size:15px}
+.pwa-ban small{color:var(--muted);font-size:13px}
+.pwa-ban .x{position:absolute;top:8px;right:8px;background:none;border:0;color:var(--faint);font-size:20px;cursor:pointer;padding:4px 8px}
+.pwa-ban .btn{margin-top:10px}
+.pwa-ban small{display:block;padding-right:24px}
+.vmodal{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.55);display:grid;place-items:end center;padding:16px}
+.vmodal>div{width:min(460px,100%);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.vmodal ol{margin:10px 0 16px;padding-left:20px;line-height:1.7}
+@media (min-width:761px){.vmodal{place-items:center}}

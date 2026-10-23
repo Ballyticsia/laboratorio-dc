@@ -519,6 +519,7 @@ function vInicio() {
 
   return `<section class="view" aria-labelledby="h-inicio">
     <h1 id="h-inicio" class="sr">Ballytics: probabilidades de fútbol</h1>
+    ${installBanner()}
     <div class="hero panel">${carousel("hero", hero, "Partidos destacados")}</div>
     ${mine}
     <div class="cards">
@@ -1935,17 +1936,72 @@ async function vFillNoticias() {
 }
 
 /* ---------- avisos de gol (mientras la página está abierta) ---------- */
+/* avisos con la app cerrada: suscripción Web Push al servidor de avisos (Cloudflare) */
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const fromB64u = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), c => c.charCodeAt(0));
+async function pushCfg() {
+  if (VV.pushUrl !== undefined) return VV.pushUrl;
+  try { VV.pushUrl = (await vget("avisos.json?t=" + Date.now())).url || null; } catch (e) { VV.pushUrl = null; }
+  return VV.pushUrl;
+}
+async function pushSub() {
+  const url = await pushCfg();
+  if (!url || !("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window) || Notification.permission !== "granted") return null;
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) { const { publicKey } = await vget(url + "/vapid"); sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromB64u(publicKey) }); }
+  return { url, sub };
+}
 async function vToggleFollow(id, btn) {
   const f = followed();
-  if (f[id]) { delete f[id]; lsSet("bt_vfollow", f); if (btn) { btn.classList.remove("on"); btn.textContent = "🔕"; } return; }
+  if (f[id]) {
+    delete f[id]; lsSet("bt_vfollow", f); if (btn) { btn.classList.remove("on"); btn.textContent = btn.classList.contains("vbell2") ? "🔕 Avisarme de goles" : "🔕"; }
+    try { const p = await pushSub(); if (p) await fetch(p.url + "/unfollow", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ endpoint: p.sub.endpoint, id }) }); } catch (e) {}
+    return;
+  }
+  // el permiso se pide primero, todavía dentro del toque (Safari lo exige)
   if ("Notification" in window && Notification.permission === "default") { try { await Notification.requestPermission(); } catch (e) {} }
-  const ev = Object.values(VV.cache).flatMap(c => c.evs).find(e => e.id === id);
+  const ev = Object.values(VV.cache).flatMap(c => c.evs).find(e => e.id === id) || (VV.sum[id] && (() => { const H = vHeader(VV.sum[id].j); return { h: { score: H.h.score, name: H.h.short }, a: { score: H.a.score, name: H.a.short }, date: H.date, state: H.state, slug: H.slug }; })());
   f[id] = { s: ev ? `${ev.h.score ?? 0}-${ev.a.score ?? 0}` : "", n: ev ? `${ev.h.name} vs ${ev.a.name}` : "", d: ev ? ev.date : "" };
   lsSet("bt_vfollow", f);
-  if (btn) { btn.classList.add("on"); btn.textContent = "🔔"; }
-  if (!("Notification" in window) || Notification.permission !== "granted") toast("Te avisaré aquí en la página. Para avisos del sistema, permite las notificaciones en tu navegador.");
-  else toast("Listo: te aviso cuando haya gol en este partido.");
+  if (btn) { btn.classList.add("on"); btn.textContent = btn.classList.contains("vbell2") ? "🔔 Siguiendo" : "🔔"; }
+  let remoto = false;
+  try {
+    const p = await pushSub();
+    if (p) {
+      const r = await fetch(p.url + "/follow", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ subscription: p.sub.toJSON(), id, slug: (ev && ev.slug) || "all", name: f[id].n, s: f[id].s, st: (ev && ev.state) || "", date: f[id].d }) });
+      remoto = r.ok;
+      if (remoto) { const g = followed(); if (g[id]) { g[id].r = true; lsSet("bt_vfollow", g); } }
+    }
+  } catch (e) {}
+  if (remoto) toast("Listo: te aviso de cada gol y del final, aunque cierres Ballytics.");
+  else if (isIOS() && !isStandalone()) toast("Te aviso mientras tengas la página abierta. Para recibir avisos con Ballytics cerrado, instálala: Compartir → Agregar a inicio.");
+  else if (!("Notification" in window) || Notification.permission !== "granted") toast("Te aviso aquí mientras tengas la página abierta. Para avisos del sistema, permite las notificaciones.");
+  else toast("Listo: te aviso cuando haya gol en este partido (con la página abierta).");
 }
+
+/* ---------- instalar la app ---------- */
+let deferredInstall = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; document.querySelectorAll(".pwa-ban").forEach(x => x.hidden = false); });
+function installBanner() {
+  if (isStandalone() || lsGet("bt_pwa_x", false)) return "";
+  return `<div class="pwa-ban panel" ${!isIOS() && !deferredInstall ? "hidden" : ""}><img src="assets/icon-192.png" alt=""><div><b>Instala Ballytics</b><small>Ábrela desde tu pantalla de inicio, más rápida y con avisos de gol aunque esté cerrada.</small><button class="btn sm" data-install>Instalar</button></div><button class="x" data-install-x aria-label="Cerrar">×</button></div>`;
+}
+function iosHowTo() {
+  const m = document.createElement("div"); m.className = "vmodal";
+  m.innerHTML = `<div role="dialog" aria-label="Instalar Ballytics"><h3>Instalar en iPhone o iPad</h3><ol><li>Abre Ballytics en <b>Safari</b>.</li><li>Toca el botón <b>Compartir</b> (el cuadrado con una flecha hacia arriba).</li><li>Elige <b>Agregar a inicio</b> y luego <b>Agregar</b>.</li><li>Abre Ballytics desde el ícono nuevo y activa la campana 🔔 en los partidos que quieras seguir.</li></ol><button class="btn" data-modal-x>Entendido</button></div>`;
+  m.addEventListener("click", e => { if (e.target === m || e.target.closest("[data-modal-x]")) m.remove(); });
+  document.body.appendChild(m);
+}
+document.addEventListener("click", async e => {
+  if (e.target.closest("[data-install-x]")) { lsSet("bt_pwa_x", true); e.target.closest(".pwa-ban").remove(); return; }
+  if (!e.target.closest("[data-install]")) return;
+  if (deferredInstall) { deferredInstall.prompt(); try { await deferredInstall.userChoice; } catch (x) {} deferredInstall = null; document.querySelectorAll(".pwa-ban").forEach(x => x.remove()); }
+  else iosHowTo();
+});
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 function toast(msg) { const t = document.createElement("div"); t.className = "vtoast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 4500); }
 async function vWatch() {
   const f = followed(), ids = Object.keys(f); if (!ids.length || document.hidden) return;
@@ -1954,7 +2010,7 @@ async function vWatch() {
   try { delete VV.cache[key]; evs = await vFetchDay(key); } catch (e) { return; }
   evs.forEach(e => { const w = f[e.id]; if (!w) return; const s = `${e.h.score ?? 0}-${e.a.score ?? 0}`;
     if (w.s && s !== w.s && e.state !== "pre") { const msg = `${e.h.name} ${e.h.score} – ${e.a.score} ${e.a.name}`;
-      if ("Notification" in window && Notification.permission === "granted") { try { new Notification("¡Gol!", { body: msg, tag: e.id }); } catch (x) {} }
+      if (!w.r && "Notification" in window && Notification.permission === "granted") { try { new Notification("¡Gol!", { body: msg, tag: e.id }); } catch (x) {} }   // si hay aviso remoto, lo manda el servidor
       toast("⚽ ¡Gol! " + msg); }
     w.s = s; if (e.state === "post") delete f[e.id]; });
   lsSet("bt_vfollow", f);
