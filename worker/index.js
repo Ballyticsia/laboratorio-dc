@@ -444,6 +444,7 @@ Reglas:
 - Responde en español neutro (de Chile), claro y breve: máximo 170 palabras. Usa viñetas cortas con "- " cuando ayude y **negrita** solo para lo clave.
 - Usa SOLO los datos que vienen en DATOS. No inventes lesiones, alineaciones, rachas ni resultados. Si falta un dato, dilo.
 - Explica con números: probabilidad del modelo, cuota justa (1 / probabilidad) y, si el usuario o los datos traen cuotas, el valor esperado (EV = probabilidad × cuota − 1).
+- Escribe las probabilidades como porcentaje (66 %) y los decimales con coma (cuota 1,52; EV +2,3 %).
 - No prometas ganancias ni digas "apuesta a" o montos. Si piden una recomendación, di qué ve más probable el modelo y si alguna cuota tiene valor según el modelo, y recuerda en una línea que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero.
 - Si hablan de apostar, agrega al final una línea corta: "Juega con responsabilidad (+18)."
 - Si la pregunta no es sobre fútbol o sobre Ballytics, responde amablemente que solo puedes ayudar con los partidos y el modelo.
@@ -467,18 +468,19 @@ async function preguntarIA(env, b, ctx, req) {
   dia.n++; dia.u[h] = (dia.u[h] || 0) + 1; dia.u["ip" + ip] = (dia.u["ip" + ip] || 0) + 1;
   ctx.waitUntil(env.SUBS.put(key, JSON.stringify(dia), { expirationTtl: 3 * 86400 }));
   const messages = [{ role: "system", content: IA_SISTEMA }, { role: "user", content: `DATOS (de Ballytics, ${b.tipo === "partido" ? "un partido" : "partidos próximos"}):\n${datos}` }, { role: "assistant", content: "Entendido, uso solo esos datos." }, ...hist, { role: "user", content: q }];
-  let txt = "", modelo = "";
+  let txt = "", modelo = "", fallos = [];
   for (const m of IA_MODELOS) {
     try {
-      const r = await env.AI.run(m, { messages, max_tokens: 450, temperature: 0.3 });
+      const r = await env.AI.run(m, { messages, max_tokens: 900, temperature: 0.3 });
       txt = (r && (r.response || (r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content) || r.output_text || "")) || "";
       if (typeof txt !== "string") txt = JSON.stringify(txt);
       txt = txt.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
       if (txt) { modelo = m.split("/").pop(); break; }
-    } catch (e) { txt = ""; }
+      fallos.push(m.split("/").pop() + ": vacío " + JSON.stringify(r).slice(0, 160));
+    } catch (e) { txt = ""; fallos.push(m.split("/").pop() + ": " + String(e).slice(0, 160)); }
   }
   if (!txt) return json({ ok: false, error: "La IA no respondió. Prueba de nuevo en un rato." }, 502);
-  const out = { ok: true, r: txt.slice(0, 2500), modelo, quedan: Math.max(0, IA_TOPE_PERSONA - dia.u[h]) };
+  const out = { ok: true, r: txt.slice(0, 2500), modelo, quedan: Math.max(0, IA_TOPE_PERSONA - dia.u[h]), ...(fallos.length ? { fallos } : {}) };
   ctx.waitUntil(cache.put(ck, json(out, 200, { "cache-control": "public, max-age=1800" })));
   return json(out);
 }
