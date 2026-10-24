@@ -32,6 +32,8 @@ from modelo import XI, ALPHA, calibrar, fit, markets, mercado_q, score_matrix  #
 RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SALIDA = os.path.join(RAIZ, "site", "data")
 REGISTRO = os.path.join(RAIZ, "data", "registro.csv")
+REG_JUG = os.path.join(RAIZ, "data", "registro_jugadores.json")   # goleadores y amarillas predichos (y lo que pasó)
+EXTRA = {}   # id -> córners, tarjetas, goleadores y amonestados reales de cada partido jugado
 HISTORIAL = os.path.join(RAIZ, "data", "historial.json")
 TEMPORADAS = 3
 SIMS = 10000
@@ -379,10 +381,57 @@ def votos_gente(ids):
     return out
 
 
+try:
+    with open(REG_JUG, encoding="utf-8") as _f:
+        REGJ = json.load(_f)
+except (OSError, ValueError):
+    REGJ = {}
+
+
+def pois_over(line, lam):
+    """P(X > line) para X ~ Poisson(lam): lo mismo que muestra el sitio para córners y tarjetas."""
+    k = int(math.floor(line))
+    term = cdf = math.exp(-lam)
+    for i in range(1, k + 1):
+        term *= lam / i
+        cdf += term
+    return 1 - cdf
+
+
+def binario(p, y):
+    """Acierto, log-loss y log-loss ingenuo (siempre la frecuencia observada) de una probabilidad sí/no."""
+    p, y = np.clip(np.asarray(p, float), 1e-6, 1 - 1e-6), np.asarray(y, bool)
+    base = np.clip(y.mean(), 1e-6, 1 - 1e-6)
+    ll = -np.mean(np.where(y, np.log(p), np.log(1 - p)))
+    ing = -np.mean(np.where(y, np.log(base), np.log(1 - base)))
+    return dict(n=int(len(y)), acierto=r(((p > .5) == y).mean()), logloss=r(ll), ingenuo=r(ing), prob=r(p.mean()), real=r(y.mean()))
+
+
+def props(clave_p, clave_r):
+    """Goleadores o amarillas: cuántos se esperaban, cuántos pasaron y si la probabilidad estuvo bien medida."""
+    P, Y, top = [], [], []
+    for v in REGJ.values():
+        if clave_r not in v or v[clave_r] is None or not v.get(clave_p):
+            continue
+        real = set(v[clave_r])
+        for jid, _, p in v[clave_p]:
+            P.append(p); Y.append(jid in real)
+        top.append(v[clave_p][0][0] in real)
+    if len(P) < 10:
+        return None
+    out = binario(P, Y)
+    out.update(partidos=len(top), esperados=r(sum(P), 1), reales=int(sum(Y)), favorito=r(np.mean(top)))
+    P, Y = np.array(P), np.array(Y)
+    out["tramos"] = [dict(rango=lab, n=int(s.sum()), prob=r(P[s].mean()), real=r(Y[s].mean()))
+                     for lo, hi, lab in [(0, .2, "Menos de 20 %"), (.2, .3, "20–30 %"), (.3, .4, "30–40 %"), (.4, 1.01, "40 % o más")]
+                     for s in [(P >= lo) & (P < hi)] if s.sum()]
+    return out
+
+
 def ledger_update(pred_rows, jugados, now_iso, votos=None):
     # lh…top = modelo propio; m* = mercado sin margen; f* = probabilidad Ballytics (ajustada a la cuota si la hay)
     cols = ["id", "liga", "kickoff", "home", "away", "lh", "la", "pH", "pD", "pA", "pO25", "pBTTS", "top", "predicho", "hg", "ag", "mH", "mD", "mA",
-            "fH", "fD", "fA", "fO25", "fBTTS", "ftop", "jH", "jD", "jA", "jO25", "vH", "vD", "vA", "vN"]
+            "fH", "fD", "fA", "fO25", "fBTTS", "ftop", "jH", "jD", "jA", "jO25", "vH", "vD", "vA", "vN", "cE", "tE", "cR", "tR"]
     reg = pd.read_csv(REGISTRO, dtype={"id": str}) if os.path.exists(REGISTRO) else pd.DataFrame(columns=cols)
     reg = reg.reindex(columns=cols).set_index("id", drop=False)
     for a, b in (("fH", "pH"), ("fD", "pD"), ("fA", "pA"), ("fO25", "pO25"), ("fBTTS", "pBTTS"), ("ftop", "top")):
@@ -401,13 +450,33 @@ def ledger_update(pred_rows, jugados, now_iso, votos=None):
         q, _, _ = mercado_q(p.get("cuotas"), p.get("mercado"))
         if q is not None:
             reg.loc[p["id"], ["mH", "mD", "mA"]] = q.round(4)
+        reg.loc[p["id"], ["cE", "tE"]] = [r(p["ch"] + p["ca"], 2) if p.get("ch") is not None and p.get("ca") is not None else np.nan,
+                                          r(p["th"] + p["ta"], 2) if p.get("th") is not None and p.get("ta") is not None else np.nan]
+        pj = REGJ.setdefault(str(p["id"]), {})
+        if "rg" not in pj:   # mientras no se juegue, se guarda la última predicción antes del partido
+            pj["g"] = [[s_["jid"], s_.get("jugador", ""), s_["p"]] for s_ in sorted(p.get("goleadores", []), key=lambda z: -z["p"])[:8]]
+            pj["y"] = [[s_["jid"], s_.get("jugador", ""), s_["p"]] for s_ in sorted(p.get("tarjetas_jug", []), key=lambda z: -z["p"])[:8]]
     res = jugados.set_index("id")
     for i in reg.index[reg.hg.isna()]:
         if i in res.index:
             reg.at[i, "hg"], reg.at[i, "ag"] = res.at[i, "hg"], res.at[i, "ag"]
+    for i in reg.index:
+        ex = EXTRA.get(str(i))
+        if not ex:
+            continue
+        if pd.isna(reg.at[i, "cR"]) and ex["c"] is not None:
+            reg.at[i, "cR"] = ex["c"]
+        if pd.isna(reg.at[i, "tR"]) and ex["t"] is not None:
+            reg.at[i, "tR"] = ex["t"]
+        pj = REGJ.get(str(i))
+        if pj is not None and "rg" not in pj and ex["g"] is not None:
+            pj["rg"], pj["ry"] = ex["g"], ex["y"]
     reg = reg.reset_index(drop=True)[cols].sort_values("kickoff")
     os.makedirs(os.path.dirname(REGISTRO), exist_ok=True)
     reg.to_csv(REGISTRO, index=False)
+    vivos = set(reg.id.astype(str))
+    with open(REG_JUG, "w", encoding="utf-8") as f:
+        json.dump({k: v for k, v in REGJ.items() if k in vivos}, f, ensure_ascii=False, separators=(",", ":"))
     return reg
 
 
@@ -477,6 +546,22 @@ def ledger_summary(reg, base):
             if s.sum() >= 10:
                 cal.append(dict(pred=r(probs[s].mean()), real=r(hits[s].mean()), n=int(s.sum())))
         out["calibracion"] = cal
+        mk = {}
+        mk["o25"] = binario(g.fO25.astype(float), (g.hg + g.ag) > 2.5)
+        gb = g.dropna(subset=["fBTTS"])
+        if len(gb):
+            mk["btts"] = binario(gb.fBTTS.astype(float), (gb.hg > 0) & (gb.ag > 0))
+        for key, e_, r_, line in (("corners", "cE", "cR", 9.5), ("tarjetas", "tE", "tR", 4.5)):
+            gc = g.dropna(subset=[e_, r_])
+            if len(gc):
+                lam = gc[e_].astype(float).values
+                mk[key] = dict(binario([pois_over(line, l) for l in lam], gc[r_].astype(float).values > line), linea=line,
+                               esperado=r(lam.mean(), 2), promedio_real=r(gc[r_].astype(float).mean(), 2))
+        for key, cp, cr in (("goleadores", "g", "rg"), ("amarillas", "y", "ry")):
+            pr = props(cp, cr)
+            if pr:
+                mk[key] = pr
+        out["mercados"] = mk
     rows = reg.sort_values("kickoff", ascending=False).head(500)
     out["filas"] = clean(rows.to_dict("records"))
     return out
@@ -639,8 +724,13 @@ def main():
             ch, ca = stat(x, "h", "wonCorners"), stat(x, "a", "wonCorners")
             if ch == ch and ca == ca:
                 rr["c"] = [int(ch), int(ca)]
+            ex = dict(c=int(ch + ca) if ch == ch and ca == ca else None, t=None, g=None, y=None)
             if eventos_completos(x):
                 rr["t"] = [int(cards(x, "h")), int(cards(x, "a"))]
+                ex["t"] = rr["t"][0] + rr["t"][1]
+                if all(v.get("jid") for v in e if v["t"] in ("G", "Y")):   # sin el id del jugador no se puede calificar
+                    ex.update(g=[v["jid"] for v in e if v["t"] == "G" and not v["og"]], y=[v["jid"] for v in e if v["t"] == "Y"])
+            EXTRA[str(x.id)] = ex
             resultados.append(rr)
         jugados_all.append(jug[["id", "hg", "ag"]])
 
