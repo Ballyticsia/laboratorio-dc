@@ -15,10 +15,13 @@ with cf.ThreadPoolExecutor(24) as ex:
     for u, s, n in ex.map(chk, sorted(urls)):
         if s != 200 or n < 300: rep["urls"][u] = [s, n]
 rep["urls_total"] = len(urls)
+import urllib.request as U
+try: rep["picks"] = len(json.loads(U.urlopen(BASE + "data/picks.json?x=1", timeout=20).read())["picks"])
+except Exception as e: rep["picks"] = str(e)[:80]
 RUTAS = {
   "selecciones": "#/selecciones", "competiciones": "#/competiciones", "liga_chile": "#/liga/chile",
   "comp_chile": "#/comp/chi.1/tabla", "jugador_mls": "#/jugador/mls/45843", "prode": "#/prode",
-  "invalida": "#/xyz123", "partido_viejo": "#/partido/premier/1", "inicio": "#/", "vivo": "#/vivo",
+  "invalida": "#/xyz123", "partido_viejo": "#/partido/premier/1", "inicio": "#/", "vivo": "#/vivo", "partido": "#/liga/premier/partidos",
 }
 async def page_run(name, dev, hashr, ctx):
     pg = await ctx.new_page(); bad = []; errs = []
@@ -29,7 +32,10 @@ async def page_run(name, dev, hashr, ctx):
     await pg.wait_for_timeout(5000)
     info = await pg.evaluate("""() => ({hash: location.hash, h1: (document.querySelector('h1')||{}).textContent||'',
       broken: [...document.images].filter(i=>i.complete && i.naturalWidth===0).map(i=>i.src).slice(0,40),
-      emptyLogos: document.querySelectorAll('.vlogo:empty').length})""")
+      emptyLogos: document.querySelectorAll('.vlogo:empty').length, tfb: document.querySelectorAll('.tfb').length,
+      ver: [...document.scripts].map(x=>x.src).filter(x=>x.includes('app.js'))[0]||'',
+      natNames: [...document.querySelectorAll('#vs-next .vtn')].slice(0,6).map(x=>x.textContent),
+      tag: (document.querySelector('.tagm')||{}).textContent||''})""")
     if name == "prode":
         await pg.click("#pr-new button"); await pg.wait_for_timeout(800)
         await pg.screenshot(path=f"{OUT}/{dev}_prode_vacio.png")
