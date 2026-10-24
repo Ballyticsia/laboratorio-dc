@@ -103,6 +103,11 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - La ficha de jugador (`#/ficha/<id>`) lee directo de ESPN; la curva de probabilidad en vivo se calcula en el navegador con el marcador, el minuto y las rojas.
 - `pipeline/copas.py` simula la fase de liga de las copas UEFA y las llaves de ida y vuelta de CONMEBOL.
 
+## Pregúntale a la IA
+- El servidor de avisos tiene `/ia`: usa Workers AI de Cloudflare (plan gratis, 10.000 neuronas al día) con el modelo Gemma 4 sin razonamiento; si falla, gpt-oss-120b y Mistral Small.
+- El sitio manda la pregunta y los datos del partido (probabilidades, cuotas, bajas, goleadores) o de los próximos 3 días. La IA responde solo con esos datos y no da consejos de apuesta.
+- Topes en `worker/index.js`: `IA_TOPE_PERSONA` (15 preguntas al día por persona) e `IA_TOPE_DIA` (200 en total). Las preguntas repetidas salen de la caché por 30 minutos.
+
 ## Cambiar cosas
 - **Horario:** la línea `cron` del workflow (está en hora UTC; Chile es UTC-3).
 - **Ligas:** la lista `LIGAS` en `pipeline/generar.py` (códigos de ESPN como `eng.1`, `esp.1`, `por.1`, `ned.1`, `arg.1`, `chi.1`).
