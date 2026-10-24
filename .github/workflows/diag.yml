@@ -1,0 +1,18 @@
+name: Diagnóstico informe
+on:
+  push:
+    branches: [diagnostico]
+    paths: [diag/shots.py, .github/workflows/diag.yml]
+permissions:
+  contents: write
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - run: pip install playwright && python -m playwright install --with-deps chromium webkit
+      - run: python diag/shots.py
+      - run: |
+          git config user.name "Claude"; git config user.email "noreply@anthropic.com"
+          git add diag/out && git commit -m "Resultado diagnóstico" && git push origin HEAD:diagnostico
