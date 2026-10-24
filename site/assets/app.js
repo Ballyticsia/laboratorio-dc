@@ -483,72 +483,143 @@ function skeleton() {
 
 /* ---------------- asistente con IA ---------------- */
 // La IA (Workers AI, en el servidor de Ballytics) responde solo con los datos que se le mandan desde aquí.
+// Se abre como panel lateral desde cualquier pantalla; en un partido conversa sobre ese partido.
 const r3 = x => x == null ? null : Math.round(x * 1000) / 1000;
 function iaCtxPartido(L, p) {
-  const k = markets(pmatrix(L, p).m), st = ODDS[p.id] || {}, q = mktOf(p), sh = rowOf(L, p.home), sa = rowOf(L, p.away);
+  const k = markets(pmatrix(L, p).m), st = ODDS[p.id] || {}, q = mktOf(p), sh = rowOf(L, p.home), sa = rowOf(L, p.away), eh = statOf(L, p.home), ea = statOf(L, p.away);
   const tus = Object.fromEntries(Object.entries(st).filter(([key, v]) => key[0] !== "_" && v > 1));
   return {
     liga: L.nombre, partido: `${p.home} (local) vs ${p.away} (visita)`, fecha: p.kickoff,
-    prob_ballytics: { local: r3(k.H), empate: r3(k.D), visita: r3(k.A), mas_2_5: r3(k.O25), ambos_marcan: r3(k.B), marcador_mas_probable: p.top },
-    goles_esperados: { local: r3(p.lh), visita: r3(p.la) },
+    prob_ballytics: { local: pct(k.H), empate: pct(k.D), visita: pct(k.A), mas_2_5: pct(k.O25), ambos_marcan: pct(k.B), marcador_mas_probable: p.top },
+    cuota_justa: { local: dec(1 / k.H), empate: dec(1 / k.D), visita: dec(1 / k.A), mas_2_5: dec(1 / k.O25), ambos_marcan: dec(1 / k.B) },
+    goles_esperados: { local: dec(p.lh), visita: dec(p.la) },
     fuente_prob: p.calib ? "modelo ajustado a la cuota sin margen" : "modelo propio (sin cuota)",
-    modelo_propio: p.modelo ? { local: r3(p.modelo.pH), empate: r3(p.modelo.pD), visita: r3(p.modelo.pA) } : null,
-    mercado_sin_margen: q ? { local: r3(q.p[0]), empate: r3(q.p[1]), visita: r3(q.p[2]), fuente: q.casa || "" } : null,
+    modelo_propio: p.modelo ? { local: pct(p.modelo.pH), empate: pct(p.modelo.pD), visita: pct(p.modelo.pA) } : null,
+    mercado_sin_margen: q ? { local: pct(q.p[0]), empate: pct(q.p[1]), visita: pct(q.p[2]), fuente: q.casa || "" } : null,
     cuotas_casa: p.cuotas ? { local: p.cuotas.h, empate: p.cuotas.d, visita: p.cuotas.a, casa: p.cuotas.casa || "ESPN", linea_goles: p.cuotas.linea, mas: p.cuotas.over, menos: p.cuotas.under } : null,
     cuotas_del_usuario: Object.keys(tus).length ? tus : null,
-    corners_esperados: p.ch != null ? r3(p.ch + p.ca) : null, tarjetas_esperadas: p.th != null ? r3(p.th + p.ta) : null,
+    corners_esperados: p.ch != null ? dec(p.ch + p.ca, 1) : null, tarjetas_esperadas: p.th != null ? dec(p.th + p.ta, 1) : null,
+    promedios_temporada: { local: { goles: dec(eh.gf), recibe: dec(eh.gc), tiros_al_arco: dec(eh.tiros_arco, 1), corners: dec(eh.corners, 1), tarjetas: dec(eh.tarjetas, 1), posesion: eh.posesion != null ? dec(eh.posesion, 0) + " %" : null },
+      visita: { goles: dec(ea.gf), recibe: dec(ea.gc), tiros_al_arco: dec(ea.tiros_arco, 1), corners: dec(ea.corners, 1), tarjetas: dec(ea.tarjetas, 1), posesion: ea.posesion != null ? dec(ea.posesion, 0) + " %" : null } },
     tabla: { local: sh.pos ? `${sh.pos}º, ${sh.pts} pts, forma ${(sh.forma || []).join("")}` : null, visita: sa.pos ? `${sa.pos}º, ${sa.pts} pts, forma ${(sa.forma || []).join("")}` : null },
     bajas: p.bajas ? { local: (p.bajas.h || []).slice(0, 8).map(x => `${x.jug} (${x.tipo === "Missing Fixture" ? "baja" : "duda"}${x.goles ? `, ${x.goles} goles` : ""})`), visita: (p.bajas.a || []).slice(0, 8).map(x => `${x.jug} (${x.tipo === "Missing Fixture" ? "baja" : "duda"}${x.goles ? `, ${x.goles} goles` : ""})`) } : "sin datos",
-    goleadores_probables: (p.goleadores || []).slice(0, 5).map(g => `${g.jugador} ${Math.round(g.p * 100)}%`),
+    goleadores_probables: (p.goleadores || []).slice(0, 5).map(g => `${g.jugador} ${pct(g.p)}`),
     ultimos_cruces: (p.h2h || []).slice(0, 4).map(x => `${x.home} ${x.hg}-${x.ag} ${x.away}`),
-    nota: "Probabilidades entre 0 y 1. Cuotas en formato decimal.",
   };
 }
+const iaPartidosProx = () => { const now = Date.now();
+  return allMatches().filter(p => { const t = new Date(p.kickoff).getTime(); return t > now - 2 * 3600e3 && t < now + 3 * DAYMS; }).sort((a, b) => a.kickoff.localeCompare(b.kickoff)).slice(0, 50); };
 function iaCtxDia() {
-  const now = Date.now();
-  const ms = allMatches().filter(p => { const t = new Date(p.kickoff).getTime(); return t > now - 2 * 3600e3 && t < now + 3 * DAYMS; }).sort((a, b) => a.kickoff.localeCompare(b.kickoff)).slice(0, 55);
-  return { hoy: new Date().toISOString().slice(0, 10), zona: "Chile", partidos: ms.map(p => { const q = mktOf(p);
-    return [p.L.nombre, `${p.home} vs ${p.away}`, new Date(p.kickoff).toLocaleString("es-CL", { weekday: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }), `L ${pct(p.pH)} E ${pct(p.pD)} V ${pct(p.pA)}`, `+2,5 ${pct(p.pO25)}`, `ambos ${pct(p.pBTTS)}`, `marcador ${p.top}`, q ? `mercado L ${pct(q.p[0])} E ${pct(q.p[1])} V ${pct(q.p[2])}` : "sin cuota"].join(" | "); }),
-    formato: "liga | partido | hora | probabilidades Ballytics | +2,5 goles | ambos marcan | marcador más probable | mercado sin margen" };
+  return { hoy: new Date().toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }), zona: "Chile",
+    formato: "liga | partido | hora | prob. Ballytics local/empate/visita | +2,5 goles | ambos marcan | marcador más probable | tiros al arco por partido (local–visita) | córners esperados | mercado sin margen",
+    partidos: iaPartidosProx().map(p => { const q = mktOf(p), eh = statOf(p.L, p.home), ea = statOf(p.L, p.away);
+      return [p.L.nombre, `${p.home} vs ${p.away}`, new Date(p.kickoff).toLocaleString("es-CL", { weekday: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }), `L ${pct(p.pH)} E ${pct(p.pD)} V ${pct(p.pA)}`, `+2,5 ${pct(p.pO25)}`, `ambos ${pct(p.pBTTS)}`, p.top,
+        eh.tiros_arco != null ? `tiros ${dec(eh.tiros_arco, 1)}–${dec(ea.tiros_arco, 1)}` : "", p.ch != null ? `córners ${dec(p.ch + p.ca, 1)}` : "", q ? `mercado L ${pct(q.p[0])} E ${pct(q.p[1])} V ${pct(q.p[2])}` : "sin cuota"].filter(Boolean).join(" | "); }) };
 }
-const iaMd = t => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").split(/\n+/).map(l => /^\s*[-•*] /.test(l) ? `<li>${l.replace(/^\s*[-•*] /, "")}</li>` : `<p>${l}</p>`).join("").replace(/(<li>.*?<\/li>)+/g, m => `<ul>${m}</ul>`);
-const IAH = {};   // historial por conversación (partido o jornada), solo en esta pestaña
-function iaPanel(key, sugeridas, big) {
-  const h = IAH[key] || [];
-  return `<div class="panel stack iapanel${big ? " big" : ""}" data-ia="${esc(key)}">
-    <div class="ia-h"><span class="ia-ic" aria-hidden="true">✦</span><div><h3>Pregúntale a la IA</h3><small class="muted">Responde con las probabilidades y cuotas de Ballytics</small></div></div>
-    <div class="ia-log" aria-live="polite">${h.map(m => `<div class="ia-m ${m.r}">${m.r === "ia" ? iaMd(m.t) : esc(m.t)}</div>`).join("")}</div>
-    ${h.length ? "" : `<div class="ia-sug">${sugeridas.map(x => `<button class="chip-btn" data-iaq="${esc(x)}">${esc(x)}</button>`).join("")}</div>`}
-    <form class="ia-f" data-iaf="${esc(key)}"><input name="q" maxlength="400" autocomplete="off" placeholder="${big ? "Ej: ¿qué partidos de hoy tienen más goles?" : "Pregunta sobre este partido"}" aria-label="Tu pregunta"><button class="btn" aria-label="Enviar">Preguntar</button></form>
-    <p class="note">Respuestas generadas por IA con los datos del modelo; puede equivocarse. No es un consejo de apuesta. +18.</p></div>`;
+const iaMd = t => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^#{1,4} (.+)$/gm, "<b>$1</b>").split(/\n+/).map(l => /^\s*[-•*] /.test(l) ? `<li>${l.replace(/^\s*[-•*] /, "")}</li>` : `<p>${l}</p>`).join("").replace(/(<li>.*?<\/li>)+/g, m => `<ul>${m}</ul>`);
+// partidos que la IA nombró en su respuesta → tarjetas para tocar, ver el partido o armar la combinada
+function iaMencionados(txt, scope) {
+  const T = txt.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(), hit = [];
+  const ms = scope.startsWith("p:") ? [] : iaPartidosProx();
+  const re = n => new RegExp(`(^|[^a-z])${String(n).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z]|$)`);
+  ms.forEach(p => { const names = [p.home, p.away, corto(p.L, p.home), corto(p.L, p.away)].filter(n => n && n.length > 3);
+    let pos = -1; names.forEach(n => { const m = T.search(re(n)); if (m >= 0 && (pos < 0 || m < pos)) pos = m; });
+    const both = [[p.home, corto(p.L, p.home)], [p.away, corto(p.L, p.away)]].filter(ns => ns.some(n => n && n.length > 3 && re(n).test(T))).length;
+    if (pos >= 0 && !hit.some(h => h.p.id === p.id)) hit.push({ p, pos, both }); });
+  const dos = hit.filter(h => h.both === 2);   // si nombró "A vs B", solo esos; si no, los equipos sueltos
+  return (dos.length ? dos : hit).sort((a, b) => a.pos - b.pos).slice(0, 4).map(h => h.p);
 }
-async function iaAsk(key, q) {
-  const box = document.querySelector(`[data-ia="${CSS.escape(key)}"]`); if (!box || !q.trim()) return;
-  const log = box.querySelector(".ia-log"), f = box.querySelector(".ia-f"), btn = f.querySelector("button"), sug = box.querySelector(".ia-sug");
-  const h = IAH[key] || (IAH[key] = []);
-  h.push({ r: "yo", t: q.trim() }); if (sug) sug.remove();
-  log.insertAdjacentHTML("beforeend", `<div class="ia-m yo">${esc(q.trim())}</div><div class="ia-m ia wait"><span class="dots"><i></i><i></i><i></i></span></div>`);
-  log.lastElementChild.scrollIntoView({ block: "nearest" });
-  btn.disabled = true; f.q.value = "";
-  let ctx, tipo;
-  if (key.startsWith("p:")) { const id = key.slice(2); const L = Object.values(D.ligas).find(L => L.partidos.some(x => String(x.id) === id)); const p = L && findMatch(L.id, id); ctx = p ? iaCtxPartido(L, p) : {}; tipo = "partido"; }
-  else { await D.all; ctx = iaCtxDia(); tipo = "dia"; }
-  let txt;
+function iaCards(ms, q, txt) {
+  if (!ms.length) return "";
+  const s = (q + " " + txt).toLowerCase(), modo = /ambos/.test(s) ? "BY" : /gol|over|\+2,5|más de 2/.test(s) ? "O25" : "1X2";
+  const pick = p => { if (modo === "O25") return ["O25", "Goles: Más de 2,5", p.pO25]; if (modo === "BY") return ["BY", "Ambos marcan: Sí", p.pBTTS];
+    const m = Math.max(p.pH, p.pD, p.pA); return m === p.pH ? ["H", `Gana ${corto(p.L, p.home)}`, p.pH] : m === p.pA ? ["A", `Gana ${corto(p.L, p.away)}`, p.pA] : ["D", "Empate", p.pD]; };
+  const btn = (p, key, lab, pr, txtb) => `<button class="addsel iasel" data-sel="${key}" data-label="${esc(lab)}" data-liga="${p.L.id}" data-mid="${esc(p.id)}" aria-pressed="${inCombo(p.id, key)}" title="Agregar a la combinada"><span>${txtb}</span><b class="num">${pct(pr)}</b></button>`;
+  const cards = ms.map(p => `<div class="iacard"><button class="iac-top" data-go="partido" data-liga="${p.L.id}" data-id="${esc(p.id)}">${leagueMark(p.L, "sm")}<span class="iac-lg">${esc(p.L.nombre)} · ${esc(cuando(p.kickoff))}</span><span class="iac-go">Ver partido ›</span></button>
+      <div class="iac-t"><span>${badge(p.L, p.home)}<b>${esc(corto(p.L, p.home))}</b></span><span class="faint">vs</span><span><b>${esc(corto(p.L, p.away))}</b>${badge(p.L, p.away)}</span></div>
+      <div class="iac-b">${btn(p, "H", `Gana ${corto(p.L, p.home)}`, p.pH, "1")}${btn(p, "D", "Empate", p.pD, "X")}${btn(p, "A", `Gana ${corto(p.L, p.away)}`, p.pA, "2")}${p.pO25 != null ? btn(p, "O25", "Goles: Más de 2,5", p.pO25, "+2,5") : ""}${p.pBTTS != null ? btn(p, "BY", "Ambos marcan: Sí", p.pBTTS, "Ambos") : ""}</div></div>`).join("");
+  const picks = ms.map(p => ({ p, k: pick(p) })), tot = picks.reduce((a, x) => a * x.k[2], 1);
+  const combo = ms.length > 1 ? `<button class="iacombo" data-iacombo='${esc(JSON.stringify(picks.map(x => [x.p.L.id, x.p.id, x.k[0], x.k[1]])))}'><span><b>Agregar a mi combinada</b><small>${picks.map(x => esc(x.k[1])).join(" + ")}</small></span><span class="num"><b>${pct(tot, 1)}</b><small>cuota justa ${dec(1 / tot)}</small></span></button>` : "";
+  return `<div class="iacards">${cards}${combo}</div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-iacombo]"); if (!b) return;
+  JSON.parse(b.dataset.iacombo).forEach(([liga, mid, key, label]) => { if (inCombo(mid, key)) return; const p = findMatch(liga, mid); if (!p) return;
+    COMBO.push({ liga, mid, key, label, home: p.home, away: p.away, kickoff: p.kickoff }); });
+  saveCombo(); paintComboBar(); b.classList.add("ok"); b.querySelector("b").textContent = "Agregada a tu combinada ✓";
+  b.closest(".iacards").querySelectorAll(".iasel").forEach(x => x.setAttribute("aria-pressed", String(inCombo(x.dataset.mid, x.dataset.sel))));
+});
+const IAH = {};   // conversaciones por tema (jornada o partido), solo en esta pestaña
+const IA_SUG = {
+  dia: ["¿Qué partidos de hoy tienen más goles?", "Dame una combinada de favoritos para el finde", "¿Alguna sugerencia sobre tiros al arco?", "¿Dónde ve el modelo más diferencia con el mercado?", "¿Cuál es el favorito más claro?", "¿Qué partidos son más parejos?", "¿Dónde es más probable que marquen ambos?", "¿Qué partido tiene más córners?"],
+  p: ["¿Quién es favorito y por qué?", "¿Habrá muchos goles?", "¿Alguna cuota tiene valor?", "¿Cómo afectan las bajas?", "¿Quién puede marcar?", "¿Qué dice el historial?"],
+};
+let IASCOPE = "dia";
+function iaScopeAuto() { return R.v === "partido" && findMatch(R.liga, R.id) ? "p:" + R.id : "dia"; }
+function iaMatchOf(scope) { if (!scope.startsWith("p:")) return null; const id = scope.slice(2); const L = Object.values(D.ligas).find(L => L.partidos.some(x => String(x.id) === id)); const p = L && findMatch(L.id, id); return p ? { L, p } : null; }
+function iaChat(scope, mode) {
+  const h = IAH[scope] || [], mp = iaMatchOf(scope);
+  const sug = IA_SUG[scope.startsWith("p:") ? "p" : "dia"], half = Math.ceil(sug.length / 2);
+  const chip = mp ? `<div class="ia-scope">${badge(mp.L, mp.p.home)}<span>Sobre <b>${esc(corto(mp.L, mp.p.home))} vs ${esc(corto(mp.L, mp.p.away))}</b></span><button class="link" data-iascope="dia">Preguntar por todos los partidos</button></div>`
+    : (iaScopeAuto() !== "dia" ? `<div class="ia-scope"><span>Sobre los partidos de los próximos 3 días</span><button class="link" data-iascope="${iaScopeAuto()}">Volver a este partido</button></div>` : "");
+  const welcome = `<div class="ia-hello"><span class="ia-orb" aria-hidden="true">✦</span><h2>Bienvenido a <span class="ia-grad">Ballytics IA</span> <span class="ia-beta">Beta</span></h2>
+    <p>${mp ? `Pregúntame lo que quieras de <b>${esc(corto(mp.L, mp.p.home))} vs ${esc(corto(mp.L, mp.p.away))}</b>: favoritos, goles, bajas, cuotas.` : "Soy tu analista de fútbol. Pídeme los partidos más interesantes de los próximos días y te explico lo que dice el modelo, con sus números."}</p></div>
+    <div class="ia-pop"><span class="lbl">Preguntas populares</span><div class="ia-rows"><div class="ia-row">${sug.slice(0, half).map(x => `<button data-iaq="${esc(x)}">${esc(x)}</button>`).join("")}</div><div class="ia-row">${sug.slice(half).map(x => `<button data-iaq="${esc(x)}">${esc(x)}</button>`).join("")}</div></div></div>`;
+  const log = h.map(m => m.r === "ia" ? `<div class="ia-m ia"><span class="ia-av" aria-hidden="true">✦</span><div class="ia-bub">${iaMd(m.t)}${m.cards || ""}</div></div>` : `<div class="ia-m yo"><div class="ia-bub">${esc(m.t)}</div></div>`).join("");
+  return `<div class="iachat ${mode}" data-ia="${esc(scope)}">${chip}<div class="ia-scroll">${h.length ? `<div class="ia-log" aria-live="polite">${log}</div>` : welcome}</div>
+    <form class="ia-f" data-iaf="${esc(scope)}"><input name="q" maxlength="400" autocomplete="off" placeholder="Pregúntame lo que quieras" aria-label="Tu pregunta"><button class="ia-send" aria-label="Enviar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-6 16-3-7z"/></svg></button></form>
+    <p class="ia-legal">Respuestas generadas por IA con los datos del modelo; puede equivocarse. No es un consejo de apuesta. +18.</p></div>`;
+}
+function iaRepaint() {
+  const d = document.getElementById("iad"); if (d && !d.hidden) d.querySelector(".iad-body").innerHTML = iaChat(IASCOPE, "drawer");
+  const pg = document.getElementById("ia-page"); if (pg) pg.innerHTML = iaChat("dia", "page");
+  const sc = document.querySelector(".iachat .ia-scroll"); if (sc) sc.scrollTop = sc.scrollHeight;
+}
+function iaOpen(scope) {
+  let d = document.getElementById("iad");
+  if (!d) { d = document.createElement("aside"); d.id = "iad"; d.className = "iad"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Ballytics IA"); d.hidden = true;
+    d.innerHTML = `<div class="iad-in"><header class="iad-h"><span class="ia-ic sm" aria-hidden="true">✦</span><b>Ballytics IA</b><span class="ia-beta">Beta</span><button class="iad-x" data-iaclose aria-label="Cerrar">×</button></header><div class="iad-body"></div></div>`;
+    document.body.appendChild(d); }
+  IASCOPE = scope || iaScopeAuto(); d.hidden = false; document.body.classList.add("ia-open"); iaRepaint();
+  setTimeout(() => { const i = d.querySelector(".ia-f input"); if (i && window.innerWidth > 760) i.focus(); }, 50);
+}
+function iaClose() { const d = document.getElementById("iad"); if (d) d.hidden = true; document.body.classList.remove("ia-open"); }
+async function iaAsk(scope, q) {
+  q = q.trim(); if (!q) return;
+  const h = IAH[scope] || (IAH[scope] = []);
+  h.push({ r: "yo", t: q }); iaRepaint();
+  const box = document.querySelector(`.iachat[data-ia="${CSS.escape(scope)}"]`);
+  if (box) { box.querySelector(".ia-log").insertAdjacentHTML("beforeend", `<div class="ia-m ia wait"><span class="ia-av spin" aria-hidden="true">✦</span><div class="ia-bub"><span class="muted">Pensando</span> <span class="dots"><i></i><i></i><i></i></span></div></div>`);
+    box.querySelector(".ia-f button").disabled = true; const sc = box.querySelector(".ia-scroll"); sc.scrollTop = sc.scrollHeight; }
+  let ctx, tipo; const mp = iaMatchOf(scope);
+  if (mp) { ctx = iaCtxPartido(mp.L, mp.p); tipo = "partido"; } else { await D.all; ctx = iaCtxDia(); tipo = "dia"; }
   try {
-    const url = await pushCfg(); if (!url) throw new Error("sin servidor");
-    const r = await (await fetch(url + "/ia", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ q: q.trim(), uid: myUid(), tipo, ctx, hist: h.slice(0, -1).slice(-4) }) })).json();
-    txt = r.ok ? r.r : null; if (!r.ok) throw new Error(r.error || "error");
-  } catch (e) { txt = null; const w = log.querySelector(".wait"); if (w) { w.classList.remove("wait"); w.classList.add("err"); w.textContent = e.message && e.message.length > 12 ? e.message : "No pude conectar con la IA. Prueba de nuevo."; } h.pop(); btn.disabled = false; return; }
-  h.push({ r: "ia", t: txt });
-  const w = log.querySelector(".wait"); if (w) { w.classList.remove("wait"); w.innerHTML = iaMd(txt); }
-  btn.disabled = false;
+    const url = await pushCfg(); if (!url) throw new Error("No pude conectar con la IA. Prueba de nuevo.");
+    const r = await (await fetch(url + "/ia", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ q, uid: myUid(), tipo, ctx, hist: h.slice(0, -1).slice(-4).map(m => ({ r: m.r, t: m.t })) }) })).json();
+    if (!r.ok) throw new Error(r.error || "La IA no respondió. Prueba de nuevo.");
+    h.push({ r: "ia", t: r.r, cards: iaCards(iaMencionados(r.r, scope), q, r.r) });
+  } catch (e) { h.pop(); iaRepaint(); const b = document.querySelector(`.iachat[data-ia="${CSS.escape(scope)}"] .ia-scroll`); if (b) b.insertAdjacentHTML("beforeend", `<div class="ia-m ia err"><div class="ia-bub">${esc(e.message && e.message.length > 12 ? e.message : "No pude conectar con la IA. Prueba de nuevo.")}</div></div>`); return; }
+  iaRepaint();
 }
 document.addEventListener("submit", e => { const f = e.target.closest("[data-iaf]"); if (!f) return; e.preventDefault(); iaAsk(f.dataset.iaf, f.q.value); });
-document.addEventListener("click", e => { const b = e.target.closest("[data-iaq]"); if (!b) return; const box = b.closest("[data-ia]"); iaAsk(box.dataset.ia, b.dataset.iaq); });
+document.addEventListener("click", e => {
+  const q = e.target.closest("[data-iaq]"); if (q) { const box = q.closest("[data-ia]"); if (box) iaAsk(box.dataset.ia, q.dataset.iaq); else { iaOpen(q.dataset.iascopeq || undefined); setTimeout(() => iaAsk(IASCOPE, q.dataset.iaq), 30); } return; }
+  const o = e.target.closest("[data-iaopen]"); if (o) { e.preventDefault(); iaOpen(o.dataset.iaopen || undefined); return; }
+  const s = e.target.closest("[data-iascope]"); if (s) { IASCOPE = s.dataset.iascope; iaRepaint(); return; }
+  if (e.target.closest("[data-iaclose]") || e.target.id === "iad") { iaClose(); return; }
+  if (e.target.closest("#iad [data-go]")) iaClose();
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && document.body.classList.contains("ia-open")) iaClose(); });
+// botón flotante en todas las pantallas
+(function () { const f = document.createElement("button"); f.id = "iafab"; f.setAttribute("data-iaopen", ""); f.setAttribute("aria-label", "Abrir Ballytics IA"); f.innerHTML = `<span aria-hidden="true">✦</span><b>IA</b>`; document.body.appendChild(f); })();
+// en el partido: tarjeta corta que abre la IA con ese partido
+function iaTeaser(p) {
+  return `<div class="panel iateaser"><div class="ia-h"><span class="ia-ic" aria-hidden="true">✦</span><div><h3>Pregúntale a la IA</h3><small class="muted">Te explica este partido con las probabilidades y cuotas de Ballytics</small></div><button class="btn sm" data-iaopen="p:${esc(p.id)}">Abrir chat</button></div>
+    <div class="ia-row">${IA_SUG.p.slice(0, 4).map(x => `<button data-iaq="${esc(x)}" data-iascopeq="p:${esc(p.id)}">${esc(x)}</button>`).join("")}</div></div>`;
+}
 function vIA() {
-  return `<section class="view narrow" aria-labelledby="h-ia"><h1 id="h-ia">Pregúntale a la IA</h1>
-    <p class="muted">Haz preguntas sobre los partidos de los próximos 3 días. La IA lee las probabilidades del modelo, las cuotas del mercado y te explica qué ve. Para un partido en particular, abre el partido y pregunta ahí: tiene más datos (bajas, goleadores, cuotas).</p>
-    ${iaPanel("dia", ["¿Qué partidos de hoy tienen más goles?", "¿Cuál es el favorito más claro del fin de semana?", "¿Dónde ve el modelo más diferencia con el mercado?", "¿Qué partidos son más parejos?"], true)}</section>`;
+  setTimeout(iaRepaint, 0);
+  return `<section class="view narrow" aria-labelledby="h-ia"><h1 id="h-ia" class="sr">Ballytics IA</h1><div class="panel flush iapage" id="ia-page"></div></section>`;
 }
 
 /* ---------------- página no encontrada ---------------- */
@@ -674,7 +745,7 @@ function vInicio() {
   return `<section class="view" aria-labelledby="h-inicio">
     <h1 id="h-inicio" class="sr">Ballytics: probabilidades de fútbol</h1>
     ${installBanner()}
-    <p class="promise">Probabilidades de fútbol explicadas, con un <button class="link" data-go="registro">registro público</button> para revisar cuánto acierta el modelo. <button class="ia-cta" data-go="ia"><span aria-hidden="true">✦</span> Pregúntale a la IA</button></p>
+    <p class="promise">Probabilidades de fútbol explicadas, con un <button class="link" data-go="registro">registro público</button> para revisar cuánto acierta el modelo. <button class="ia-cta" data-iaopen><span aria-hidden="true">✦</span> Pregúntale a la IA</button></p>
     <div class="hero panel">${carousel("hero", hero, "Partidos destacados")}</div>
     ${mine}
     <div class="row" id="partidos" style="justify-content:space-between"><h2>Partidos</h2><span class="note">Elige el día y la liga · horario local</span></div>
@@ -932,7 +1003,7 @@ function vPartido() {
     ${bajasPanel(L, p)}
     <div class="panel stack previa"><h3>Previa</h3>${previa(L, p, k, ct, tt)}</div>
     ${evCalc}
-    ${iaPanel("p:" + p.id, [`¿Quién es favorito y por qué?`, `¿Habrá muchos goles?`, `¿Alguna cuota tiene valor?`, `¿Cómo afectan las bajas?`])}
+    ${iaTeaser(p)}
     <div class="grid2">
       <div class="panel stack"><h3>Marcador exacto</h3><div class="scroll"><table class="heat">${heat}</table></div><p class="note">Filas: goles de ${esc(H)}. Columnas: goles de ${esc(A)}.</p></div>
       ${cmp ? `<div class="panel stack"><h3>Comparación de la temporada</h3><div class="cmph"><span>${badge(L, p.home)} ${esc(H)}</span><span>${esc(A)} ${badge(L, p.away)}</span></div>${cmp}</div>` : ""}
@@ -1696,6 +1767,7 @@ function comboProb(sels) {
 function paintComboBar() {
   let bar = document.getElementById("combobar");
   if (!bar) { bar = document.createElement("div"); bar.id = "combobar"; document.body.appendChild(bar); }
+  document.body.classList.toggle("has-combo", !!COMBO.length && R.v !== "combinada");
   if (!COMBO.length || R.v === "combinada") { bar.hidden = true; return; }
   const c = comboProb(COMBO);
   bar.hidden = false;
