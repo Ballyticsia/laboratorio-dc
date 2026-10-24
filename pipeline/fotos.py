@@ -6,7 +6,7 @@ equipo en ambos lados y se cruzan por número de camiseta y nombre.
 
 Cada equipo cuesta 1 consulta de API-Football (más 1 por liga para la lista de equipos). Con el plan gratis
 se avanza de a pocos equipos por corrida, dejando una reserva para las bajas; cada plantel se renueva cada
-60 días. Resultado: site/assets/fotos.json  {id de ESPN: id de API-Football}.
+60 días. Resultado: site/data/fotos.json  {id de ESPN: id de API-Football}.
 """
 import json
 import os
@@ -20,7 +20,7 @@ import lesiones
 
 RAIZ = os.path.join(os.path.dirname(__file__), "..")
 ESTADO_P = os.path.join(RAIZ, "data", "api_football", "fotos_estado.json")
-SALIDA = os.path.join(RAIZ, "site", "assets", "fotos.json")
+SALIDA = os.path.join(RAIZ, "site", "data", "fotos.json")
 MAX = int(os.environ.get("FOTOS_MAX", "10"))           # consultas de API-Football por corrida
 RESERVA = int(os.environ.get("FOTOS_RESERVA", "40"))   # nunca bajar de esto en el día
 DIAS = 60

@@ -111,7 +111,7 @@ function ensure(id) {
   return PEND[id] || (PEND[id] = getJSON(`data/${id}.json`).then(L => { D.ligas[id] = L; return L; }).catch(() => null));
 }
 async function load() {
-  [D.indice, D.fotos] = await Promise.all([getJSON("data/indice.json"), getJSON("assets/fotos.json").catch(() => ({}))]);
+  [D.indice, D.fotos] = await Promise.all([getJSON("data/indice.json"), getJSON("data/fotos.json").catch(() => ({}))]);
   D.meta = {}; D.indice.ligas.forEach(l => D.meta[l.id] = l);
   // primero lo que se ve en pantalla; el resto se carga en segundo plano
   const h = (location.hash || "#/").slice(2).split("/");
