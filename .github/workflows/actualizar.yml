@@ -47,6 +47,12 @@ jobs:
           ODDS_API_MIN_HORAS: "20"      # plan gratis (500 créditos/mes): cada liga se actualiza ~1 vez al día antes de jugar
         run: python pipeline/generar.py
 
+      - name: Revisar datos y código antes de publicar
+        run: |
+          python pipeline/validar.py
+          node --check site/assets/app.js
+          node --check site/sw.js
+
       - name: Guardar datos y registro en el repositorio
         run: |
           git config user.name "github-actions[bot]"

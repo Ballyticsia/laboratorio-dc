@@ -572,9 +572,11 @@ def ledger_summary(reg, base):
         for nom, e_, r_, line in (("Córners", "cE", "cR", 9.5), ("Tarjetas", "tE", "tR", 4.5)):
             gc = g.dropna(subset=[e_, r_])
             picks[nom] = np.array([pois_over(line, l) > .5 for l in gc[e_].astype(float)]) == (gc[r_].astype(float).values > line)
+        picks = {k: v for k, v in picks.items() if len(v) >= 10}   # un mercado entra al resumen desde 10 partidos calificados
         tot = sum(len(v) for v in picks.values())
-        out["global"] = dict(n=int(tot), aciertos=int(sum(int(np.sum(v)) for v in picks.values())),
-                             por=[dict(mercado=k, n=int(len(v)), acierto=r(np.mean(v))) for k, v in picks.items() if len(v)])
+        if tot:
+            out["global"] = dict(n=int(tot), aciertos=int(sum(int(np.sum(v)) for v in picks.values())),
+                                 por=[dict(mercado=k, n=int(len(v)), acierto=r(np.mean(v))) for k, v in picks.items()])
     rows = reg.sort_values("kickoff", ascending=False).head(500)
     filas = clean(rows.to_dict("records"))
     for f in filas:   # goleador y amonestado más probables de cada partido, y si pasó

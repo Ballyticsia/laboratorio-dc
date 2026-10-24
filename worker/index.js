@@ -39,6 +39,35 @@ function cors(req, res) {
 const json = (o, status = 200, extra = {}) => new Response(JSON.stringify(o), { status, headers: { "content-type": "application/json", ...extra } });
 const espn = async url => { const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 Ballytics" } }); if (!r.ok) throw new Error(`ESPN ${r.status}`); return r.json(); };
 
+/* ================= validaciones ================= */
+// solo servicios de push reales: el servidor nunca hace pedidos a direcciones arbitrarias
+const PUSH_OK = [/^fcm\.googleapis\.com$/, /^android\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/, /^push\.services\.mozilla\.com$/,
+  /^[a-z0-9-]+\.notify\.windows\.com$/, /^web\.push\.apple\.com$/, /^[a-z0-9.-]+\.push\.apple\.com$/];
+function pushValido(sub) {
+  try {
+    if (!sub || typeof sub.endpoint !== "string" || sub.endpoint.length > 800) return false;
+    const u = new URL(sub.endpoint);
+    return u.protocol === "https:" && !u.port && PUSH_OK.some(rx => rx.test(u.hostname));
+  } catch (e) { return false; }
+}
+/* hora y estado del partido según ESPN (nunca se confía en lo que manda el navegador) */
+async function evento(env, id) {
+  if (!/^\d{5,12}$/.test(String(id))) return null;
+  const k = `ev:${id}`, c = await env.SUBS.get(k, "json");
+  if (c && (c.state === "post" || Date.now() - c.t < 5 * 60000)) return c;
+  try {
+    const j = await espn(`${ESPN}/all/summary?event=${id}`);
+    const co = ((j.header || {}).competitions || [])[0];
+    if (!co || !co.date) return c || null;
+    const side = x => ((co.competitors || []).find(y => y.homeAway === x) || {}).team || {};
+    const ev = { t: Date.now(), k: co.date, state: ((co.status || {}).type || {}).state || "pre", h: side("home").displayName || "", a: side("away").displayName || "",
+      slug: ((j.header || {}).league || {}).slug || "all", comp: ((j.header || {}).league || {}).name || "" };
+    await env.SUBS.put(k, JSON.stringify(ev), { expirationTtl: 3 * 86400 });
+    return ev;
+  } catch (e) { return c || null; }
+}
+const abierto = ev => ev && ev.state === "pre" && Date.now() < new Date(ev.k).getTime();
+
 /* ================= avisos ================= */
 async function vapid(env) {
   let v = await env.SUBS.get("vapid", "json");
@@ -50,6 +79,7 @@ async function vapid(env) {
 }
 /* push vacío con autorización VAPID (RFC 8292); sin contenido no hace falta cifrar */
 async function push(env, sub) {
+  if (!pushValido(sub)) return 410;
   const v = await vapid(env);
   const key = await crypto.subtle.importKey("jwk", v.jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
   const aud = new URL(sub.endpoint).origin;
@@ -62,9 +92,10 @@ async function push(env, sub) {
 function prefsOf(p) { const o = { ...PREFS_DEF }; if (p && typeof p === "object") for (const k of Object.keys(o)) if (k in p) o[k] = p[k] ? 1 : 0; return o; }
 async function follow(env, b) {
   const sub = b.subscription;
-  if (!sub || !sub.endpoint || !/^https:\/\//.test(sub.endpoint) || !b.id || !/^\d+$/.test(String(b.id))) return json({ ok: false, error: "datos inválidos" }, 400);
+  if (!pushValido(sub) || !sub.keys || !b.id || !/^\d{5,12}$/.test(String(b.id))) return json({ ok: false, error: "datos inválidos" }, 400);
   const h = await hash(sub.endpoint);
-  await env.SUBS.put(`sub:${h}`, JSON.stringify({ ...sub, prefs: prefsOf(b.prefs) }), { expirationTtl: 60 * 60 * 24 * 60 });
+  const limpio = { endpoint: sub.endpoint, keys: { p256dh: String(sub.keys.p256dh || "").slice(0, 200), auth: String(sub.keys.auth || "").slice(0, 100) } };
+  await env.SUBS.put(`sub:${h}`, JSON.stringify({ ...limpio, prefs: prefsOf(b.prefs) }), { expirationTtl: 60 * 60 * 24 * 60 });
   const seg = (await env.SUBS.get("seguidos", "json")) || {};
   if (!seg[b.id] && Object.keys(seg).length >= MAX_SEGUIDOS) return json({ ok: false, error: "lleno" }, 429);
   const e = seg[b.id] || { slug: String(b.slug || "all").replace(/[^a-z0-9._]/gi, "") || "all", name: clean(b.name, 80), s: b.s || "", st: String(b.st || ""), d: b.date || "", subs: [] };
@@ -85,6 +116,29 @@ async function unfollow(env, b) {
   const seg = (await env.SUBS.get("seguidos", "json")) || {};
   if (seg[b.id]) { seg[b.id].subs = seg[b.id].subs.filter(x => x !== h); if (!seg[b.id].subs.length) delete seg[b.id]; await env.SUBS.put("seguidos", JSON.stringify(seg)); }
   return json({ ok: true });
+}
+/* borrar mis datos: avisos (suscripción, cola y partidos seguidos) y participación en los prodes indicados */
+async function borrar(env, b) {
+  const hecho = [];
+  if (typeof b.endpoint === "string" && b.endpoint) {
+    const h = await hash(b.endpoint);
+    await env.SUBS.delete(`sub:${h}`); await env.SUBS.delete(`q:${h}`);
+    const seg = (await env.SUBS.get("seguidos", "json")) || {};
+    let cambio = false;
+    for (const id of Object.keys(seg)) { const n = seg[id].subs.length; seg[id].subs = seg[id].subs.filter(x => x !== h); if (seg[id].subs.length !== n) cambio = true; if (!seg[id].subs.length) delete seg[id]; }
+    if (cambio) await env.SUBS.put("seguidos", JSON.stringify(seg));
+    hecho.push("avisos");
+  }
+  if (okUid(b.uid) && Array.isArray(b.prodes)) {
+    const uh = await hash(b.uid);
+    for (const code of b.prodes.slice(0, 30).map(c => String(c).toUpperCase())) {
+      const g = await env.SUBS.get(`p:${code}`, "json"); if (!g || !g.miembros[uh]) continue;
+      delete g.miembros[uh]; delete g.picks[uh];
+      if (!Object.keys(g.miembros).length) await env.SUBS.delete(`p:${code}`); else await env.SUBS.put(`p:${code}`, JSON.stringify(g));
+      hecho.push(`prode ${code}`);
+    }
+  }
+  return json({ ok: true, borrado: hecho });
 }
 async function novedades(env, b) {
   if (!b.endpoint) return json({ mensajes: [] });
@@ -157,7 +211,9 @@ async function revisar(env) {
 async function votar(env, b) {
   const id = String(b.id || ""), v = String(b.v || ""), uid = String(b.uid || "");
   if (!/^\d+$/.test(id) || !["H", "D", "A"].includes(v) || uid.length < 8 || uid.length > 64) return json({ ok: false, error: "datos inválidos" }, 400);
-  if (b.k && Date.now() >= new Date(b.k).getTime()) return json({ ok: false, error: "el partido ya empezó" }, 409);
+  const ev = await evento(env, id);
+  if (!ev) return json({ ok: false, error: "No encontré ese partido." }, 404);
+  if (!abierto(ev)) return json({ ok: false, error: "La votación de este partido ya cerró." }, 409);
   const mk = `vu:${id}:${await hash(uid)}`, prev = await env.SUBS.get(mk);
   const c = (await env.SUBS.get(`v:${id}`, "json")) || { H: 0, D: 0, A: 0 };
   if (prev === v) return json({ ok: true, votos: c, mio: v });
@@ -300,8 +356,10 @@ async function prodePick(env, b) {
   const h = await hash(b.uid), id = String(b.id || "");
   if (!g.miembros[h]) return json({ ok: false, error: "No eres parte de este prode." }, 403);
   if (!/^\d+$/.test(id) || !/^\d{1,2}-\d{1,2}$/.test(String(b.pick || ""))) return json({ ok: false, error: "Pronóstico inválido." }, 400);
-  const ev = g.eventos[id] || { k: b.k, h: clean(b.h), a: clean(b.a), slug: String(b.slug || "all").replace(/[^a-z0-9._]/gi, ""), comp: clean(b.comp, 50) };
-  if (!ev.k || Date.now() >= new Date(ev.k).getTime()) return json({ ok: false, error: "El partido ya empezó." }, 409);
+  const real = await evento(env, id);
+  if (!real) return json({ ok: false, error: "No encontré ese partido." }, 404);
+  if (!abierto(real)) return json({ ok: false, error: "El partido ya empezó." }, 409);
+  const ev = { k: real.k, h: clean(real.h), a: clean(real.a), slug: String(real.slug || "all").replace(/[^a-z0-9._]/gi, ""), comp: clean(real.comp || b.comp, 50) };
   if (!g.eventos[id] && Object.keys(g.eventos).length >= 400) return json({ ok: false, error: "Demasiados partidos en este prode." }, 429);
   g.eventos[id] = ev;
   (g.picks[h] ||= {})[id] = b.pick;
@@ -368,8 +426,9 @@ export default {
       else if (p === "/afestado") res = json({ ok: true, ...((await env.SUBS.get("afrem", "json")) || {}), pedidos: Object.keys((await env.SUBS.get("afped", "json")) || {}).length });
       else if (p.startsWith("/prode/") && req.method === "GET") res = await prodeVer(env, p.split("/")[2] || "", u.searchParams.get("uid"));
       else if (req.method === "POST") {
+        if (+(req.headers.get("content-length") || 0) > 8192) return cors(req, json({ ok: false, error: "demasiado grande" }, 413));
         const b = await req.json().catch(() => ({}));
-        const R = { "/follow": follow, "/unfollow": unfollow, "/prefs": setPrefs, "/novedades": novedades, "/voto": votar, "/prode/crear": prodeCrear, "/prode/unirse": prodeUnirse, "/prode/pick": prodePick }[p];
+        const R = { "/follow": follow, "/unfollow": unfollow, "/prefs": setPrefs, "/novedades": novedades, "/voto": votar, "/prode/crear": prodeCrear, "/prode/unirse": prodeUnirse, "/prode/pick": prodePick, "/borrar": borrar }[p];
         res = R ? await R(env, b) : json({ error: "no existe" }, 404);
       } else res = json({ ok: true, servicio: "Ballytics" });
     } catch (e) { res = json({ ok: false, error: String(e) }, 500); }

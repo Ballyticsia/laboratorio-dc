@@ -106,9 +106,11 @@ function markets(m) {
 
 /* ---------------- datos ---------------- */
 async function getJSON(p) { const r = await fetch(p, { cache: "no-cache" }); if (!r.ok) throw new Error(p + " " + r.status); return r.json(); }
-const PEND = {};
+const PEND = {}, LOADERR = {};
 function ensure(id) {
-  return PEND[id] || (PEND[id] = getJSON(`data/${id}.json`).then(L => { D.ligas[id] = L; return L; }).catch(() => null));
+  // si falla, se borra la promesa (para poder reintentar) y se anota el error; nunca se reintenta en bucle
+  return PEND[id] || (PEND[id] = getJSON(`data/${id}.json`).then(L => { D.ligas[id] = L; delete LOADERR[id]; return L; })
+    .catch(e => { delete PEND[id]; const x = LOADERR[id] || { n: 0 }; LOADERR[id] = { n: x.n + 1, t: Date.now(), msg: String(e.message || e) }; return null; }));
 }
 async function load() {
   [D.indice, D.fotos] = await Promise.all([getJSON("data/indice.json"), getJSON("data/fotos.json").catch(() => ({}))]);
@@ -157,13 +159,16 @@ function buildMenu() {
     const eq = [], seen = new Set(), pl = [], seenP = new Set();
     ligasIds().forEach(id => { const L = D.ligas[id];
       Object.keys(L.equipos).forEach(t => { const key = id + "|" + t; if (seen.has(key)) return; seen.add(key);
-        eq.push({ k: "Equipos", n: corto(L, t), alt: t, sub: L.nombre, html: badge(L, t), go: `data-go="equipo" data-liga="${id}" data-team="${esc(t)}"` }); });
+        eq.push({ k: "Equipos", n: corto(L, t), alt: t, sub: L.nombre, reg: L.region, copa: /copa|champions|libertadores|sudamericana|europa|conference/i.test(L.region + " " + L.nombre), html: badge(L, t), go: `data-go="equipo" data-liga="${id}" data-team="${esc(t)}"` }); });
       (L.goleadores || []).forEach(g => { const key = g.jid + "|" + id; if (seenP.has(key)) return; seenP.add(key);
         pl.push({ k: "Jugadores", n: g.jugador, sub: `${corto(L, g.equipo)} · ${L.nombre} · ${g.goles} goles`, html: face(L, g.equipo, g.jid, g.jugador), go: `data-go="jugador" data-liga="${id}" data-id="${esc(g.jid)}"` }); });
     });
     const sel = ((VV.sel || {}).equipos || []).map(t => ({ k: "Selecciones", n: t.n, alt: t.en, sub: (VV.sel.conf[t.cf] || "").split(" (")[0], html: selImg(t), go: `data-go="club" data-liga="sel" data-id="${esc(t.id)}"` }));
     const comps = (VV.comps || []).map(c => ({ k: "Competiciones", n: c.n, alt: c.p, sub: c.p, html: compImg(c), go: `data-go="comp" data-liga="${esc(c.s)}"` }));
-    idx = [...ligas, ...eq, ...sel, ...comps, ...pl].map(x => ({ ...x, s: norm(x.n + " " + (x.alt || "")) }));
+    // un mismo equipo aparece en su liga y en las copas: se deja una sola vez (la de su liga) y se nombran las demás
+    const byName = new Map();
+    eq.sort((a, b) => a.copa - b.copa).forEach(x => { const k = norm(x.alt || x.n); const y = byName.get(k); if (!y) byName.set(k, x); else if (!y.sub.includes(x.sub)) y.sub += " · " + x.sub; });
+    idx = [...ligas, ...byName.values(), ...sel, ...comps, ...pl].map(x => ({ ...x, s: norm(x.n + " " + (x.alt || "")), w: norm(x.n + " " + (x.alt || "")).split(/[^a-z0-9]+/).filter(Boolean) }));
   };
   indexAll(); D.all.then(indexAll); Promise.all([vComps(), vSel()]).then(indexAll);
   let act = -1;
@@ -172,7 +177,8 @@ function buildMenu() {
   q.addEventListener("input", () => {
     const v = norm(q.value.trim()); act = -1;
     if (v.length < 2) { res.hidden = true; return; }
-    const sc = x => x.s.startsWith(v) ? 2 : x.s.includes(" " + v) ? 1 : 0;
+    // primero la coincidencia exacta de una palabra, después el comienzo del nombre; Chile y Sudamérica primero en los empates
+    const sc = x => (x.w.includes(v) ? 4 : 0) + (x.s.startsWith(v) ? 3 : 0) + (x.w.some(w => w.startsWith(v)) ? 2 : 0) + (x.reg === "Sudamérica" ? 0.8 : 0) - x.n.length / 200;
     const hits = idx.filter(x => x.s.includes(v)).sort((a, b) => sc(b) - sc(a)).slice(0, 14);
     const groups = {}; hits.forEach(h => (groups[h.k] ||= []).push(h));
     res.innerHTML = hits.length ? ["Ligas", "Equipos", "Selecciones", "Competiciones", "Jugadores"].filter(k => groups[k]).map(k => `<span class="lbl sgrp">${k}</span>` +
@@ -213,7 +219,7 @@ function fromHash() {
   const p = (location.hash || "#/").slice(2).split("/").map(decodeURIComponent);
   const first = ligasIds()[0];
   switch (p[0]) {
-    case "liga": return { v: "liga", liga: D.ligas[p[1]] ? p[1] : first, tab: p[2] || "resumen" };
+    case "liga": return { v: "liga", liga: (D.ligas[p[1]] || (D.meta && D.meta[p[1]])) ? p[1] : first, tab: p[2] || "resumen" };
     case "partido": return { v: "partido", liga: p[1], id: p[2], tab: p[3] || "resumen" };
     case "equipo": return { v: "equipo", liga: p[1], team: p[2] };
     case "registro": return { v: "registro", tab: p[1] };
@@ -222,8 +228,9 @@ function fromHash() {
     case "combinada": return { v: "combinada" };
     case "seguimiento": return { v: "seguimiento" };
     case "responsable": return { v: "responsable" };
+    case "privacidad": return { v: "privacidad" };
     case "jugador": return { v: "jugador", liga: p[1], id: p[2] };
-    case "comparar": return { v: "comparar", liga: D.ligas[p[1]] ? p[1] : first, team: p[2], id: p[3] };
+    case "comparar": return { v: "comparar", liga: (D.ligas[p[1]] || (D.meta && D.meta[p[1]])) ? p[1] : first, team: p[2], id: p[3] };
     case "partidos": return { v: "inicio", liga: D.ligas[p[1]] ? p[1] : "todas" };
     case "vivo": return { v: "vivo", tab: /^\d{8}$/.test(p[1] || "") ? p[1] : undefined, id: p[2] || (p[1] === "envivo" ? "envivo" : undefined) };
     case "envivo": return /^\d+$/.test(p[1] || "") ? { v: "envivo", id: p[1], tab: p[2] || "resumen" } : { v: "envivo", id: p[2], tab: p[3] || "resumen" };
@@ -256,12 +263,19 @@ document.addEventListener("click", e => {
 function render() {
   timers.splice(0).forEach(clearInterval);
   const need = ["liga", "partido", "equipo", "jugador", "comparar"].includes(R.v) && R.liga && D.meta && D.meta[R.liga] && !D.ligas[R.liga] ? R.liga : null;
-  if (need) { $app.innerHTML = skeleton(); ensure(need).then(() => render()); return; }
-  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", combinada: "seguimiento", envivo: "vivo", competiciones: "vivo", comp: "vivo", club: "vivo", noticias: "vivo", selecciones: "vivo", ficha: "vivo", prode: "prode" }[R.v] || R.v);
+  if (need) {
+    const er = LOADERR[need];
+    if (er && er.n >= 2) { $app.innerHTML = `<div class="panel empty stack"><b>No pude cargar ${esc((D.meta[need] || {}).nombre || "esta liga")}.</b><span class="muted">Puede ser la conexión o que el sitio se está actualizando.</span><button class="btn" data-retry="${esc(need)}">Reintentar</button></div>`; return; }
+    $app.innerHTML = skeleton();
+    const want = need;
+    setTimeout(() => ensure(want).then(() => { if (R.liga === want) render(); }), er ? 1500 : 0);
+    return;
+  }
+  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", privacidad: "metodo", combinada: "seguimiento", envivo: "vivo", competiciones: "vivo", comp: "vivo", club: "vivo", noticias: "vivo", selecciones: "vivo", ficha: "vivo", prode: "prode" }[R.v] || R.v);
   document.querySelectorAll("[data-nav]").forEach(b => b.setAttribute("aria-current", b.dataset.nav === sec ? "page" : "false"));
   const f = { inicio: vInicio, liga: vLiga, partido: vPartido, equipo: vEquipo, registro: vRegistro, metodo: vMetodo,
     sobre: vSobre, responsable: vResponsable, jugador: vJugador, comparar: vComparar, combinada: vCombinada, seguimiento: vSeguimiento,
-    vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias, selecciones: vSelecciones, ficha: vFicha, prode: vProde }[R.v] || vInicio;
+    vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias, selecciones: vSelecciones, ficha: vFicha, prode: vProde, privacidad: vPrivacidad }[R.v] || vInicio;
   $app.innerHTML = staleBanner() + f();
   if (R.v === "partido") { if (R.tab === "mercados") bindOdds(); if (R.tab === "alineaciones" || document.getElementById("xi-adj")) loadSummary(); }
   if (R.v === "comparar") bindCompare();
@@ -281,11 +295,12 @@ const bar3 = (h, d, a) => `<span class="bars"><i style="width:${100 * h}%"></i><
 function zoneOf(L, pos) { return (L.zonas || []).find(z => pos >= z.desde && pos <= z.hasta); }
 function posTag(L, pos) { const z = zoneOf(L, pos); return `<span class="pos ${z ? "z-" + z.cls : ""}" ${z ? `title="${esc(z.nombre)}"` : ""}>${pos}</span>`; }
 
-function matchRow(p, showLeague, isFav) {
+const shortDay = iso => new Date(iso).toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" });
+function matchRow(p, showLeague, isFav, showDate) {
   const L = p.L || D.ligas[p.liga], fav = p.pH >= p.pA ? "h" : "a";
   const pick = p.pH >= p.pD && p.pH >= p.pA ? "1" : p.pA >= p.pD ? "2" : "X";
   return `<button class="mrow ${isFav ? "isfav" : ""}" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}">
-    <span class="t" data-live-t="${esc(p.id)}">${p.estado === "en_vivo" ? `<span class="livetag">EN VIVO</span>` : hhmm(p.kickoff)}${new Date(p.kickoff).getTime() - Date.now() < 3 * 3600e3 ? `<span class="cdown sm" data-cd="${esc(p.kickoff)}"></span>` : ""}${showLeague ? `<span class="lg">${esc(L.nombre)}</span>` : ""}</span>
+    <span class="t" data-live-t="${esc(p.id)}">${showDate && p.estado !== "en_vivo" ? `<small class="mdate">${esc(shortDay(p.kickoff))}</small>` : ""}${p.estado === "en_vivo" ? `<span class="livetag">EN VIVO</span>` : hhmm(p.kickoff)}${new Date(p.kickoff).getTime() - Date.now() < 3 * 3600e3 ? `<span class="cdown sm" data-cd="${esc(p.kickoff)}"></span>` : ""}${showLeague ? `<span class="lg">${esc(L.nombre)}</span>` : ""}</span>
     <span class="teams">
       <span class="tline">${badge(L, p.home)}<span class="n ${fav === "h" ? "fav" : "und"}">${esc(corto(L, p.home))}</span></span>
       <span class="tline">${badge(L, p.away)}<span class="n ${fav === "a" ? "fav" : "und"}">${esc(corto(L, p.away))}</span></span>
@@ -344,7 +359,7 @@ function bindCarousels() {
     c.addEventListener("mouseenter", () => paused = true);
     c.addEventListener("mouseleave", () => paused = false);
     c.addEventListener("focusin", () => paused = true);
-    if (!reduce) timers.push(setInterval(() => { if (!paused && !document.hidden) show(i + 1); }, c.dataset.car === "hero" ? 7000 : 9000));
+    if (!reduce && c.dataset.car === "hero") timers.push(setInterval(() => { if (!paused && !document.hidden) show(i + 1); }, 8000));   // solo el destacado gira solo
   });
 }
 
@@ -444,10 +459,10 @@ function vInicio() {
       <div class="hero-top">${leagueMark(L, "sm")}<span>${esc(L.nombre)}</span><span class="faint">·</span><span>${esc(cuando(p.kickoff))}</span><span class="cdown" data-cd="${esc(p.kickoff)}"></span></div>
       <div class="hero-face">
         <button class="ht" data-go="equipo" data-liga="${L.id}" data-team="${esc(p.home)}">${badge(L, p.home, "xl")}<b>${esc(corto(L, p.home))}</b>${formHtml(sh.forma)}</button>
-        <div class="hero-mid"><span class="xg num">${dec(p.lh, 1)} <span class="faint">–</span> ${dec(p.la, 1)}</span><span class="lbl">goles esperados</span></div>
+        <div class="hero-mid"><span class="xg num">${dec(p.lh, 1)} <span class="faint">–</span> ${dec(p.la, 1)}</span><span class="lbl">goles previstos</span></div>
         <button class="ht" data-go="equipo" data-liga="${L.id}" data-team="${esc(p.away)}">${badge(L, p.away, "xl")}<b>${esc(corto(L, p.away))}</b>${formHtml(sa.forma)}</button>
       </div>
-      <div class="hero-p">${bar3(p.pH, p.pD, p.pA)}<div class="nums"><span><b>${pct(p.pH)}</b> local</span><span>${pct(p.pD)} empate</span><span>visita <b>${pct(p.pA)}</b></span></div></div>
+      <div class="hero-p">${bar3(p.pH, p.pD, p.pA)}<div class="nums"><span><b>${pct(p.pH)}</b> local</span><span>${pct(p.pD)} empate</span><span>visita <b>${pct(p.pA)}</b></span></div><small class="psrc">${p.calib ? "Probabilidad Ballytics: modelo ajustado a la cuota sin margen" : "Probabilidad del modelo propio (sin cuota disponible)"}</small></div>
       <div class="row hero-cta"><button class="btn" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}">Ver análisis</button><button class="btn ghost" data-go="liga" data-liga="${L.id}" data-tab="partidos">Partidos de ${esc(L.nombre)}</button></div>
     </div>`;
   });
@@ -541,8 +556,13 @@ function vInicio() {
   return `<section class="view" aria-labelledby="h-inicio">
     <h1 id="h-inicio" class="sr">Ballytics: probabilidades de fútbol</h1>
     ${installBanner()}
+    <p class="promise">Probabilidades de fútbol explicadas, con un <button class="link" data-go="registro">registro público</button> para revisar cuánto acierta el modelo.</p>
     <div class="hero panel">${carousel("hero", hero, "Partidos destacados")}</div>
     ${mine}
+    <div class="row" id="partidos" style="justify-content:space-between"><h2>Partidos</h2><span class="note">Elige el día y la liga · horario local</span></div>
+    ${chips}
+    ${list}
+    <h2 class="sec2">Más análisis</h2>
     <div class="cards">
       ${card("Jugador destacado", carousel("jug", jug, "Jugadores destacados"), `<span class="tag">Goleadores</span>`, "accent")}
       ${card("Equipo en forma", carousel("eq", eqs, "Equipos en forma"), `<span class="tag">Últimos 5</span>`)}
@@ -554,11 +574,8 @@ function vInicio() {
       ${cupCard()}
       ${card("Modelo vs mercado", vmc, `<span class="tag">Mayores diferencias</span>`)}
       ${card("Rachas activas", `<div class="slist">${rach}</div>`)}
-      ${card("Rendimiento del modelo", `${perf}<button class="link" data-go="registro">Ver registro →</button>`, `<span class="tag">Público</span>`)}
+      ${card("Rendimiento del modelo", `${perf}<button class="link" data-go="registro">Ver resultados del modelo →</button>`, `<span class="tag">Público</span>`)}
     </div>
-    <div class="row" id="partidos" style="justify-content:space-between"><h2>Partidos</h2><span class="note">Elige el día y la liga</span></div>
-    ${list}
-    ${chips}
   </section>`;
 }
 function spark(serie) {
@@ -686,7 +703,7 @@ function lProy(L) {
   const t = [...L.tabla].sort((a, b) => (b.pts_esp ?? 0) - (a.pts_esp ?? 0));
   const zs = []; (L.zonas || []).forEach(z => { if (!zs.some(x => x.cls === z.cls)) zs.push(z); });
   const pb = (v, cls = "") => `<div class="pbar ${cls}"><span class="tr"><i style="width:${100 * (v || 0)}%"></i></span><span class="num">${!v || v < 0.005 ? "<1 %" : pct(v)}</span></div>`;
-  const zname = z => z.cls === "desc" ? "Descenso" : z.nombre.replace(" (fase de grupos)", "").replace(" (previa)", "");
+  const zname = z => z.cls === "desc" ? "Descenso" : z.nombre.replace("(fase de grupos)", "(grupos)");
   return `<div class="panel flush scroll"><table class="t"><thead><tr><th>#</th><th>Equipo</th><th class="n hide-m">Pts hoy</th><th class="n">Pts finales ${help(TIPS.proy)}</th><th class="n">Campeón</th>${zs.map(z => `<th class="n hide-m">${esc(zname(z))}</th>`).join("")}</tr></thead><tbody>` +
     t.map((s, i) => `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}"><td><span class="pos">${i + 1}</span></td><td class="team">${badge(L, s.equipo)}${esc(corto(L, s.equipo))}</td><td class="n hide-m">${s.pts}</td><td class="n"><b>${dec(s.pts_esp, 1)}</b></td><td>${pb(s.p_campeon, "gold")}</td>${zs.map(z => `<td class="hide-m">${pb((s.zonas || {})[z.cls], z.cls === "desc" ? "bad" : "")}</td>`).join("")}</tr>`).join("") +
     `</tbody></table></div><p class="note">10.000 simulaciones del resto de la temporada con el modelo actual.</p>`;
@@ -748,7 +765,7 @@ function vPartido() {
       <td class="n"><button class="addsel" data-sel="${esc(key)}" data-label="${esc(selLabel(g, n))}" data-jug="${key[0] === "G" ? esc(n.replace(/ \(.*\)$/, "")) : ""}" data-liga="${L.id}" data-mid="${esc(p.id)}" aria-pressed="${inCombo(p.id, key)}" title="Agregar a la combinada">+</button></td></tr>`).join("")).join("");
   const reg = D.registro && D.registro.filas && D.registro.filas.find(f => String(f.id) === String(p.id));
   const side = (s, t, cls) => `<div class="side ${cls}">${badge(L, t, "lg")}<button class="tn" data-go="equipo" data-liga="${L.id}" data-team="${esc(t)}">${esc(corto(L, t))}</button>
-      <span class="xgv">${dec(cls === "l" ? lh : la)}</span><span class="lbl">goles esperados ${cls === "l" ? help(TIPS.xg) : ""}</span>
+      <span class="xgv">${dec(cls === "l" ? lh : la)}</span><span class="lbl">goles previstos ${cls === "l" ? help(TIPS.xg) : ""}</span>
       <span class="row" style="gap:8px;${cls === "r" ? "justify-content:flex-end" : ""}">${s.pos ? `<span class="muted num" style="font-size:12px">${s.pos}º · ${s.pts} pts</span>` : ""}${formHtml(s.forma)}</span></div>`;
   const cmp = seasonCmp(L, p.home, p.away);
   const scorers = (p.goleadores || []).length ? (p.goleadores || []).map(g => `<div class="srow" data-go="jugador" data-liga="${L.id}" data-id="${esc(g.jid)}">${face(L, g.lado === "h" ? p.home : p.away, g.jid, g.jugador)}<span><b>${esc(g.jugador)}</b><small>${g.goles} goles en la temporada</small></span><span class="sn num">${pct(g.p)}</span></div>`).join("") : `<p class="note">Sin goleadores registrados todavía.</p>`;
@@ -832,7 +849,7 @@ function vEquipo() {
   const prox = L.partidos.filter(p => p.home === t || p.away === t).slice(0, 6);
   const res = L.resultados.filter(x => x.home === t || x.away === t).slice(0, 8);
   const rs = (L.rachas || []).filter(x => x.equipo === t);
-  const zs = s.zonas ? Object.entries(s.zonas).map(([cls, v]) => { const z = (L.zonas || []).find(z => z.cls === cls); return z ? kpi(cls === "desc" ? "" : "", cls === "desc" ? "Descenso" : z.nombre.replace(" (fase de grupos)", "").replace(" (previa)", ""), pct(v, 1), "") : ""; }).join("") : "";
+  const zs = s.zonas ? Object.entries(s.zonas).map(([cls, v]) => { const z = (L.zonas || []).find(z => z.cls === cls); return z ? kpi(cls === "desc" ? "" : "", cls === "desc" ? "Descenso" : z.nombre.replace("(fase de grupos)", "(grupos)"), pct(v, 1), "") : ""; }).join("") : "";
   return `<section class="view" aria-labelledby="h-e">
     <button class="back" data-go="liga" data-liga="${L.id}" data-tab="resumen">← ${esc(L.nombre)}</button>
     <div class="lhead panel">${badge(L, t, "xl")}<div><h1 id="h-e">${esc(corto(L, t))}</h1><span class="row" style="gap:8px;margin-top:6px">${starBtn("t", L.id + "|" + t, "Seguir este equipo")}<button class="btn ghost sm cmp-btn" data-go="comparar" data-liga="${L.id}" data-team="${esc(t)}">Comparar</button><button class="btn ghost sm" data-ics="team" data-liga="${L.id}" data-team="${esc(t)}">Partidos al calendario</button></span><span class="muted">${esc(L.nombre)}${s.pos ? ` · ${s.pos}º con ${s.pts} pts en ${s.pj} partidos` : ""}</span></div><span style="margin-left:auto">${formHtml(s.forma)}</span></div>
@@ -847,7 +864,7 @@ function vEquipo() {
     </div>
     <div class="grid2">
       <div class="stack">
-        <div class="panel flush"><div class="ph"><h3>Próximos partidos</h3></div>${prox.map(p => matchRow(p, false)).join("") || `<div class="empty">Sin partidos programados.</div>`}</div>
+        <div class="panel flush"><div class="ph"><h3>Próximos partidos</h3></div>${prox.map(p => matchRow(p, false, false, true)).join("") || `<div class="empty">Sin partidos programados.</div>`}</div>
         <div class="panel flush"><div class="ph"><h3>Goleadores del equipo</h3></div><div class="scroll">${scorersTable(L, 10, t)}</div></div>
       </div>
       <div class="stack">
@@ -889,12 +906,14 @@ function regPicks(f) {
   if (f.ama) out.push({ m: "Amarilla", pick: f.ama[0].split(" ").slice(-1)[0] || f.ama[0], full: f.ama[0], p: f.ama[1], ok: f.ama[2], largo: 1 });
   return out;
 }
+const wilson = (p, n, z = 1.96) => { if (!n) return [0, 1]; const d = 1 + z * z / n, c = (p + z * z / (2 * n)) / d, h = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d; return [Math.max(0, c - h), Math.min(1, c + h)]; };
 function regMatch(f) {
   const L = D.ligas[f.liga] || { equipos: {}, nombre: (D.meta && D.meta[f.liga] ? D.meta[f.liga].nombre : "") }, picks = regPicks(f), done = f.hg != null;
   const graded = picks.filter(x => x.ok != null && !x.largo), nOk = graded.filter(x => x.ok).length;
   const chip = x => `<span class="rp ${x.ok == null ? "pend" : x.ok ? "ok" : "ko"}${x.largo ? " largo" : ""}" title="${esc(x.full || x.pick)}${x.sub ? " · " + esc(x.sub) : ""}"><small>${x.m}</small><b>${esc(x.pick)}</b>${x.p != null ? `<i class="num">${pct(x.p)}</i>` : ""}${x.ok == null ? "" : `<em>${x.ok ? "✓" : "✗"}</em>`}${x.sub ? `<u>${esc(x.sub)}</u>` : ""}</span>`;
   return `<div class="rmatch${done ? "" : " pend"}"><div class="rm-h"><span class="rm-l">${D.ligas[f.liga] ? leagueMark(L) : ""}<span class="faint">${esc(L.nombre || "")} · ${fecha(f.kickoff)}</span></span>
       <button class="rm-t link" data-go="partido" data-liga="${esc(f.liga)}" data-id="${esc(f.id)}">${badge(L, f.home)}<b>${esc(corto(L, f.home))}</b><span class="rm-s num">${done ? `${f.hg} – ${f.ag}` : "vs"}</span><b>${esc(corto(L, f.away))}</b>${badge(L, f.away)}</button>
+      <span class="rm-src" title="${f.mH != null ? "Probabilidad Ballytics ajustada a la cuota sin margen de una casa de apuestas" : "Sin cuota disponible: probabilidad del modelo propio"}">${f.mH != null ? "con cuota" : "modelo propio"}</span>
       ${done && graded.length ? `<span class="rm-k num ${nOk / graded.length >= .6 ? "good" : nOk / graded.length < .4 ? "bad" : ""}">${nOk}/${graded.length}</span>` : `<span class="rm-k faint">pendiente</span>`}</div>
     <div class="rm-p">${picks.map(chip).join("")}</div></div>`;
 }
@@ -907,13 +926,14 @@ function vRegistro() {
   if (tab === "pendientes") filas.sort((a, b) => a.kickoff.localeCompare(b.kickoff));
   const lim = VV.regLim || 30, ligas = [...new Set((g.filas || []).map(f => f.liga))].filter(id => D.ligas[id]);
   const G = g.global;
-  const hero = G && G.n ? `<div class="panel rhero"><div class="rh-main"><span class="lbl">Predicciones acertadas</span><b class="num">${pct(G.aciertos / G.n, 1)}</b><span class="muted">${G.aciertos.toLocaleString("es-CL")} de ${G.n.toLocaleString("es-CL")} predicciones de ${g.n} partidos ${help("Cuenta cada predicción de sí o no que hace Ballytics en un partido (ganador, más o menos de 2,5 goles, ambos marcan, córners y tarjetas), tomando el lado que el modelo da como más probable. El marcador exacto, el goleador y la amarilla son apuestas largas y se miden aparte.")}</span></div>
+  const hero = G && G.n ? `<div class="panel rhero"><div class="rh-main"><span class="lbl">Predicciones acertadas</span><b class="num">${pct(G.aciertos / G.n, 1)}</b><span class="muted">${G.aciertos.toLocaleString("es-CL")} de ${G.n.toLocaleString("es-CL")} predicciones de sí o no, en ${g.n} partidos (varias preguntas por partido; no son ${G.n} partidos) ${help("Cuenta cada predicción de sí o no que hace Ballytics en un partido (ganador, más o menos de 2,5 goles, ambos marcan, córners y tarjetas), tomando el lado que el modelo da como más probable. El marcador exacto, el goleador y la amarilla son apuestas largas y se miden aparte.")}</span></div>
       <div class="rh-bars">${G.por.map(x => `<div class="rh-b"><span>${esc(x.mercado)}</span><span class="rh-t"><i style="width:${100 * x.acierto}%"></i></span><b class="num">${pct(x.acierto, 0)}</b><small class="faint">${x.n}</small></div>`).join("")}</div></div>` : "";
   return `<section class="view" aria-labelledby="h-r">
-    <h1 id="h-r">Registro público</h1>
-    <p class="muted">Cada predicción queda guardada antes de que empiece el partido y no se puede cambiar. Cuando termina, se califica sola con el resultado real: ganador, goles, ambos marcan, marcador, córners, tarjetas, goleador y amarilla. Nada se borra.${g.desde ? ` Registro desde el ${fecha(g.desde + "T12:00")}.` : ""}</p>
+    <h1 id="h-r">Resultados del modelo</h1>
+    <p class="muted">Para cada partido se guarda la última predicción publicada antes del inicio (el robot actualiza cada 2 horas) y, al terminar, se califica con el resultado real: ganador, goles, ambos marcan, marcador, córners, tarjetas, goleador y amarilla. Las filas calificadas no se recalculan y el historial completo, con cada cambio, queda en el <a class="link" href="https://github.com/Ballyticsia/laboratorio-dc/commits/main/data/registro.csv" target="_blank" rel="noopener">repositorio público</a>.${g.desde ? ` Registro desde el ${fecha(g.desde + "T12:00")}.` : ""}</p>
+    ${g.n && g.n < 100 ? `<div class="panel note-panel"><b>Muestra todavía pequeña (${g.n} partidos).</b> Con menos de 100 partidos el acierto cambia mucho por azar: el del ganador (${pct(g.acierto_1x2, 0)}) podría estar en realidad entre ${pct(wilson(g.acierto_1x2, g.n)[0], 0)} y ${pct(wilson(g.acierto_1x2, g.n)[1], 0)} (intervalo de 95 %). Sirve para revisar, no para sacar conclusiones.</div>` : ""}
     ${hero}
-    <div class="kpis">${kpi("m", "Partidos calificados", g.n || 0, `${(g.filas || []).filter(f => f.hg == null).length} por jugarse`)}${kpi("", "Acierto del ganador", pct(g.acierto_1x2, 1), "el resultado más probable")}${kpi("k", `Log-loss ${help(TIPS.logloss)}`, dec(g.logloss, 3), `ingenuo ${dec(g.logloss_ingenuo, 3)} · menos es mejor`)}${kpi("", "Marcador exacto", pct(g.marcador_exacto, 1), "el más probable")}</div>
+    <div class="kpis">${kpi("m", "Partidos calificados", g.n || 0, `${(g.filas || []).filter(f => f.hg == null).length} por jugarse`)}${kpi("", "Acierto del ganador", pct(g.acierto_1x2, 1), g.n ? `entre ${pct(wilson(g.acierto_1x2, g.n)[0], 0)} y ${pct(wilson(g.acierto_1x2, g.n)[1], 0)} con 95 % de confianza` : "el resultado más probable")}${kpi("k", `Log-loss ${help(TIPS.logloss)}`, dec(g.logloss, 3), `ingenuo ${dec(g.logloss_ingenuo, 3)} · menos es mejor`)}${kpi("", "Marcador exacto", pct(g.marcador_exacto, 1), "el más probable")}</div>
     <div class="panel flush rlist"><div class="ph rl-h"><h3>Partido por partido</h3>
       <div class="row" style="gap:8px;flex-wrap:wrap"><select class="rsel" id="reg-liga" aria-label="Liga"><option value="">Todas las ligas</option>${ligas.map(id => `<option value="${esc(id)}"${id === ligaSel ? " selected" : ""}>${esc(D.ligas[id].nombre)}</option>`).join("")}</select>
       <div class="tabs2" role="group" aria-label="Filtro">${[["calificados", "Calificados"], ["pendientes", "Por jugarse"]].map(([k, n]) => `<button data-go="registro" data-tab="${k}" data-keep aria-pressed="${k === tab}">${n}</button>`).join("")}</div></div></div>
@@ -978,7 +998,7 @@ function vMetodo() {
     <h1 id="h-m">Cómo funciona</h1>
     <div class="panel stack" style="font-size:15px">
       <p><b>Goles.</b> Cada equipo tiene una fuerza de ataque y una de defensa. Con eso se calcula cuántos goles se espera que marque cada uno, y la probabilidad de cada marcador sale de una distribución de Poisson con la corrección de Dixon y Coles (1997) para los resultados bajos.</p>
-      <p><b>Datos.</b> Resultados de las últimas tres temporadas, incluida la segunda división cuando existe, para medir bien a los recién ascendidos. Los partidos recientes pesan más (vida media de unos 231 días) y se mezcla un 30 % de tiros al arco con los goles, porque los tiros tienen menos ruido. Se reajusta tres veces al día.</p>
+      <p><b>Datos.</b> Resultados de las últimas tres temporadas, incluida la segunda división cuando existe, para medir bien a los recién ascendidos. Los partidos recientes pesan más (vida media de unos 231 días) y se mezcla un 30 % de tiros al arco con los goles, porque los tiros tienen menos ruido. Se reajusta cada 2 horas.</p>
       <p><b>Córners y tarjetas.</b> El mismo modelo de ataque y defensa, ajustado sobre córners ganados y tarjetas recibidas. No conoce al árbitro.</p>
       <p><b>Goleadores.</b> La probabilidad de que un jugador marque sale de su parte de los goles de su equipo en la temporada y de los goles esperados de su equipo en ese partido.</p>
       <p><b>Proyecciones.</b> El resto de la temporada se simula 10.000 veces para estimar puntos finales y opciones de título, copas o descenso.</p>
@@ -1001,7 +1021,7 @@ function vMetodo() {
 /* ---------------- AYUDA ---------------- */
 function help(text) { return `<button class="hlp" data-tip="${esc(text)}" aria-label="Qué significa">?</button>`; }
 const TIPS = {
-  xg: "Goles esperados: cuántos goles debería marcar cada equipo según el modelo. Sale de su ataque, la defensa del rival y la localía.",
+  xg: "Goles previstos: el promedio de goles que el modelo espera de cada equipo antes del partido, según su ataque, la defensa del rival y la localía (ajustado a la cuota si la hay). No es el xG, que mide la calidad de los tiros ya ocurridos.",
   justa: "Cuota justa: 1 dividido por la probabilidad. Es lo que pagaría una casa sin margen. Si te ofrecen más, el modelo ve valor.",
   ev: "Valor esperado (EV): cuánto ganarías o perderías en promedio por cada $1 si la probabilidad del modelo fuera correcta. Positivo = el modelo ve valor.",
   logloss: "Log-loss: mide qué tan buenas son las probabilidades. Castiga mucho estar muy seguro y equivocarse. Menos es mejor; adivinar al azar da cerca de 1,10.",
@@ -1267,7 +1287,7 @@ function bajasPanel(L, p) {
     "Concussion": "Conmoción", "Inactive": "Inactivo", "Coach's decision": "Decisión técnica", "International duty": "Selección", "Knock": "Golpe" }[m] || m || "");
   const col = (lado, t) => `<div class="bj-col"><div class="lu-h">${badge(L, t)}<b>${esc(corto(L, t))}</b></div>${(b[lado] || []).length ? b[lado].map(x =>
       `<div class="bj-row">${tipo(x.tipo)}${face(L, t, x.jid, x.jug, "sm", x.foto)}<span class="bj-n"><b>${esc(x.jug)}</b><small>${esc(motivo(x.motivo))}${x.goles ? ` · ${x.goles} ${x.goles === 1 ? "gol" : "goles"} en la temporada` : ""}</small></span></div>`).join("")
-    : `<p class="note">Sin bajas informadas.</p>`}</div>`;
+    : `<p class="note">Sin bajas informadas por la fuente (API-Football). Eso no garantiza que el equipo no tenga bajas.</p>`}</div>`;
   return `<div class="panel stack"><h3>Bajas ${help("Lesionados y suspendidos informados por API-Football. «Baja» = no juega; «Duda» = puede no jugar. Si falta un goleador, el modelo ajusta sus goles esperados.")}</h3>
     <div class="lineups">${col("h", p.home)}${col("a", p.away)}</div>
     ${p.ajuste ? `<p class="note">Por los goleadores ausentes, el modelo ajusta los goles esperados a <b>${dec(p.ajuste.lh, 2)} – ${dec(p.ajuste.la, 2)}</b>.</p>` : ""}</div>`;
@@ -1386,7 +1406,7 @@ function vSobre() {
   return `<section class="view narrow" aria-labelledby="h-s">
     <h1 id="h-s">Sobre Ballytics</h1>
     <div class="panel stack prose">
-      <p><b>Ballytics</b> es un proyecto personal de análisis de fútbol con modelos estadísticos. Calcula probabilidades para cada partido de 14 competiciones y las publica junto con un registro de cómo le va a cada predicción.</p>
+      <p><b>Ballytics</b> es un proyecto personal de análisis de fútbol con modelos estadísticos. Calcula probabilidades para cada partido de ${D.indice ? D.indice.ligas.length : ""} competiciones y las publica junto con un registro de cómo le va a cada predicción.</p>
       <p><b>Qué es.</b> Una herramienta para entender partidos: quién llega mejor, cuántos goles se esperan, qué tan probable es cada resultado y cuánto debería pagar una cuota para ser justa.</p>
       <p><b>Qué no es.</b> No es un servicio de pronósticos pagados ni una casa de apuestas, y no promete ganancias. En las pruebas con temporadas anteriores, las cuotas del mercado predijeron mejor que el modelo.</p>
       <p><b>Cómo se mantiene honesto.</b> Cada predicción queda guardada antes del partido en el <button class="link" data-go="registro">registro público</button> y se califica sola cuando termina. Nada se borra.</p>
@@ -1394,6 +1414,40 @@ function vSobre() {
       <p><b>Método.</b> El detalle está en <button class="link" data-go="metodo">Cómo funciona</button>.</p>
     </div></section>`;
 }
+/* ---------- privacidad ---------- */
+function vPrivacidad() {
+  return `<section class="view narrow" aria-labelledby="h-pv"><h1 id="h-pv">Privacidad</h1>
+    <p class="muted">Qué datos usa Ballytics, para qué, cuánto tiempo y cómo borrarlos. Actualizado el 24 de octubre de 2026.</p>
+    <div class="panel stack prose">
+      <h3>Quién es responsable</h3><p>Ballytics es un proyecto personal sin fines de lucro. Para cualquier consulta sobre tus datos, escribe en <a class="link" href="https://github.com/Ballyticsia/laboratorio-dc/issues" target="_blank" rel="noopener">el repositorio público del proyecto</a>.</p>
+      <h3>Lo que queda solo en tu teléfono o computador</h3><p>Equipos y ligas favoritas, tus pronósticos guardados, preferencias de avisos, tema claro u oscuro, prodes a los que entraste y la última lista de partidos. Se guardan en el almacenamiento del navegador y no se envían a ningún servidor.</p>
+      <h3>Lo que se guarda en el servidor de Ballytics (Cloudflare)</h3>
+      <ul><li><b>Identificador anónimo:</b> un código al azar creado por tu navegador. El servidor guarda solo una versión cifrada, para que votes una vez por partido y para el prode. No incluye tu nombre, correo ni ubicación.</li>
+        <li><b>"¿Quién gana?":</b> cuántos votos tiene cada resultado y cuál fue tu voto (asociado al identificador cifrado). Se borra solo a los 60 días.</li>
+        <li><b>Prode:</b> el nombre del grupo, el apodo que elijas y tus pronósticos. Los ven los demás participantes del grupo.</li>
+        <li><b>Avisos:</b> si activas los avisos, la dirección de suscripción que entrega tu navegador, los partidos que sigues y qué avisos quieres. Se borra sola si no se usa en 60 días.</li></ul>
+      <h3>Otros servicios</h3><p>La página está alojada en GitHub Pages. Los resultados en vivo, escudos y fotos se piden directamente a ESPN y a API-Football, que reciben tu dirección IP como cualquier sitio que visitas. Ballytics no usa cookies de publicidad ni de seguimiento.</p>
+      <h3>Tus derechos</h3><p>Puedes borrar todo con el botón de abajo. Para pedir una copia o corregir algo, escribe en el repositorio. Ballytics se está adaptando a la Ley 21.719 de protección de datos personales, que empieza a regir el 1 de diciembre de 2026.</p>
+      <h3>Edad y juego responsable</h3><p>Las probabilidades son de un modelo estadístico y no son consejos de apuesta. Si apuestas, debes ser mayor de 18 años. <button class="link" data-go="responsable">Juego responsable</button></p>
+    </div>
+    <div class="panel stack" id="pv-box"><h3>Borrar mis datos</h3><p class="note">Borra lo guardado en este navegador, tus avisos y tu participación en los prodes de este dispositivo. Los votos ya contados quedan como números anónimos.</p><button class="btn ghost" id="pv-del">Borrar mis datos</button></div>
+  </section>`;
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest("#pv-del, #pv-yes"); if (!b) return;
+  const box = document.getElementById("pv-box"); if (!box) return;
+  if (b.id === "pv-del") { box.querySelector("p").insertAdjacentHTML("afterend", `<p class="warn">¿Seguro? No se puede deshacer.</p>`); b.outerHTML = `<button class="btn" id="pv-yes">Sí, borrar todo</button>`; return; }
+  b.disabled = true; b.textContent = "Borrando…";
+  let hecho = [];
+  try {
+    const url = await pushCfg();
+    let endpoint = null;
+    try { const reg = "serviceWorker" in navigator ? await navigator.serviceWorker.getRegistration() : null, sub = reg && reg.pushManager ? await reg.pushManager.getSubscription() : null; if (sub) { endpoint = sub.endpoint; await sub.unsubscribe(); } } catch (x) {}
+    if (url) { const r = await fetch(url + "/borrar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ uid: lsGet("bt_uid", ""), endpoint, prodes: myProdes().map(p => p.code) }) }); hecho = (await r.json()).borrado || []; }
+  } catch (x) {}
+  try { Object.keys(localStorage).filter(k => k.startsWith("bt_")).forEach(k => localStorage.removeItem(k)); } catch (x) {}
+  box.innerHTML = `<h3>Listo</h3><p>Se borraron los datos de este navegador${hecho.length ? ` y en el servidor: ${esc(hecho.join(", "))}` : ""}.</p>`;
+});
 function vResponsable() {
   return `<section class="view narrow" aria-labelledby="h-jr">
     <h1 id="h-jr">Juego responsable</h1>
@@ -1515,7 +1569,7 @@ function vCombinada() {
       <label class="f oddin"><span class="lbl">Cuota que te ofrecen</span><input id="cb-odd" inputmode="decimal" placeholder="Ej: 5,40"></label>
       <p id="cb-ev" class="note">Escribe la cuota para ver el valor esperado.</p>
       <div class="row"><label class="f oddin"><span class="lbl">Monto (opcional)</span><input id="cb-amt" inputmode="numeric" placeholder="Ej: 1000"></label></div>
-      <div class="row"><button class="btn" id="cb-save">Guardar en Mi seguimiento</button><button class="btn ghost" id="cb-clear">Vaciar</button></div>
+      <div class="row"><button class="btn" id="cb-save">Guardar en Mis pronósticos</button><button class="btn ghost" id="cb-clear">Vaciar</button></div>
       <p class="note">Cuando eliges varios mercados del mismo partido, la probabilidad se calcula con el marcador exacto, así que no se infla. Un modelo no garantiza nada: úsalo para medir, no para apostar más.</p>
     </div></section>`;
 }
@@ -1570,11 +1624,11 @@ function vSeguimiento() {
       <div class="row note" style="gap:14px"><span>Probabilidad del modelo: <b>${pct(pk.p, 1)}</b></span>${pk.cuota ? `<span>Cuota: <b>${dec(pk.cuota)}</b></span>` : ""}${pk.monto ? `<span>Monto: <b>${Math.round(pk.monto).toLocaleString("es-CL")}</b></span>` : ""}</div>
     </div>`).join("");
   return `<section class="view narrow" aria-labelledby="h-sg">
-    <h1 id="h-sg">Mi seguimiento</h1>
+    <h1 id="h-sg">Mis pronósticos</h1>
     <p class="muted">Tus pronósticos guardados en este navegador. Se califican solos cuando terminan los partidos. Sirve para medirte con datos reales.</p>
     <div class="kpis">${kpi("m", "Pronósticos", PICKS.length, `${done.length} terminados`)}${kpi("", "Acierto", done.length ? pct(wins / done.length, 1) : "—", done.length ? `el modelo esperaba ${pct(expect / done.length, 1)}` : "")}
       ${kpi("k", "Resultado", money.length ? `${ret - staked >= 0 ? "+" : "−"}${Math.round(Math.abs(ret - staked)).toLocaleString("es-CL")}` : "—", money.length ? `ROI ${pct((ret - staked) / staked, 1)} sobre ${Math.round(staked).toLocaleString("es-CL")}` : "anota cuota y monto para verlo")}</div>
-    ${rows || `<div class="panel empty">Aún no guardas pronósticos. Arma una combinada (o una sola selección) desde la pestaña Mercados de un partido y toca <b>Guardar en Mi seguimiento</b>.</div>`}
+    ${rows || `<div class="panel empty">Aún no guardas pronósticos. Arma una combinada (o una sola selección) desde la pestaña Mercados de un partido y toca <b>Guardar en Mis pronósticos</b>.</div>`}
     <p class="note">Se guarda solo en este navegador y dispositivo. Si apuestas, hazlo con un presupuesto que puedas perder. <button class="link" data-go="responsable">Juego responsable</button></p>
   </section>`;
 }
@@ -2745,6 +2799,7 @@ document.addEventListener("click", e => { const b = e.target.closest("[data-pm]"
   }, { passive: true });
 })();
 
+document.addEventListener("click", e => { const b = e.target.closest("[data-retry]"); if (!b) return; delete LOADERR[b.dataset.retry]; render(); });
 load().then(() => { R = fromHash(); render(); pollLive(); setInterval(pollLive, 60000);
   D.all.then(() => { if (R.v === "inicio" || R.v === "registro") { const y = window.scrollY; render(); window.scrollTo(0, y); } }); })
   .catch(err => { $app.innerHTML = `<div class="panel empty">No pude cargar los datos (${esc(err.message)}). Si abriste el archivo directo desde tu computador, el navegador bloquea la lectura: usa la versión publicada.</div>`; });
