@@ -562,8 +562,27 @@ def ledger_summary(reg, base):
             if pr:
                 mk[key] = pr
         out["mercados"] = mk
+    # acierto global: cada predicción de sí o no (el lado que Ballytics da como más probable)
+    if len(g):
+        picks = {"Ganador": hit}
+        picks["Más/menos 2,5"] = (g.fO25.astype(float).values > .5) == ((g.hg + g.ag) > 2.5).values
+        gb = g.dropna(subset=["fBTTS"])
+        picks["Ambos marcan"] = (gb.fBTTS.astype(float).values > .5) == ((gb.hg > 0) & (gb.ag > 0)).values
+        for nom, e_, r_, line in (("Córners", "cE", "cR", 9.5), ("Tarjetas", "tE", "tR", 4.5)):
+            gc = g.dropna(subset=[e_, r_])
+            picks[nom] = np.array([pois_over(line, l) > .5 for l in gc[e_].astype(float)]) == (gc[r_].astype(float).values > line)
+        tot = sum(len(v) for v in picks.values())
+        out["global"] = dict(n=int(tot), aciertos=int(sum(int(np.sum(v)) for v in picks.values())),
+                             por=[dict(mercado=k, n=int(len(v)), acierto=r(np.mean(v))) for k, v in picks.items() if len(v)])
     rows = reg.sort_values("kickoff", ascending=False).head(500)
-    out["filas"] = clean(rows.to_dict("records"))
+    filas = clean(rows.to_dict("records"))
+    for f in filas:   # goleador y amonestado más probables de cada partido, y si pasó
+        pj = REGJ.get(str(f["id"])) or {}
+        for k, kr, dst in (("g", "rg", "gol"), ("y", "ry", "ama")):
+            if pj.get(k):
+                jid, nom, pr = pj[k][0]
+                f[dst] = [nom, pr, (jid in pj[kr]) if pj.get(kr) is not None else None]
+    out["filas"] = filas
     return out
 
 

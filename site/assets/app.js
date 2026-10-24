@@ -872,22 +872,57 @@ function calChart(pts) {
   pts.forEach(p => s += `<circle cx="${sx(p.pred)}" cy="${sy(p.real)}" r="${(3 + 5 * Math.sqrt(p.n / mx)).toFixed(1)}" fill="#3d8bff" stroke="#0e131e" stroke-width="1.5"><title>Predijo ${pct(p.pred)} · ocurrió ${pct(p.real)} · ${p.n} casos</title></circle>`);
   return s + `<text x="${(W + pad) / 2}" y="${H - 2}" text-anchor="middle">probabilidad predicha (%)</text></svg>`;
 }
+/* ---------- registro público ---------- */
+const poisOverJ = (line, lam) => { let t = Math.exp(-lam), c = t; for (let i = 1; i <= Math.floor(line); i++) { t *= lam / i; c += t; } return 1 - c; };
+function regPicks(f) {
+  // todo lo que Ballytics predijo para el partido y, si ya se jugó, si acertó
+  const done = f.hg != null, tg = done ? f.hg + f.ag : null, out = [];
+  const P = f.fH != null ? [f.fH, f.fD, f.fA] : [f.pH, f.pD, f.pA], k = P.indexOf(Math.max(...P)), L = D.ligas[f.liga] || { equipos: {} };
+  const lab1 = [corto(L, f.home), "Empate", corto(L, f.away)][k];
+  out.push({ m: "Ganador", pick: lab1, p: P[k], ok: done ? ["H", "D", "A"][k] === (f.hg > f.ag ? "H" : f.hg === f.ag ? "D" : "A") : null });
+  const o = f.fO25 ?? f.pO25;
+  if (o != null) out.push({ m: "Goles", pick: o > .5 ? "Más de 2,5" : "Menos de 2,5", p: Math.max(o, 1 - o), ok: done ? (o > .5) === (tg > 2.5) : null });
+  const bt = f.fBTTS ?? f.pBTTS;
+  if (bt != null) out.push({ m: "Ambos marcan", pick: bt > .5 ? "Sí" : "No", p: Math.max(bt, 1 - bt), ok: done ? (bt > .5) === (f.hg > 0 && f.ag > 0) : null });
+  const top = f.ftop || f.top;
+  if (top) out.push({ m: "Marcador", pick: top.replace("-", "–"), p: null, ok: done ? top === `${f.hg}-${f.ag}` : null, largo: 1 });
+  if (f.cE != null) { const q = poisOverJ(9.5, f.cE); out.push({ m: "Córners", pick: `${q > .5 ? "Más" : "Menos"} de 9,5`, p: Math.max(q, 1 - q), sub: `${dec(f.cE, 1)} esperados${f.cR != null ? ` · hubo ${f.cR}` : ""}`, ok: f.cR != null ? (q > .5) === (f.cR > 9.5) : null }); }
+  if (f.tE != null) { const q = poisOverJ(4.5, f.tE); out.push({ m: "Tarjetas", pick: `${q > .5 ? "Más" : "Menos"} de 4,5`, p: Math.max(q, 1 - q), sub: `${dec(f.tE, 1)} esperadas${f.tR != null ? ` · hubo ${f.tR}` : ""}`, ok: f.tR != null ? (q > .5) === (f.tR > 4.5) : null }); }
+  if (f.gol) out.push({ m: "Goleador", pick: f.gol[0].split(" ").slice(-1)[0] || f.gol[0], full: f.gol[0], p: f.gol[1], ok: f.gol[2], largo: 1 });
+  if (f.ama) out.push({ m: "Amarilla", pick: f.ama[0].split(" ").slice(-1)[0] || f.ama[0], full: f.ama[0], p: f.ama[1], ok: f.ama[2], largo: 1 });
+  return out;
+}
+function regMatch(f) {
+  const L = D.ligas[f.liga] || { equipos: {}, nombre: (D.meta && D.meta[f.liga] ? D.meta[f.liga].nombre : "") }, picks = regPicks(f), done = f.hg != null;
+  const graded = picks.filter(x => x.ok != null && !x.largo), nOk = graded.filter(x => x.ok).length;
+  const chip = x => `<span class="rp ${x.ok == null ? "pend" : x.ok ? "ok" : "ko"}${x.largo ? " largo" : ""}" title="${esc(x.full || x.pick)}${x.sub ? " · " + esc(x.sub) : ""}"><small>${x.m}</small><b>${esc(x.pick)}</b>${x.p != null ? `<i class="num">${pct(x.p)}</i>` : ""}${x.ok == null ? "" : `<em>${x.ok ? "✓" : "✗"}</em>`}${x.sub ? `<u>${esc(x.sub)}</u>` : ""}</span>`;
+  return `<div class="rmatch${done ? "" : " pend"}"><div class="rm-h"><span class="rm-l">${D.ligas[f.liga] ? leagueMark(L) : ""}<span class="faint">${esc(L.nombre || "")} · ${fecha(f.kickoff)}</span></span>
+      <button class="rm-t link" data-go="partido" data-liga="${esc(f.liga)}" data-id="${esc(f.id)}">${badge(L, f.home)}<b>${esc(corto(L, f.home))}</b><span class="rm-s num">${done ? `${f.hg} – ${f.ag}` : "vs"}</span><b>${esc(corto(L, f.away))}</b>${badge(L, f.away)}</button>
+      ${done && graded.length ? `<span class="rm-k num ${nOk / graded.length >= .6 ? "good" : nOk / graded.length < .4 ? "bad" : ""}">${nOk}/${graded.length}</span>` : `<span class="rm-k faint">pendiente</span>`}</div>
+    <div class="rm-p">${picks.map(chip).join("")}</div></div>`;
+}
 function vRegistro() {
   const g = D.registro;
   if (!g) return `<section class="view"><h1>Registro</h1><div class="panel empty">Todavía no hay registro.</div></section>`;
   const tab = R.tab === "pendientes" ? "pendientes" : "calificados";
-  const filas = (g.filas || []).filter(f => tab === "pendientes" ? f.hg == null : f.hg != null);
+  const ligaSel = VV.regLiga || "";
+  let filas = (g.filas || []).filter(f => (tab === "pendientes" ? f.hg == null : f.hg != null) && (!ligaSel || f.liga === ligaSel));
   if (tab === "pendientes") filas.sort((a, b) => a.kickoff.localeCompare(b.kickoff));
-  const rows = filas.map(f => {
-    const L = D.ligas[f.liga] || { equipos: {} }, P = f.fH != null ? [f.fH, f.fD, f.fA] : [f.pH, f.pD, f.pA], pick = ["1", "X", "2"][P.indexOf(Math.max(...P))];
-    let res = `<span class="faint">pendiente</span>`, ok = "";
-    if (f.hg != null) { const r = f.hg > f.ag ? "1" : f.hg === f.ag ? "X" : "2"; res = `<b class="num">${f.hg} – ${f.ag}</b>`; ok = r === pick ? `<span class="good">✓</span>` : `<span class="bad">✗</span>`; }
-    return `<tr><td class="num muted">${fecha(f.kickoff)}</td><td>${esc(corto(L, f.home))} – ${esc(corto(L, f.away))}</td><td class="n hide-m">${pct(P[0])} · ${pct(P[1])} · ${pct(P[2])}</td><td class="n">${pick}</td><td class="n">${res}</td><td class="n">${ok}</td></tr>`;
-  }).join("");
+  const lim = VV.regLim || 30, ligas = [...new Set((g.filas || []).map(f => f.liga))].filter(id => D.ligas[id]);
+  const G = g.global;
+  const hero = G && G.n ? `<div class="panel rhero"><div class="rh-main"><span class="lbl">Predicciones acertadas</span><b class="num">${pct(G.aciertos / G.n, 1)}</b><span class="muted">${G.aciertos.toLocaleString("es-CL")} de ${G.n.toLocaleString("es-CL")} predicciones de ${g.n} partidos ${help("Cuenta cada predicción de sí o no que hace Ballytics en un partido (ganador, más o menos de 2,5 goles, ambos marcan, córners y tarjetas), tomando el lado que el modelo da como más probable. El marcador exacto, el goleador y la amarilla son apuestas largas y se miden aparte.")}</span></div>
+      <div class="rh-bars">${G.por.map(x => `<div class="rh-b"><span>${esc(x.mercado)}</span><span class="rh-t"><i style="width:${100 * x.acierto}%"></i></span><b class="num">${pct(x.acierto, 0)}</b><small class="faint">${x.n}</small></div>`).join("")}</div></div>` : "";
   return `<section class="view" aria-labelledby="h-r">
     <h1 id="h-r">Registro público</h1>
-    <p class="muted">Cada predicción se guarda antes de que empiece el partido y no se puede cambiar después. Así se mide si el modelo sirve, con resultados reales y no con capturas de los aciertos. Los números de arriba son de la probabilidad Ballytics; también se guardan el modelo propio y la cuota para compararlos.${g.desde ? ` Registro desde el ${fecha(g.desde + "T12:00")}.` : ""}</p>
-    <div class="kpis">${kpi("m", "Partidos calificados", g.n || 0, "")}${kpi("", "Acierto 1X2", pct(g.acierto_1x2, 1), "el resultado más probable")}${kpi("k", `Log-loss ${help(TIPS.logloss)}`, dec(g.logloss, 3), `ingenuo ${dec(g.logloss_ingenuo, 3)} · menos es mejor`)}${kpi("", "Más/Menos 2,5", pct(g.acierto_o25, 1), "acierto")}${kpi("", "Marcador exacto", pct(g.marcador_exacto, 1), "el más probable")}</div>
+    <p class="muted">Cada predicción queda guardada antes de que empiece el partido y no se puede cambiar. Cuando termina, se califica sola con el resultado real: ganador, goles, ambos marcan, marcador, córners, tarjetas, goleador y amarilla. Nada se borra.${g.desde ? ` Registro desde el ${fecha(g.desde + "T12:00")}.` : ""}</p>
+    ${hero}
+    <div class="kpis">${kpi("m", "Partidos calificados", g.n || 0, `${(g.filas || []).filter(f => f.hg == null).length} por jugarse`)}${kpi("", "Acierto del ganador", pct(g.acierto_1x2, 1), "el resultado más probable")}${kpi("k", `Log-loss ${help(TIPS.logloss)}`, dec(g.logloss, 3), `ingenuo ${dec(g.logloss_ingenuo, 3)} · menos es mejor`)}${kpi("", "Marcador exacto", pct(g.marcador_exacto, 1), "el más probable")}</div>
+    <div class="panel flush rlist"><div class="ph rl-h"><h3>Partido por partido</h3>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><select class="rsel" id="reg-liga" aria-label="Liga"><option value="">Todas las ligas</option>${ligas.map(id => `<option value="${esc(id)}"${id === ligaSel ? " selected" : ""}>${esc(D.ligas[id].nombre)}</option>`).join("")}</select>
+      <div class="tabs2" role="group" aria-label="Filtro">${[["calificados", "Calificados"], ["pendientes", "Por jugarse"]].map(([k, n]) => `<button data-go="registro" data-tab="${k}" data-keep aria-pressed="${k === tab}">${n}</button>`).join("")}</div></div></div>
+      <div class="rl-leg"><span class="rp ok mini"><em>✓</em></span> acertó <span class="rp ko mini"><em>✗</em></span> falló <span class="rp pend mini"></span> por jugarse <span class="faint">· el porcentaje es la probabilidad que dio Ballytics</span></div>
+      ${filas.length ? filas.slice(0, lim).map(regMatch).join("") : `<div class="empty">${tab === "pendientes" ? "No hay predicciones esperando partido." : "Todavía no hay partidos calificados."}</div>`}
+      ${filas.length > lim ? `<button class="vmore" id="reg-more">Ver ${Math.min(30, filas.length - lim)} partidos más (${filas.length - lim} restantes)</button>` : ""}</div>
     ${regMercados(g.mercados)}
     ${g.vs_mercado ? `<div class="panel stack"><h3>Ballytics, modelo propio y mercado</h3><div class="kpis">${kpi("m", "Log-loss Ballytics", dec(g.vs_mercado.ballytics, 3), g.vs_mercado.acierto_ballytics != null ? `acierto ${pct(g.vs_mercado.acierto_ballytics, 1)}` : "")}${kpi("", "Log-loss modelo propio", dec(g.vs_mercado.modelo, 3), g.vs_mercado.acierto_modelo != null ? `acierto ${pct(g.vs_mercado.acierto_modelo, 1)}` : "")}${kpi("k", "Log-loss mercado", dec(g.vs_mercado.mercado, 3), g.vs_mercado.acierto_mercado != null ? `acierto ${pct(g.vs_mercado.acierto_mercado, 1)}` : "")}${kpi("", "Partidos con cuota", g.vs_mercado.n, "")}</div><p class="note">Solo partidos en que ESPN publicó cuotas antes del inicio. Menos es mejor.</p></div>` : ""}
     <div class="panel stack"><h3>La gente contra Ballytics</h3>${g.gente && g.gente.n ? `<div class="kpis">${kpi("m", "Acierto Ballytics", pct(g.gente.acierto_ballytics, 1), `log-loss ${dec(g.gente.logloss_ballytics, 3)}`)}${kpi(g.gente.acierto_gente > g.gente.acierto_ballytics ? "k" : "", "Acierto de la gente", pct(g.gente.acierto_gente, 1), `log-loss ${dec(g.gente.logloss_gente, 3)}`)}${kpi("", "Partidos con votos", g.gente.n, `${g.gente.votos} votos`)}</div>` : ""}<p class="note">${g.gente && g.gente.n ? "Partidos con al menos 3 votos en “¿Quién gana?”. El voto más repetido cuenta como el pronóstico de la gente." : "Se llena cuando la gente vote en “¿Quién gana?” y se jueguen esos partidos (mínimo 3 votos por partido)."}</p></div>
@@ -896,11 +931,11 @@ function vRegistro() {
       <div class="panel flush scroll"><div class="ph"><h3>Por liga</h3></div><table class="t"><thead><tr><th>Liga</th><th class="n">Partidos</th><th class="n">Acierto</th><th class="n">Log-loss</th></tr></thead><tbody>${(g.por_liga || []).map(x => `<tr><td class="team">${D.ligas[x.liga] ? leagueMark(D.ligas[x.liga]) + esc(D.ligas[x.liga].nombre) : esc(x.liga)}</td><td class="n">${x.n}</td><td class="n">${pct(x.acierto, 1)}</td><td class="n">${dec(x.logloss, 3)}</td></tr>`).join("")}</tbody></table></div>
       <div class="panel flush scroll"><div class="ph"><h3>Según la confianza del modelo</h3></div><table class="t"><thead><tr><th>Probabilidad del favorito</th><th class="n">Partidos</th><th class="n">Esperado</th><th class="n">Real</th></tr></thead><tbody>${(g.confianza || []).map(x => `<tr><td>${esc(x.rango)}</td><td class="n">${x.n}</td><td class="n">${pct(x.prob, 1)}</td><td class="n ${x.acierto >= x.prob ? "good" : "bad"}">${pct(x.acierto, 1)}</td></tr>`).join("")}</tbody></table><p class="note" style="padding:0 16px 12px">Si "Real" se parece a "Esperado", las probabilidades están bien medidas.</p></div>
     </div>` : ""}
-    <div class="grid2">
-      <div class="panel stack"><h3>Calibración ${help(TIPS.cal)}</h3><p class="note">Si el modelo dice 40 %, ¿pasa el 40 % de las veces?</p>${calChart(g.calibracion)}${spark(g.serie)}</div>
-      <div class="panel flush"><div class="ph"><h3>Predicciones</h3><div class="tabs2" role="group" aria-label="Filtro">${[["calificados", "Calificadas"], ["pendientes", "Pendientes"]].map(([k, n]) => `<button data-go="registro" data-tab="${k}" data-keep aria-pressed="${k === tab}">${n}</button>`).join("")}</div></div><div class="scroll" style="max-height:560px;overflow:auto"><table class="t"><thead><tr><th>Fecha</th><th>Partido</th><th class="n hide-m">1 · X · 2</th><th class="n">Pick</th><th class="n">Resultado</th><th></th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="empty">${tab === "pendientes" ? "No hay partidos pendientes en el registro." : "Todavía no hay partidos calificados."}</td></tr>`}</tbody></table></div></div>
-    </div></section>`;
+    <div class="panel stack"><h3>Calibración ${help(TIPS.cal)}</h3><p class="note">Si el modelo dice 40 %, ¿pasa el 40 % de las veces?</p>${calChart(g.calibracion)}${spark(g.serie)}</div>
+  </section>`;
 }
+document.addEventListener("change", e => { if (e.target.id === "reg-liga") { VV.regLiga = e.target.value; VV.regLim = 30; go({ v: "registro", tab: R.tab, keepScroll: true }); } });
+document.addEventListener("click", e => { if (e.target.id === "reg-more") { VV.regLim = (VV.regLim || 30) + 30; go({ v: "registro", tab: R.tab, keepScroll: true }); } });
 /* ---------- registro: todos los mercados ---------- */
 function regMercados(M) {
   if (!M || !Object.keys(M).length) return "";
