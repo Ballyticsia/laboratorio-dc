@@ -437,12 +437,24 @@ async function prodeVer(env, code, uid, ctx) {
 /* ================= asistente con IA (Workers AI, plan gratis: 10.000 neuronas al día) =================
    El sitio manda la pregunta y los datos del partido o de la jornada (probabilidades, cuotas, bajas…).
    La IA responde solo con esos datos. Hay tope por persona y tope diario total para no pasar el plan gratis. */
-const IA_MODELOS = ["@cf/google/gemma-4-26b-a4b-it", "@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/meta/llama-3.1-8b-instruct-fp8-fast"];
-const IA_TOPE_DIA = 250, IA_TOPE_PERSONA = 15;
+// gemma sin "pensar" (rápida, barata y no inventa datos en las pruebas); si falla, gpt-oss y mistral
+const IA_MODELOS = [
+  ["@cf/google/gemma-4-26b-a4b-it", m => ({ messages: m, max_tokens: 600, temperature: 0.3, chat_template_kwargs: { enable_thinking: false } })],
+  ["@cf/openai/gpt-oss-120b", m => ({ instructions: m[0].content, input: m.slice(1).map(x => `${x.role === "assistant" ? "Asistente" : "Usuario"}: ${x.content}`).join("\n\n"), reasoning: { effort: "low" } })],
+  ["@cf/mistralai/mistral-small-3.1-24b-instruct", m => ({ messages: m, max_tokens: 600, temperature: 0.3 })],
+];
+const iaTexto = r => {
+  if (!r) return "";
+  if (typeof r.response === "string" && r.response) return r.response;
+  const c = r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content; if (c) return c;
+  if (Array.isArray(r.output)) return r.output.filter(o => o.type === "message").flatMap(o => o.content || []).map(x => x.text || "").join("\n");
+  return r.output_text || "";
+};
+const IA_TOPE_DIA = 200, IA_TOPE_PERSONA = 15;
 const IA_SISTEMA = `Eres el asistente de Ballytics, una página chilena de probabilidades de fútbol hecha con un modelo estadístico (Dixon-Coles ajustado a las cuotas sin margen cuando existen).
 Reglas:
 - Responde en español neutro (de Chile), claro y breve: máximo 170 palabras. Usa viñetas cortas con "- " cuando ayude y **negrita** solo para lo clave.
-- Usa SOLO los datos que vienen en DATOS. No inventes lesiones, alineaciones, rachas ni resultados. Si falta un dato, dilo.
+- Usa SOLO los datos que vienen en DATOS. No inventes cuotas, lesiones, alineaciones, rachas ni resultados. Si falta un dato (por ejemplo, la cuota de un mercado), dilo y no calcules el valor de ese mercado.
 - Explica con números: probabilidad del modelo, cuota justa (1 / probabilidad) y, si el usuario o los datos traen cuotas, el valor esperado (EV = probabilidad × cuota − 1).
 - Escribe las probabilidades como porcentaje (66 %) y los decimales con coma (cuota 1,52; EV +2,3 %).
 - No prometas ganancias ni digas "apuesta a" o montos. Si piden una recomendación, di qué ve más probable el modelo y si alguna cuota tiene valor según el modelo, y recuerda en una línea que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero.
@@ -452,11 +464,6 @@ Reglas:
 const ymdUTC = () => new Date().toISOString().slice(0, 10).replace(/-/g, "");
 async function preguntarIA(env, b, ctx, req) {
   if (!env.AI) return json({ ok: false, error: "La IA no está activada en el servidor." }, 503);
-  if (b.prueba === "diag-7Hq2" && b.m) {
-    const t = Date.now(); let r;
-    try { r = await env.AI.run(b.m, b.args || {}); } catch (e) { r = { error: String(e) }; }
-    return json({ ms: Date.now() - t, raw: JSON.stringify(r).slice(0, 2500) });
-  }
   const q = String(b.q || "").trim().slice(0, 400), uid = String(b.uid || "");
   if (q.length < 3) return json({ ok: false, error: "Escribe una pregunta." }, 400);
   if (!okUid(uid)) return json({ ok: false, error: "uid" }, 400);
@@ -474,11 +481,11 @@ async function preguntarIA(env, b, ctx, req) {
   ctx.waitUntil(env.SUBS.put(key, JSON.stringify(dia), { expirationTtl: 3 * 86400 }));
   const messages = [{ role: "system", content: IA_SISTEMA }, { role: "user", content: `DATOS (de Ballytics, ${b.tipo === "partido" ? "un partido" : "partidos próximos"}):\n${datos}` }, { role: "assistant", content: "Entendido, uso solo esos datos." }, ...hist, { role: "user", content: q }];
   let txt = "", modelo = "", fallos = [];
-  for (const m of IA_MODELOS) {
+  for (const [m, args] of IA_MODELOS) {
     try {
-      const r = await env.AI.run(m, { messages, max_tokens: 900, temperature: 0.3 });
-      txt = (r && (r.response || (r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content) || r.output_text || "")) || "";
-      if (typeof txt !== "string") txt = JSON.stringify(txt);
+      const r = await env.AI.run(m, args(messages));
+      txt = iaTexto(r);
+      if (typeof txt !== "string") txt = "";
       txt = txt.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
       if (txt) { modelo = m.split("/").pop(); break; }
       fallos.push(m.split("/").pop() + ": vacío " + JSON.stringify(r).slice(0, 160));
