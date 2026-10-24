@@ -13,6 +13,7 @@ import os
 import re
 import time
 import unicodedata
+import urllib.parse
 from datetime import date, datetime, timezone
 
 import datos
@@ -109,15 +110,25 @@ def actualizar(ligas):
             lg = est["ligas"].get(L["id"])
             season = temporada(L, hoy)
             if not lg or lg.get("season") != season:
-                r = af(f"/teams?league={AF_LIGA[L['id']]}&season={season}")
+                try:
+                    r = af(f"/teams?league={AF_LIGA[L['id']]}&season={season}")
+                except RuntimeError as e:   # el plan gratis no siempre deja ver la temporada actual: se usa una anterior
+                    est["error"] = str(e)
+                    usadas += 1
+                    r = af(f"/teams?league={AF_LIGA[L['id']]}&season=2024")
                 usadas += 1
                 lg = est["ligas"][L["id"]] = {"season": season, "equipos": [[t["team"]["id"], t["team"]["name"]] for t in r]}
                 if not puedo():
                     break
             cand = sorted(((parecido(team, n), i) for i, n in lg["equipos"]), reverse=True)
-            if not cand or cand[0][0] < 0.5:
-                est["equipos"][k] = {"t": hoy.isoformat(), "af": None}
-                continue
+            if not cand or cand[0][0] < 0.5:      # equipo recién ascendido: se busca por nombre
+                q = " ".join(norm(team)) or team
+                r = af(f"/teams?search={urllib.parse.quote(q[:30])}") if len(q) >= 3 else []
+                usadas += 1
+                cand = sorted(((parecido(team, t["team"]["name"]), t["team"]["id"]) for t in r), reverse=True)
+                if not cand or cand[0][0] < 0.5:
+                    est["equipos"][k] = {"t": hoy.isoformat(), "af": None}
+                    continue
             afid = cand[0][1]
             r = af(f"/players/squads?team={afid}")
             usadas += 1
@@ -143,6 +154,7 @@ def actualizar(ligas):
             est["equipos"][k] = {"t": hoy.isoformat(), "af": afid, "n": n_ok}
     except Exception as e:   # sin consultas o error: se sigue en la próxima corrida
         print(f"  (fotos: {e})")
+        est["error"] = str(e)[:200]
     os.makedirs(os.path.dirname(ESTADO_P), exist_ok=True)
     with open(ESTADO_P, "w", encoding="utf-8") as f:
         json.dump(est, f, ensure_ascii=False, separators=(",", ":"))
