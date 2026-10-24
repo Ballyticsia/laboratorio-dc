@@ -28,7 +28,7 @@ async def page_run(name, dev, hashr, ctx):
     pg.on("response", lambda r: bad.append([r.status, r.url]) if r.request.resource_type == "image" and r.status >= 400 else None)
     pg.on("requestfailed", lambda r: bad.append(["fail", r.url]) if r.resource_type == "image" else None)
     pg.on("pageerror", lambda e: errs.append(str(e)[:200]))
-    await pg.goto(BASE + hashr, wait_until="networkidle", timeout=60000)
+    await pg.goto(BASE + hashr, wait_until="load", timeout=60000)
     await pg.wait_for_timeout(5000)
     info = await pg.evaluate("""() => ({hash: location.hash, h1: (document.querySelector('h1')||{}).textContent||'',
       broken: [...document.images].filter(i=>i.complete && i.naturalWidth===0).map(i=>i.src).slice(0,40),
@@ -54,8 +54,7 @@ async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch()
         desk = await b.new_context(viewport={"width": 1280, "height": 900}, service_workers="block")
-        wk = await p.webkit.launch()
-        mob = await wk.new_context(**p.devices["iPhone 13"], service_workers="block")
+        mob = await b.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2, is_mobile=True, has_touch=True, service_workers="block")
         for n, h in RUTAS.items():
             for dev, ctx in (("desk", desk), ("mob", mob)):
                 try: await asyncio.wait_for(page_run(n, dev, h, ctx), 120)

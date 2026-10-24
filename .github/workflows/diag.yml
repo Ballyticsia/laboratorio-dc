@@ -8,10 +8,10 @@ permissions:
 jobs:
   diag:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
-      - run: pip install playwright && python -m playwright install --with-deps chromium webkit
+      - run: pip install playwright && python -m playwright install --with-deps chromium
       - run: python diag/shots.py
       - run: |
           git config user.name "Claude"; git config user.email "noreply@anthropic.com"
