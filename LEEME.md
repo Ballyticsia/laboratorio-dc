@@ -98,6 +98,8 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 ## Votos, prode y fichas
 - El mismo servidor guarda los votos de "¿Quién gana?" (`/voto`, `/votos`) y los prodes con amigos (`/prode/...`): 3 puntos por marcador exacto y 1 por acertar el ganador o el empate. Los pronósticos de los demás se muestran cuando empieza el partido.
 - El robot lee los votos al guardar cada predicción, y la página Registro compara a la gente con Ballytics.
+- **Desafía a Ballytics:** el robot publica `site/data/picks.json` (marcador más probable de cada partido próximo). El servidor lo lee y Ballytics juega en todos los prodes con ese marcador; su pronóstico se congela cuando empieza el partido.
+- **Respaldo:** en Mis pronósticos se puede descargar y cargar un archivo con todo lo guardado en el navegador (pronósticos, equipos seguidos, prodes) para pasarlo a otro dispositivo.
 - La ficha de jugador (`#/ficha/<id>`) lee directo de ESPN; la curva de probabilidad en vivo se calcula en el navegador con el marcador, el minuto y las rojas.
 - `pipeline/copas.py` simula la fase de liga de las copas UEFA y las llaves de ida y vuelta de CONMEBOL.
 

@@ -88,6 +88,12 @@ def main():
             ids.add(f.get("id"))
             for k in ("fH", "fD", "fA", "fO25", "fBTTS"):
                 prob(f.get(k), f"registro {f.get('id')} {k}")
+    pk = os.path.join(DATA, "picks.json")
+    if os.path.exists(pk):
+        j = leer(pk) or {}
+        malos = [k for k, v in (j.get("picks") or {}).items() if not (str(k).isdigit() and re.fullmatch(r"\d{1,2}-\d{1,2}", str(v)))]
+        if malos:
+            err(f"picks.json: {len(malos)} pronósticos con formato inválido")
     for extra in ("metodologia.json", "fotos.json"):
         p = os.path.join(DATA, extra)
         if os.path.exists(p):

@@ -19,6 +19,7 @@
 
 const ORIGINS = ["https://ballyticsia.github.io", "http://localhost:8793", "http://localhost:8000"];
 const ESPN = "https://site.api.espn.com/apis/site/v2/sports/soccer";
+const PICKS_URL = "https://ballyticsia.github.io/laboratorio-dc/data/picks.json";   // marcador más probable de Ballytics por partido
 const ESPN_WEB = "https://site.api.espn.com/apis/common/v3/sports/soccer";   // site.web.api y core bloquean a Cloudflare
 const MAX_SEGUIDOS = 300;
 const PREFS_DEF = { gol: 1, roja: 1, inicio: 1, final: 1, alin: 1, prev: 1 };
@@ -329,6 +330,17 @@ async function jugadoresPartido(env, q) {
 }
 
 /* ================= prode ================= */
+// Ballytics juega en todos los prodes con el marcador más probable del modelo (se congela al empezar el partido)
+async function picksBallytics(ctx) {
+  const cache = caches.default, ck = new Request(PICKS_URL + "?c=1");
+  let r = await cache.match(ck);
+  if (!r) {
+    try { const x = await fetch(PICKS_URL, { cf: { cacheTtl: 600 } }); if (!x.ok) return {}; r = new Response(await x.text(), { headers: { "content-type": "application/json", "cache-control": "public, max-age=600" } }); ctx && ctx.waitUntil(cache.put(ck, r.clone())); }
+    catch (e) { return {}; }
+  }
+  try { const j = await r.json(); return j && j.picks ? j.picks : {}; } catch (e) { return {}; }
+}
+const BOT = "Ballytics (modelo)";
 const CODE_CH = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const newCode = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), b => CODE_CH[b % CODE_CH.length]).join("");
 const okUid = u => typeof u === "string" && u.length >= 8 && u.length <= 64;
@@ -349,7 +361,7 @@ async function prodeUnirse(env, b) {
   await env.SUBS.put(`p:${code}`, JSON.stringify(g));
   return json({ ok: true, code });
 }
-async function prodePick(env, b) {
+async function prodePick(env, b, ctx) {
   const code = String(b.code || "").toUpperCase(), g = await env.SUBS.get(`p:${code}`, "json");
   if (!g) return json({ ok: false, error: "No existe el prode." }, 404);
   if (!okUid(b.uid)) return json({ ok: false, error: "uid" }, 400);
@@ -363,6 +375,7 @@ async function prodePick(env, b) {
   if (!g.eventos[id] && Object.keys(g.eventos).length >= 400) return json({ ok: false, error: "Demasiados partidos en este prode." }, 429);
   g.eventos[id] = ev;
   (g.picks[h] ||= {})[id] = b.pick;
+  const bp = (await picksBallytics(ctx))[id]; if (bp && /^\d{1,2}-\d{1,2}$/.test(bp)) (g.bot ||= {})[id] = bp;
   await env.SUBS.put(`p:${code}`, JSON.stringify(g));
   return json({ ok: true });
 }
@@ -383,29 +396,39 @@ async function resultado(env, id, ev) {
   return null;
 }
 const sign = (x, y) => Math.sign(x - y);
-async function prodeVer(env, code, uid) {
+async function prodeVer(env, code, uid, ctx) {
   const g = await env.SUBS.get(`p:${code.toUpperCase()}`, "json");
   if (!g) return json({ ok: false, error: "No existe un prode con ese código." }, 404);
   const me = uid ? await hash(uid) : null, now = Date.now();
+  // actualiza el pronóstico de Ballytics de los partidos que aún no empiezan
+  const abiertos = Object.entries(g.eventos).filter(([, ev]) => now < new Date(ev.k).getTime());
+  if (abiertos.length) {
+    const P = await picksBallytics(ctx); let cambio = false;
+    for (const [id] of abiertos) { const bp = P[id]; if (bp && /^\d{1,2}-\d{1,2}$/.test(bp) && (g.bot || {})[id] !== bp) { (g.bot ||= {})[id] = bp; cambio = true; } }
+    if (cambio) ctx ? ctx.waitUntil(env.SUBS.put(`p:${code.toUpperCase()}`, JSON.stringify(g))) : await env.SUBS.put(`p:${code.toUpperCase()}`, JSON.stringify(g));
+  }
   let fetched = 0;
   const res = {};
   for (const [id, ev] of Object.entries(g.eventos)) {
     const c = await env.SUBS.get(`res:${id}`);
     if (c) res[id] = c; else if (fetched < 8 && now > new Date(ev.k).getTime() + 100 * 60e3) { fetched++; const r = await resultado(env, id, ev); if (r) res[id] = r; }
   }
-  const tabla = Object.entries(g.miembros).map(([h, alias]) => {
+  const jugadores = Object.entries(g.miembros);
+  if (g.bot && Object.keys(g.bot).length) jugadores.push(["__bot", BOT]);
+  const picksDe = h => h === "__bot" ? g.bot || {} : g.picks[h] || {};
+  const tabla = jugadores.map(([h, alias]) => {
     let pts = 0, ex = 0, ac = 0, n = 0;
-    for (const [id, p] of Object.entries(g.picks[h] || {})) {
+    for (const [id, p] of Object.entries(picksDe(h))) {
       const r = res[id]; if (!r) continue; n++;
       const [ph, pa] = p.split("-").map(Number), [rh, ra] = r.split("-").map(Number);
       if (ph === rh && pa === ra) { pts += 3; ex++; } else if (sign(ph, pa) === sign(rh, ra)) { pts += 1; ac++; }
     }
-    return { alias, pts, exactos: ex, aciertos: ac, jugados: n, yo: h === me };
+    return { alias, pts, exactos: ex, aciertos: ac, jugados: n, yo: h === me, bot: h === "__bot" || undefined };
   }).sort((a, b) => b.pts - a.pts || b.exactos - a.exactos || a.alias.localeCompare(b.alias));
   const eventos = Object.entries(g.eventos).map(([id, ev]) => {
     const empezado = now >= new Date(ev.k).getTime();
     return { id, ...ev, res: res[id] || null, mio: me && g.picks[me] ? g.picks[me][id] || null : null,
-      otros: empezado ? Object.entries(g.miembros).map(([h, alias]) => ({ alias, pick: (g.picks[h] || {})[id] || null })).filter(x => x.pick) : null,
+      otros: empezado ? jugadores.map(([h, alias]) => ({ alias, pick: picksDe(h)[id] || null, bot: h === "__bot" || undefined })).filter(x => x.pick) : null,
       n: Object.values(g.picks).filter(p => p[id]).length };
   }).sort((a, b) => String(a.k).localeCompare(String(b.k)));
   return json({ ok: true, code: code.toUpperCase(), nombre: g.nombre, miembro: !!(me && g.miembros[me]), dueno: me === g.dueno, tabla, eventos });
@@ -424,12 +447,12 @@ export default {
       else if (p === "/dia") res = await dia(ctx, (u.searchParams.get("d") || "").split(","));
       else if (p === "/jugadores") res = await jugadoresPartido(env, u.searchParams);
       else if (p === "/afestado") res = json({ ok: true, ...((await env.SUBS.get("afrem", "json")) || {}), pedidos: Object.keys((await env.SUBS.get("afped", "json")) || {}).length });
-      else if (p.startsWith("/prode/") && req.method === "GET") res = await prodeVer(env, p.split("/")[2] || "", u.searchParams.get("uid"));
+      else if (p.startsWith("/prode/") && req.method === "GET") res = await prodeVer(env, p.split("/")[2] || "", u.searchParams.get("uid"), ctx);
       else if (req.method === "POST") {
         if (+(req.headers.get("content-length") || 0) > 8192) return cors(req, json({ ok: false, error: "demasiado grande" }, 413));
         const b = await req.json().catch(() => ({}));
         const R = { "/follow": follow, "/unfollow": unfollow, "/prefs": setPrefs, "/novedades": novedades, "/voto": votar, "/prode/crear": prodeCrear, "/prode/unirse": prodeUnirse, "/prode/pick": prodePick, "/borrar": borrar }[p];
-        res = R ? await R(env, b) : json({ error: "no existe" }, 404);
+        res = R ? await R(env, b, ctx) : json({ error: "no existe" }, 404);
       } else res = json({ ok: true, servicio: "Ballytics" });
     } catch (e) { res = json({ ok: false, error: String(e) }, 500); }
     return cors(req, res);

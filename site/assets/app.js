@@ -39,9 +39,24 @@ function badge(L, t, size = "") {
   const bg = c ? "#" + c : hashColor(t), fg = c && lum(c) > 0.62 ? "#07090f" : "#fff";
   const ab = (i.abr || t.replace(/[^A-Za-zÀ-ÿ ]/g, "").split(" ").map(w => w[0]).join("").slice(0, 3)).toUpperCase();
   const logo = typeof i.logo === "string" && /^https:\/\//.test(i.logo) ? i.logo : null;
-  const img = logo ? `<img class="crest" src="${esc(logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove('logo');this.remove()">` : "";
+  const img = logo ? `<img class="crest" src="${esc(logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onload="this.parentNode.classList.add('ok')" onerror="this.parentNode.classList.remove('logo');this.remove()">` : "";
   return `<span class="badge ${size}${logo ? " logo" : ""}" style="background:${bg};color:${fg}" aria-hidden="true">${esc(ab)}${img}</span>`;
 }
+/* si un escudo o bandera no carga, se reemplaza por un emblema con iniciales (nunca queda un cuadro vacío) */
+window.bfb = img => {
+  const n = String(img.dataset.n || "").trim();
+  const ini = iniOf(n);
+  const cs = getComputedStyle(img), h = parseFloat(cs.height) || 22, wd = parseFloat(cs.width) || h;
+  const s = document.createElement("span");
+  s.className = "tfb " + (img.className || "").replace(/\b(cimg|flagimg|crest)\b/g, "");
+  s.textContent = ini; s.setAttribute("aria-hidden", "true");
+  s.style.cssText = `--c:${hashColor(n || "?")};width:${Math.round(wd)}px;height:${Math.round(h)}px;font-size:${Math.max(7, Math.round(h * .36))}px`;
+  img.replaceWith(s);
+};
+// emblema con iniciales para equipos sin escudo (mismo estilo que el respaldo de bfb)
+function iniOf(n) { n = String(n || "").trim(); const w = n.replace(/[^A-Za-zÀ-ÿ0-9 ]/g, " ").trim().split(/\s+/).filter(Boolean);
+  return (w.length > 1 && !/^[A-Z]{3}$/.test(n) ? w.filter(x => x.length > 2 || /^[A-Z]/.test(x)).slice(0, 2).map(x => x[0]).join("") || w[0][0] : (w[0] || "?").slice(0, 3)).toUpperCase(); }
+const fbSpan = (n, abr) => `<span class="tfb fit" style="--c:${hashColor(String(n || "?"))}" aria-hidden="true">${esc(abr && abr.length <= 3 ? abr : iniOf(n))}</span>`;
 /* cara del jugador: foto de ESPN (o de API-Football), con iniciales y color del equipo si no hay foto */
 function face(L, t, jid, name, size = "", alt = "") {
   const i = info(L, t), c = i.color && /^[0-9a-f]{6}$/i.test(i.color) ? i.color : null;
@@ -58,9 +73,9 @@ function face(L, t, jid, name, size = "", alt = "") {
   return `<span class="pface ${size}" style="--fc:${bg};--ff:${fg}" aria-hidden="true"><i>${esc(ini)}</i>${img}${crest}</span>`;
 }
 function leagueMark(L, size = "") {
-  const logo = L.logo && /^https:\/\//.test(L.logo) ? L.logo : null;
+  const logo = L.logo && /^(https:\/\/|assets\/logos\/)/.test(L.logo) ? L.logo : null;
   const ab = L.nombre.split(" ").map(w => w[0]).join("").slice(0, 3).toUpperCase();
-  return `<span class="lmark ${size}${logo ? " logo" : ""}" aria-hidden="true">${esc(ab)}${logo ? `<img src="${esc(logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove('logo');this.remove()">` : ""}</span>`;
+  return `<span class="lmark ${size}${logo ? " logo" : ""}" aria-hidden="true">${esc(ab)}${logo ? `<img src="${esc(logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onload="this.parentNode.classList.add('ok')" onerror="this.parentNode.classList.remove('logo');this.remove()">` : ""}</span>`;
 }
 
 /* ---------------- modelo (igual que en Python) ---------------- */
@@ -194,7 +209,9 @@ function buildMenu() {
   });
   document.addEventListener("click", e => { if (!e.target.closest(".search")) res.hidden = true; });
   res.addEventListener("click", () => { res.hidden = true; q.value = ""; });
-  document.addEventListener("keydown", e => { if (e.key === "/" && document.activeElement.tagName !== "INPUT") { e.preventDefault(); q.focus(); } });
+  // atajos: "/" o Ctrl/Cmd + K abren el buscador desde cualquier pantalla
+  document.addEventListener("keydown", e => { const k = (e.key || "").toLowerCase(), tag = document.activeElement.tagName;
+    if ((k === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes(tag)) || (k === "k" && (e.ctrlKey || e.metaKey))) { e.preventDefault(); q.focus(); q.select(); } });
   m.addEventListener("click", e => { if (e.target.closest("[data-go]")) setOpen(false); });
 }
 
@@ -219,7 +236,7 @@ function fromHash() {
   const p = (location.hash || "#/").slice(2).split("/").map(decodeURIComponent);
   const first = ligasIds()[0];
   switch (p[0]) {
-    case "liga": return { v: "liga", liga: (D.ligas[p[1]] || (D.meta && D.meta[p[1]])) ? p[1] : first, tab: p[2] || "resumen" };
+    case "liga": return (D.ligas[p[1]] || (D.meta && D.meta[p[1]])) ? { v: "liga", liga: p[1], tab: p[2] || "resumen" } : p[1] ? { v: "nf", what: "liga" } : { v: "liga", liga: first, tab: "resumen" };
     case "partido": return { v: "partido", liga: p[1], id: p[2], tab: p[3] || "resumen" };
     case "equipo": return { v: "equipo", liga: p[1], team: p[2] };
     case "registro": return { v: "registro", tab: p[1] };
@@ -241,7 +258,8 @@ function fromHash() {
     case "noticias": return { v: "noticias" };
     case "comp": return { v: "comp", liga: p[1], tab: p[2] || "partidos" };
     case "club": return { v: "club", liga: p[1], id: p[2], tab: p[3] || "partidos" };
-    default: return { v: "inicio", liga: "todas" };
+    case "": case undefined: return { v: "inicio", liga: "todas" };
+    default: return { v: "nf" };
   }
 }
 let skipHash = false;
@@ -275,9 +293,9 @@ function render() {
   document.querySelectorAll("[data-nav]").forEach(b => b.setAttribute("aria-current", b.dataset.nav === sec ? "page" : "false"));
   const f = { inicio: vInicio, liga: vLiga, partido: vPartido, equipo: vEquipo, registro: vRegistro, metodo: vMetodo,
     sobre: vSobre, responsable: vResponsable, jugador: vJugador, comparar: vComparar, combinada: vCombinada, seguimiento: vSeguimiento,
-    vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias, selecciones: vSelecciones, ficha: vFicha, prode: vProde, privacidad: vPrivacidad }[R.v] || vInicio;
+    vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias, selecciones: vSelecciones, ficha: vFicha, prode: vProde, privacidad: vPrivacidad, nf: vNoEncontrado }[R.v] || vInicio;
   $app.innerHTML = staleBanner() + f();
-  if (R.v === "partido") { if (R.tab === "mercados") bindOdds(); if (R.tab === "alineaciones" || document.getElementById("xi-adj")) loadSummary(); }
+  if (R.v === "partido") { bindOdds(); if (R.tab === "alineaciones" || document.getElementById("xi-adj")) loadSummary(); }
   if (R.v === "comparar") bindCompare();
   if (R.v === "combinada") bindCombinada();
   if (R.v === "seguimiento") bindSeguimiento();
@@ -286,6 +304,7 @@ function render() {
   bindCarousels();
   paintLive();
   paintCountdown();
+  const hs = document.querySelector('.hsort [aria-pressed="true"]'); if (hs && hs.offsetLeft > hs.parentNode.clientWidth - 40) hs.parentNode.scrollLeft = hs.offsetLeft - 60;
 }
 
 /* ---------------- componentes ---------------- */
@@ -296,7 +315,7 @@ function zoneOf(L, pos) { return (L.zonas || []).find(z => pos >= z.desde && pos
 function posTag(L, pos) { const z = zoneOf(L, pos); return `<span class="pos ${z ? "z-" + z.cls : ""}" ${z ? `title="${esc(z.nombre)}"` : ""}>${pos}</span>`; }
 
 const shortDay = iso => new Date(iso).toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" });
-function matchRow(p, showLeague, isFav, showDate) {
+function matchRow(p, showLeague, isFav, showDate, met) {
   const L = p.L || D.ligas[p.liga], fav = p.pH >= p.pA ? "h" : "a";
   const pick = p.pH >= p.pD && p.pH >= p.pA ? "1" : p.pA >= p.pD ? "2" : "X";
   return `<button class="mrow ${isFav ? "isfav" : ""}" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}">
@@ -305,7 +324,7 @@ function matchRow(p, showLeague, isFav, showDate) {
       <span class="tline">${badge(L, p.home)}<span class="n ${fav === "h" ? "fav" : "und"}">${esc(corto(L, p.home))}</span></span>
       <span class="tline">${badge(L, p.away)}<span class="n ${fav === "a" ? "fav" : "und"}">${esc(corto(L, p.away))}</span></span>
     </span>
-    <span class="p3">${bar3(p.pH, p.pD, p.pA)}<span class="nums"><span><b>${pct(p.pH)}</b></span><span>${pct(p.pD)}</span><span><b>${pct(p.pA)}</b></span></span></span>
+    <span class="p3">${met ? `<span class="mmet">${esc(met)}</span>` : ""}${bar3(p.pH, p.pD, p.pA)}<span class="nums"><span><b>${pct(p.pH)}</b></span><span>${pct(p.pD)}</span><span><b>${pct(p.pA)}</b></span></span></span>
     <span class="pick" data-live-s="${esc(p.id)}"><span class="s">${esc(p.top)}</span><span class="l">Pick ${pick}</span></span>
   </button>`;
 }
@@ -384,11 +403,25 @@ function dayList(sel) {
   const strip = `<div class="days" role="tablist" aria-label="Día">${days.map(k => `<button role="tab" class="dbtn" data-go="inicio" data-dia="${k}" data-liga="${sel}" data-keep aria-selected="${k === dia}"><span class="dn">${esc(short(k))}</span><b>${dnum(k)}</b><small>${cnt(k) || "–"}</small></button>`).join("")}</div>`;
   const items = [...byDay[dia].res.map(x => ({ t: x.kickoff, x, r: true })), ...byDay[dia].fx.map(p => ({ t: p.kickoff, x: p }))];
   const fav = it => isFavT(it.x.L.id, it.x.home) || isFavT(it.x.L.id, it.x.away) || isFavL(it.x.L.id);
-  items.sort((a, b) => (fav(b) - fav(a)) || a.t.localeCompare(b.t));
-  const rows = items.map(it => it.r ? resRow(it.x, sel === "todas", fav(it)) : matchRow(it.x, sel === "todas", fav(it))).join("");
+  // ordenar como en Forebet: por hora o por lo que el modelo ve más claro en cada mercado
+  const so = HSORT.find(x => x[0] === VV.hsort) || HSORT[0];
+  if (so[0] === "hora") items.sort((a, b) => (fav(b) - fav(a)) || a.t.localeCompare(b.t));
+  else items.sort((a, b) => (!!a.r - !!b.r) || ((b.r ? -1 : so[2](b.x) ?? -1) - (a.r ? -1 : so[2](a.x) ?? -1)) || a.t.localeCompare(b.t));
+  const rows = items.map(it => it.r ? resRow(it.x, sel === "todas", fav(it)) : matchRow(it.x, sel === "todas", fav(it), false, so[0] === "hora" ? null : so[3](it.x))).join("");
   const more = !D.allLoaded ? `<div class="skel-row"><span class="skel" style="width:40%"></span></div>` : "";
-  return `${strip}<div class="panel flush daypanel">${rows || `<div class="empty">No hay partidos ${dayLabel(dia) === "Hoy" ? "hoy" : "este día"}${sel !== "todas" ? " en esta liga" : ""}.</div>`}${more}</div>`;
+  const sortBar = byDay[dia].fx.length > 1 ? `<div class="hsort" role="group" aria-label="Ordenar partidos"><span class="lbl">Ordenar</span>${HSORT.map(x => `<button data-hsort="${x[0]}" aria-pressed="${x === so}">${x[1]}</button>`).join("")}</div>` : "";
+  return `${strip}${sortBar}${so[0] === "mercado" ? `<p class="note hs-note">Diferencia entre el modelo propio y el mercado sin margen. Es una comparación, no un consejo: en el backtest el mercado fue más preciso.</p>` : ""}<div class="panel flush daypanel">${rows || `<div class="empty">No hay partidos ${dayLabel(dia) === "Hoy" ? "hoy" : "este día"}${sel !== "todas" ? " en esta liga" : ""}.</div>`}${more}</div>`;
 }
+const mktDif = p => { const q = mktOf(p); if (!q || !p.modelo) return null; const own = [p.modelo.pH, p.modelo.pD, p.modelo.pA];
+  const i = [0, 1, 2].sort((a, b) => Math.abs(own[b] - q.p[b]) - Math.abs(own[a] - q.p[a]))[0]; return { i, d: own[i] - q.p[i] }; };
+const HSORT = [
+  ["hora", "Hora"],
+  ["seguro", "Más claro", p => Math.max(p.pH, p.pD, p.pA), p => { const m = Math.max(p.pH, p.pD, p.pA); return `${m === p.pH ? "Local" : m === p.pA ? "Visita" : "Empate"} ${pct(m)}`; }],
+  ["goles", "+2,5 goles", p => p.pO25, p => p.pO25 != null ? `+2,5 · ${pct(p.pO25)}` : ""],
+  ["btts", "Ambos marcan", p => p.pBTTS, p => p.pBTTS != null ? `Ambos · ${pct(p.pBTTS)}` : ""],
+  ["mercado", "Modelo vs mercado", p => { const m = mktDif(p); return m ? Math.abs(m.d) : null; }, p => { const m = mktDif(p); return m ? `${["Local", "Empate", "Visita"][m.i]} ${m.d > 0 ? "+" : "−"}${Math.round(Math.abs(m.d) * 100)} pts` : "sin cuota"; }],
+];
+document.addEventListener("click", e => { const b = e.target.closest("[data-hsort]"); if (!b) return; VV.hsort = b.dataset.hsort; lsSet("bt_hsort", VV.hsort); go({ ...R, keepScroll: true }, false); });
 function resRow(x, showLeague, fav) {
   const L = x.L, hw = x.hg > x.ag, aw = x.ag > x.hg;
   return `<div class="mrow res ${fav ? "isfav" : ""}">
@@ -438,11 +471,24 @@ function misPartidos() {
 }
 
 /* ---------------- esqueletos ---------------- */
+// esqueletos de carga: tarjetas grises animadas con la forma de lo que viene
+const skelRows = n => `<div class="panel flush skel-list" aria-busy="true" aria-label="Cargando">${Array.from({ length: n }, (_, i) => `<div class="skel-r"><span class="skel sk-c"></span><span class="skel" style="width:${[62, 48, 70, 55, 66][i % 5]}%"></span><span class="skel sk-s"></span></div>`).join("")}</div>`;
+const skelHead = () => `<div class="skel-h" aria-busy="true" aria-label="Cargando"><span class="skel sk-l"></span><span class="skel" style="width:45%;height:22px"></span></div>`;
 function skeleton() {
   const line = w => `<span class="skel" style="width:${w}"></span>`;
   return `<section class="view"><div class="panel skel-box" style="height:220px"></div>
     <div class="cards">${[1, 2, 3].map(() => `<div class="panel stack">${line("40%")}${line("90%")}${line("75%")}${line("60%")}</div>`).join("")}</div></section>`;
 }
+
+/* ---------------- página no encontrada ---------------- */
+function vNoEncontrado(msg) {
+  return `<section class="view narrow nf" aria-labelledby="h-nf"><div class="panel stack nf-box">
+    <span class="nf-code num" aria-hidden="true">404</span>
+    <h1 id="h-nf">${esc(msg || (R.what === "liga" ? "Esta liga no está en Ballytics" : "No encontramos esta página"))}</h1>
+    <p class="muted">Puede que el enlace esté mal escrito o que el partido ya se haya jugado y salido del calendario. Busca un equipo, jugador o competición:</p>
+    <div class="row nf-act"><button class="btn" data-focus-q>Buscar</button><button class="btn ghost" data-go="inicio" data-liga="todas">Ir al inicio</button><button class="btn ghost" data-go="vivo">Partidos de hoy</button><button class="btn ghost" data-go="registro">Resultados del modelo</button></div></div></section>`;
+}
+document.addEventListener("click", e => { if (e.target.closest("[data-focus-q]")) { const q = document.getElementById("q"); if (q) { window.scrollTo({ top: 0 }); q.focus(); } } });
 
 /* ---------------- INICIO ---------------- */
 let homeLiga = null;
@@ -550,7 +596,8 @@ function vInicio() {
   const sel = R.liga || "todas";
   const list = dayList(sel);
   const chips = `<div class="lgrid" role="group" aria-label="Filtrar por liga"><button class="lpick all" data-go="inicio" data-liga="todas" data-keep aria-pressed="${sel === "todas"}" title="Todas las ligas"><span class="lmark">★</span><span>Todas</span></button>` +
-    D.indice.ligas.map(l => `<button class="lpick" data-go="inicio" data-liga="${l.id}" data-keep aria-pressed="${sel === l.id}" title="${esc(l.nombre)}">${leagueMark(l)}<span>${esc(l.nombre)}</span></button>`).join("") + `</div>`;
+    // las ligas que sigues quedan primero, con estrella
+    [...D.indice.ligas].sort((a, b) => isFavL(b.id) - isFavL(a.id)).map(l => `<button class="lpick${isFavL(l.id) ? " fav" : ""}" data-go="inicio" data-liga="${l.id}" data-keep aria-pressed="${sel === l.id}" title="${esc(l.nombre)}">${leagueMark(l)}<span>${isFavL(l.id) ? "★ " : ""}${esc(l.nombre)}</span></button>`).join("") + `</div>`;
   const mine = misPartidos();
 
   return `<section class="view" aria-labelledby="h-inicio">
@@ -628,7 +675,27 @@ function groupTables(L, compact = false) {
       `</tbody></table>${!multi ? zonesLegend(L) : ""}</div>`;
   }).join("") + `<p class="note">Tabla oficial publicada por ESPN.</p>`;
 }
-function lTabla(L) { return L.tabla_ok ? `<div class="panel flush scroll">${fullTable(L)}</div>` : (groupTables(L) || `<div class="panel empty">Sin tabla publicada para esta competición.</div>`); }
+// tabla de local o de visita (como FootyStats), calculada con los resultados de la temporada
+function splitTable(L, side) {
+  const T = {};
+  L.tabla.forEach(s => T[s.equipo] = { equipo: s.equipo, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0, pts: 0, f: [] });
+  [...L.resultados].sort((a, b) => a.kickoff.localeCompare(b.kickoff)).forEach(x => {
+    const t = side === "local" ? x.home : x.away, r = T[t]; if (!r) return;
+    const gf = side === "local" ? x.hg : x.ag, gc = side === "local" ? x.ag : x.hg;
+    r.pj++; r.gf += gf; r.gc += gc; if (gf > gc) { r.g++; r.pts += 3; r.f.push("G"); } else if (gf === gc) { r.e++; r.pts++; r.f.push("E"); } else { r.p++; r.f.push("P"); }
+  });
+  return Object.values(T).map(r => ({ ...r, dg: r.gf - r.gc, forma: r.f.slice(-5) })).sort((a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf).map((r, i) => ({ ...r, pos: i + 1 }));
+}
+function lTabla(L) {
+  if (!L.tabla_ok) return groupTables(L) || `<div class="panel empty">Sin tabla publicada para esta competición.</div>`;
+  const sp = ["local", "visita"].includes(VV.tsplit) ? VV.tsplit : "total";
+  const sw = `<div class="tabs2 tsplit" role="group" aria-label="Partidos">${[["total", "Total"], ["local", "De local"], ["visita", "De visita"]].map(([k, n]) => `<button data-tsplit="${k}" aria-pressed="${k === sp}">${n}</button>`).join("")}</div>`;
+  if (sp === "total") return `${sw}<div class="panel flush scroll">${fullTable(L)}</div>`;
+  const rows = splitTable(L, sp);
+  return `${sw}<div class="panel flush scroll"><table class="t"><thead><tr><th>#</th><th>Equipo</th><th class="n">PJ</th><th class="n hide-m">G</th><th class="n hide-m">E</th><th class="n hide-m">P</th><th class="n">GF</th><th class="n">GC</th><th class="n">DG</th><th class="n">Pts</th><th class="n hide-m">Pts/PJ</th><th class="hide-m">Forma</th></tr></thead><tbody>${rows.map(s => `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}"><td><span class="pos">${s.pos}</span></td><td class="team">${badge(L, s.equipo)}${esc(corto(L, s.equipo))}</td><td class="n">${s.pj}</td><td class="n hide-m">${s.g}</td><td class="n hide-m">${s.e}</td><td class="n hide-m">${s.p}</td><td class="n">${s.gf}</td><td class="n">${s.gc}</td><td class="n">${sgn(s.dg)}</td><td class="n"><b>${s.pts}</b></td><td class="n hide-m">${s.pj ? dec(s.pts / s.pj) : "—"}</td><td class="hide-m">${formHtml(s.forma)}</td></tr>`).join("")}</tbody></table></div>
+    <p class="note">Solo los partidos jugados ${sp === "local" ? "en casa" : "fuera de casa"} esta temporada. Sirve para ver cuánto cambia un equipo según dónde juega.</p>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-tsplit]"); if (!b) return; VV.tsplit = b.dataset.tsplit; go({ ...R, keepScroll: true }, false); });
 function weeks(L) {
   const w = {};
   L.resultados.forEach(x => (w[weekStart(x.kickoff)] ||= { res: [], fx: [] }).res.push(x));
@@ -734,7 +801,11 @@ function lResumen(L) {
 /* ---------------- PARTIDO ---------------- */
 function vPartido() {
   const L = D.ligas[R.liga], p = findMatch(R.liga, R.id);
-  if (!L || !p) return `<section class="view"><button class="back" data-go="inicio">← Inicio</button><div class="panel empty">Este partido ya no está en el calendario (puede que ya se haya jugado).</div></section>`;
+  if (!L || !p) {
+    const reg = D.registro && (D.registro.filas || []).find(f => String(f.id) === String(R.id));
+    if (reg) return `<section class="view narrow"><button class="back" data-go="registro">← Resultados del modelo</button>${regMatch(reg)}<p class="note">Este partido ya se jugó. Arriba está lo que predijo Ballytics y cómo le fue.</p></section>`;
+    return vNoEncontrado("Este partido ya no está en el calendario");
+  }
   const { m, lh, la } = pmatrix(L, p), k = markets(m);
   const sh = rowOf(L, p.home), sa = rowOf(L, p.away), H = corto(L, p.home), A = corto(L, p.away);
   const N = 6; let mx = 0; for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) mx = Math.max(mx, m[i][j]);
@@ -764,6 +835,11 @@ function vPartido() {
       <td class="n"><input class="odd" inputmode="decimal" aria-label="Cuota ${esc(n)}" data-k="${esc(key)}" data-p="${pr}" value="${st[key] ? String(st[key]).replace(".", ",") : ""}" placeholder="—"></td><td class="n" data-ev="${esc(key)}"></td>
       <td class="n"><button class="addsel" data-sel="${esc(key)}" data-label="${esc(selLabel(g, n))}" data-jug="${key[0] === "G" ? esc(n.replace(/ \(.*\)$/, "")) : ""}" data-liga="${L.id}" data-mid="${esc(p.id)}" aria-pressed="${inCombo(p.id, key)}" title="Agregar a la combinada">+</button></td></tr>`).join("")).join("");
   const reg = D.registro && D.registro.filas && D.registro.filas.find(f => String(f.id) === String(p.id));
+  // calculadora rápida: el usuario escribe la cuota de su casa y ve al tiro si tiene valor según Ballytics
+  const quick = [["H", `Gana ${H}`, k.H], ["D", "Empate", k.D], ["A", `Gana ${A}`, k.A], ["O25", "Más de 2,5 goles", k.O25], ["BY", "Ambos marcan", k.B]];
+  const evCalc = `<div class="panel stack evcalc"><div class="row" style="justify-content:space-between;align-items:baseline"><h3>¿Tu cuota tiene valor? ${help(TIPS.ev)}</h3><button class="link" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}" data-tab="mercados" data-keep>Todos los mercados →</button></div>
+    <div class="evq">${quick.map(([key, n, pr]) => `<label class="evi"><span class="lbl">${esc(n)}</span><span class="evp num">${pct(pr, 0)} · justa ${dec(1 / pr)}</span><input class="odd" inputmode="decimal" aria-label="Tu cuota para ${esc(n)}" data-k="${key}" data-p="${pr}" value="${st[key] ? String(st[key]).replace(".", ",") : ""}" placeholder="Tu cuota"><span class="evr" data-ev="${key}"></span></label>`).join("")}</div>
+    <p class="note">Escribe la cuota que te ofrece tu casa. Si es mayor que la cuota justa, el valor esperado (EV) sale positivo según Ballytics. Ojo: en el backtest, apostar solo por valor del modelo perdió plata; es una referencia, no una recomendación.</p></div>`;
   const side = (s, t, cls) => `<div class="side ${cls}">${badge(L, t, "lg")}<button class="tn" data-go="equipo" data-liga="${L.id}" data-team="${esc(t)}">${esc(corto(L, t))}</button>
       <span class="xgv">${dec(cls === "l" ? lh : la)}</span><span class="lbl">goles previstos ${cls === "l" ? help(TIPS.xg) : ""}</span>
       <span class="row" style="gap:8px;${cls === "r" ? "justify-content:flex-end" : ""}">${s.pos ? `<span class="muted num" style="font-size:12px">${s.pos}º · ${s.pts} pts</span>` : ""}${formHtml(s.forma)}</span></div>`;
@@ -784,6 +860,7 @@ function vPartido() {
     ${cerca ? `<div id="xi-adj"></div>` : ""}
     ${bajasPanel(L, p)}
     <div class="panel stack previa"><h3>Previa</h3>${previa(L, p, k, ct, tt)}</div>
+    ${evCalc}
     <div class="grid2">
       <div class="panel stack"><h3>Marcador exacto</h3><div class="scroll"><table class="heat">${heat}</table></div><p class="note">Filas: goles de ${esc(H)}. Columnas: goles de ${esc(A)}.</p></div>
       ${cmp ? `<div class="panel stack"><h3>Comparación de la temporada</h3><div class="cmph"><span>${badge(L, p.home)} ${esc(H)}</span><span>${esc(A)} ${badge(L, p.away)}</span></div>${cmp}</div>` : ""}
@@ -814,7 +891,7 @@ function vPartido() {
     <div class="panel match">
       <div class="livebox" data-live-box="${esc(p.id)}" hidden></div>
       <div class="meta">${leagueMark(L, "sm")}<span>${esc(L.nombre)}</span><span>·</span><span>${new Date(p.kickoff).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })} ${hhmm(p.kickoff)}</span><span class="cdown" data-cd="${esc(p.kickoff)}"></span></div>
-      <div class="mact"><button class="btn ghost sm" data-share data-liga="${L.id}" data-mid="${esc(p.id)}">Compartir imagen</button><button class="btn ghost sm" data-ics="match" data-liga="${L.id}" data-mid="${esc(p.id)}">Agregar al calendario</button></div>
+      <div class="mact"><button class="btn ghost sm" data-share data-liga="${L.id}" data-mid="${esc(p.id)}">Compartir imagen</button><button class="btn ghost sm" data-share data-fmt="story" data-liga="${L.id}" data-mid="${esc(p.id)}" title="Formato vertical 9:16 para historias de Instagram o WhatsApp">Imagen para historias</button><button class="btn ghost sm" data-ics="match" data-liga="${L.id}" data-mid="${esc(p.id)}">Agregar al calendario</button></div>
       <div class="face">${side(sh, p.home, "l")}<span class="vs">VS</span>${side(sa, p.away, "r")}</div>
       <div class="probs">
         <div class="pt h"><span class="lbl">${esc(H)}</span><span class="v">${pct(k.H, 1)}</span><div class="tr"><i style="width:${100 * k.H}%"></i></div></div>
@@ -1477,7 +1554,10 @@ function countdown(iso) {
   return h ? `en ${h} h ${m} min` : `en ${m} min`;
 }
 function paintCountdown() {
-  document.querySelectorAll("[data-cd]").forEach(el => { const t = countdown(el.dataset.cd); el.textContent = t; el.hidden = !t; });
+  const narrow = window.innerWidth <= 760;
+  document.querySelectorAll("[data-cd]").forEach(el => { let t = countdown(el.dataset.cd);
+    if (t && narrow && el.classList.contains("sm")) t = t.replace(/^en /, "").replace(" h ", "h ").replace(" min", "m").replace(" d ", "d ").replace(/ h$/, "h");
+    el.textContent = t; el.hidden = !t; });
 }
 setInterval(paintCountdown, 30000);
 
@@ -1629,9 +1709,33 @@ function vSeguimiento() {
     <div class="kpis">${kpi("m", "Pronósticos", PICKS.length, `${done.length} terminados`)}${kpi("", "Acierto", done.length ? pct(wins / done.length, 1) : "—", done.length ? `el modelo esperaba ${pct(expect / done.length, 1)}` : "")}
       ${kpi("k", "Resultado", money.length ? `${ret - staked >= 0 ? "+" : "−"}${Math.round(Math.abs(ret - staked)).toLocaleString("es-CL")}` : "—", money.length ? `ROI ${pct((ret - staked) / staked, 1)} sobre ${Math.round(staked).toLocaleString("es-CL")}` : "anota cuota y monto para verlo")}</div>
     ${rows || `<div class="panel empty">Aún no guardas pronósticos. Arma una combinada (o una sola selección) desde la pestaña Mercados de un partido y toca <b>Guardar en Mis pronósticos</b>.</div>`}
-    <p class="note">Se guarda solo en este navegador y dispositivo. Si apuestas, hazlo con un presupuesto que puedas perder. <button class="link" data-go="responsable">Juego responsable</button></p>
+    <div class="panel stack backup"><h3>Respaldo</h3><p class="note">Tus pronósticos, equipos seguidos y prodes se guardan solo en este navegador. Descarga un respaldo para pasarlos a otro teléfono o computador, o por si borras los datos del navegador.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn ghost sm" data-backup="out">Descargar respaldo</button><label class="btn ghost sm" style="cursor:pointer">Cargar respaldo<input type="file" accept="application/json,.json" data-backup="in" hidden></label></div></div>
+    <p class="note">Si apuestas, hazlo con un presupuesto que puedas perder. <button class="link" data-go="responsable">Juego responsable</button></p>
   </section>`;
 }
+/* respaldo: todo lo que Ballytics guarda en este navegador (menos la caché de partidos) */
+const BK_SKIP = ["bt_dia"];
+document.addEventListener("click", e => {
+  if (!e.target.closest('[data-backup="out"]')) return;
+  const data = {};
+  try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith("bt_") && !BK_SKIP.includes(k)) data[k] = localStorage.getItem(k); } } catch (x) {}
+  const blob = new Blob([JSON.stringify({ app: "ballytics", v: 1, fecha: new Date().toISOString(), datos: data }, null, 1)], { type: "application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `ballytics-respaldo-${ymd(new Date())}.json`; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  toast("Respaldo descargado. Ábrelo en el otro dispositivo con «Cargar respaldo».");
+});
+document.addEventListener("change", async e => {
+  const inp = e.target.closest('[data-backup="in"]'); if (!inp || !inp.files[0]) return;
+  try {
+    const j = JSON.parse(await inp.files[0].text());
+    if (!j || j.app !== "ballytics" || typeof j.datos !== "object") throw new Error("formato");
+    const ks = Object.keys(j.datos).filter(k => /^bt_[a-z0-9_]+$/i.test(k) && !BK_SKIP.includes(k) && typeof j.datos[k] === "string" && j.datos[k].length < 500000);
+    ks.forEach(k => localStorage.setItem(k, j.datos[k]));
+    toast(`Respaldo cargado (${ks.length} datos). Recargando…`); setTimeout(() => location.reload(), 900);
+  } catch (x) { toast("Ese archivo no es un respaldo de Ballytics."); }
+  inp.value = "";
+});
 function bindSeguimiento() {
   document.querySelectorAll("[data-rmp]").forEach(b => b.onclick = () => { PICKS.splice(+b.dataset.rmp, 1); savePicks(); go({ v: "seguimiento", keepScroll: true }); });
 }
@@ -1659,8 +1763,8 @@ document.addEventListener("click", e => {
 });
 
 /* ---------------- COMPARTIR (imagen) ---------------- */
-async function shareImage(L, p) {
-  const W = 1080, H = 1350, c = document.createElement("canvas"); c.width = W; c.height = H;
+async function shareImage(L, p, fmt) {
+  const story = fmt === "story", W = 1080, H = story ? 1920 : 1350, c = document.createElement("canvas"); c.width = W; c.height = H;
   const x = c.getContext("2d");
   try { await document.fonts.ready; } catch (e) {}
   const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, "#0f1a36"); g.addColorStop(.55, "#0a0f1e"); g.addColorStop(1, "#160f2e");
@@ -1672,6 +1776,8 @@ async function shareImage(L, p) {
   x.strokeStyle = "#fff"; x.lineWidth = 7; x.lineCap = "round"; x.lineJoin = "round"; x.beginPath(); x.moveTo(84, 118); x.lineTo(98, 98); x.lineTo(110, 106); x.lineTo(122, 86); x.stroke();
   x.fillStyle = "#e8edf7"; x.font = `700 44px ${D1}`; x.textBaseline = "middle"; x.fillText("BALLYTICS", 156, 104);
   x.fillStyle = "#8792a6"; x.font = `600 30px ${D1}`; x.textAlign = "right"; x.fillText(L.nombre.toUpperCase(), W - 70, 104); x.textAlign = "left";
+  // formato historia (9:16): el contenido baja y se agregan córners y tarjetas esperados
+  const oy = story ? 250 : 0; x.save(); x.translate(0, oy);
   x.fillStyle = "#c8d3ea"; x.font = `500 32px ${D2}`; x.textAlign = "center";
   x.fillText(new Date(p.kickoff).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }) + " · " + hhmm(p.kickoff), W / 2, 230);
   const crest = (cx, t) => { const i = info(L, t), col = i.color && /^[0-9a-f]{6}$/i.test(i.color) ? "#" + i.color : "#3d8bff";
@@ -1692,11 +1798,18 @@ async function shareImage(L, p) {
   boxes.forEach(([l, v], i) => { const w = (W - 180 - 40) / 3, xx = 90 + i * (w + 20);
     x.fillStyle = "rgba(255,255,255,.05)"; x.strokeStyle = "rgba(148,163,184,.25)"; x.lineWidth = 2; x.beginPath(); x.roundRect(xx, 1030, w, 150, 22); x.fill(); x.stroke();
     x.textAlign = "center"; x.fillStyle = "#8792a6"; x.font = `600 24px ${D1}`; x.fillText(l, xx + w / 2, 1075); x.fillStyle = "#ffb020"; x.font = `700 50px ${D1}`; x.fillText(v, xx + w / 2, 1135); });
+  if (story) {
+    const extra = [p.ch != null ? ["CÓRNERS ESPERADOS", dec(p.ch + p.ca, 1)] : null, p.th != null ? ["TARJETAS ESPERADAS", dec(p.th + p.ta, 1)] : null].filter(Boolean);
+    extra.forEach(([l, v], i) => { const w = (W - 180 - 20 * (extra.length - 1)) / extra.length, xx = 90 + i * (w + 20);
+      x.fillStyle = "rgba(255,255,255,.05)"; x.strokeStyle = "rgba(148,163,184,.25)"; x.lineWidth = 2; x.beginPath(); x.roundRect(xx, 1210, w, 150, 22); x.fill(); x.stroke();
+      x.textAlign = "center"; x.fillStyle = "#8792a6"; x.font = `600 24px ${D1}`; x.fillText(l, xx + w / 2, 1255); x.fillStyle = "#e8edf7"; x.font = `700 50px ${D1}`; x.fillText(v, xx + w / 2, 1315); });
+  }
+  x.restore();
   x.fillStyle = "#5d677a"; x.font = `500 24px ${D2}`; x.textAlign = "center";
-  x.fillText("Probabilidades de un modelo estadístico. No son consejos de apuesta. +18", W / 2, 1255);
-  x.fillStyle = "#8792a6"; x.font = `600 26px ${D3}`; x.fillText(location.host + location.pathname.replace(/\/$/, ""), W / 2, 1295);
+  x.fillText("Probabilidades de un modelo estadístico. No son consejos de apuesta. +18", W / 2, H - 95);
+  x.fillStyle = "#8792a6"; x.font = `600 26px ${D3}`; x.fillText(location.host + location.pathname.replace(/\/$/, ""), W / 2, H - 55);
   const blob = await new Promise(r => c.toBlob(r, "image/png"));
-  const fname = `ballytics-${corto(L, p.home)}-${corto(L, p.away)}.png`.replace(/\s+/g, "_");
+  const fname = `ballytics-${corto(L, p.home)}-${corto(L, p.away)}${story ? "-historia" : ""}.png`.replace(/\s+/g, "_");
   const file = new File([blob], fname, { type: "image/png" });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try { await navigator.share({ files: [file], title: `${corto(L, p.home)} vs ${corto(L, p.away)}`, text: "Probabilidades en Ballytics", url: location.href }); return; } catch (e) { if (e.name === "AbortError") return; }
@@ -1707,7 +1820,7 @@ async function shareImage(L, p) {
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-share]"); if (!b) return;
   const L = D.ligas[b.dataset.liga], p = L && findMatch(L.id, b.dataset.mid); if (!p) return;
-  b.disabled = true; shareImage(L, p).finally(() => { b.disabled = false; });
+  b.disabled = true; shareImage(L, p, b.dataset.fmt).finally(() => { b.disabled = false; });
 });
 
 
@@ -1734,6 +1847,7 @@ document.addEventListener("click", e => {
 const ESPN = "https://site.api.espn.com/apis/site/v2/sports/soccer";
 const ESPN_ST = "https://site.api.espn.com/apis/v2/sports/soccer";
 const VV = { cache: {}, sum: {}, team: "h", comps: null, byId: {}, bySlug: {}, more: {}, q: "", st: {}, sched: {}, news: {} };
+VV.hsort = lsGet("bt_hsort", "hora");
 const NCAA = new Set(["5487", "5499"]);   // fútbol universitario de EE.UU.: muchos partidos, poco interés
 const ymd = d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
 const localDay = iso => ymd(new Date(iso));
@@ -1757,7 +1871,7 @@ async function vSel() {
   return VV.sel;
 }
 const favSel = () => lsGet("bt_vsel", []);
-const selImg = (t, cls = "") => t && t.l ? `<img class="cimg flagimg ${cls}" src="${esc(t.l)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : `<span class="cflag">🏳️</span>`;
+const selImg = (t, cls = "") => t && t.l ? `<img class="cimg flagimg ${cls}" src="${esc(t.l)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-n="${esc(t.abr || t.n)}" onerror="bfb(this)">` : `<span class="cflag">🏳️</span>`;
 const NAT_SLUGS = ["fifa.friendly", "uefa.nations", "concacaf.nations.league", "fifa.worldq.conmebol", "fifa.worldq.uefa", "fifa.worldq.concacaf", "fifa.worldq.afc", "fifa.worldq.caf", "fifa.worldq.ofc", "conmebol.america", "uefa.euroq", "caf.nations", "afc.asian.cup", "fifa.world"];
 function cupCard() {
   const L = D.ligas.champions || D.ligas.libertadores, C = L && L.copa; if (!C) return "";
@@ -1770,7 +1884,7 @@ function vSelecciones() {
   setTimeout(vFillSel, 0);
   return `<section class="view" aria-labelledby="h-sel"><h1 id="h-sel">Selecciones</h1>${vHub("selecciones")}
     <div class="vbar"><div class="vsearch wide"><input id="vs-q" type="search" placeholder="Buscar selección" autocomplete="off"></div></div>
-    <div id="vs-next"></div><div id="vs-list"><div class="panel empty">Cargando…</div></div></section>`;
+    <div id="vs-next"></div><div id="vs-list">${skelRows(5)}</div></section>`;
 }
 async function vFillSel() {
   const S = await vSel(), box = document.getElementById("vs-list"); if (!box) return;
@@ -1790,7 +1904,7 @@ async function vFillNatNext() {
   const box = document.getElementById("vs-next"); if (!box) return;
   if (!VV.natNext || Date.now() - VV.natNext.t > 600000) {
     const now = new Date(), months = [0, 1, 2].map(i => { const d = new Date(now.getFullYear(), now.getMonth() + i, 1); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`; });
-    await vComps();
+    await Promise.all([vComps(), vSel()]);
     const res = await Promise.all(NAT_SLUGS.flatMap(s => months.map(m => vget(`${ESPN}/${s}/scoreboard?dates=${m}&limit=1000`).catch(() => null))));
     const map = new Map(); res.filter(Boolean).forEach(j => (j.events || []).forEach(e => { const x = vParse(e); if (!map.has(x.id)) map.set(x.id, x); }));
     VV.natNext = { t: Date.now(), evs: [...map.values()].sort((a, b) => a.date.localeCompare(b.date)) };
@@ -1808,6 +1922,8 @@ const compImg = (c, cls = "") => c && c.l ? `<img class="cimg ${cls}" src="${esc
 function modelBySlug(slug) { return Object.values(D.ligas || {}).find(L => L.slug === slug) || (D.indice ? D.indice.ligas.find(l => l.slug === slug) : null); }
 
 /* ---------- partidos del día ---------- */
+// ESPN entrega las selecciones con nombre en inglés: se traducen con assets/selecciones.json
+function esNat(o) { const t = o && VV.selById && VV.selById[o.id]; if (t) { o.name = t.n; o.full = t.n; if (t.abr) o.abr = t.abr; } return o; }
 function vParse(e) {
   const c = (e.competitions || [])[0] || {}, st = c.status || e.status || {}, t = st.type || {};
   const lid = String(e.uid || "").split("~l:")[1]?.split("~")[0] || "";
@@ -1816,20 +1932,20 @@ function vParse(e) {
     return { id: String(tm.id || ""), name: tm.shortDisplayName || tm.displayName || "", full: tm.displayName || "", abr: tm.abbreviation, logo: tm.logo, color: tm.color, score: x.score, winner: x.winner }; };
   return { id: String(e.id), lid, comp: known ? known.n : (note.split(",")[0] || "Otras competiciones"), slug: known ? known.s : null,
     ronda: note.includes(",") ? note.split(",").slice(1).join(",").trim() : "", date: e.date, state: t.state, detail: t.shortDetail || t.detail || "",
-    clock: st.displayClock, period: st.period, h: side("home"), a: side("away") };
+    clock: st.displayClock, period: st.period, h: esNat(side("home")), a: esNat(side("away")) };
 }
 /* evento en formato corto (servidor de Ballytics) → mismo formato que vParse */
 function vParseC(x) {
   const lid = String(x.uid || "").split("~l:")[1]?.split("~")[0] || "", known = VV.byId[lid], note = x.note || "";
   return { id: x.id, lid, comp: known ? known.n : (note.split(",")[0] || "Otras competiciones"), slug: known ? known.s : null,
-    ronda: note.includes(",") ? note.split(",").slice(1).join(",").trim() : "", date: x.date, state: x.state, detail: x.detail || "", clock: x.clock, period: x.period, h: x.h, a: x.a };
+    ronda: note.includes(",") ? note.split(",").slice(1).join(",").trim() : "", date: x.date, state: x.state, detail: x.detail || "", clock: x.clock, period: x.period, h: esNat({ ...x.h }), a: esNat({ ...x.a }) };
 }
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("tiempo")), ms))]);
 function vDayLocal(key) { const c = lsGet("bt_dia", null); return c && c.k === key ? c : null; }
 async function vFetchDay(key, onlyKey) {
   const c = VV.cache[key];
   if (c && Date.now() - c.t < 20000) return c.evs;
-  await vComps();
+  await Promise.all([vComps(), vSel()]);
   const d2 = fromYmd(key); d2.setDate(d2.getDate() + 1);
   const dates = [key, ymd(d2)];
   let evs = null;
@@ -1857,7 +1973,7 @@ function vModel(id) {
 const isLive = e => e.state === "in";
 const vClock = e => /half|HT|Entretiempo/i.test(e.detail) ? "ET" : (e.clock && e.clock !== "0'" ? e.clock : e.detail);
 function vTeam(e, k, cls) {
-  const t = e[k], img = t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : "";
+  const t = e[k], img = t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-n="${esc(t.short || t.name)}" onerror="bfb(this)">` : fbSpan(t.name, t.abr);
   return `<span class="vt ${cls}${e.state === "post" && t.winner ? " win" : ""}"><span class="vtn">${esc(t.name)}</span><span class="vlogo">${img}</span></span>`;
 }
 function vRow(e) {
@@ -1920,13 +2036,13 @@ function vCompeticiones() {
   setTimeout(vFillComps, 0);
   return `<section class="view" aria-labelledby="h-comps"><h1 id="h-comps">Competiciones</h1>${vHub("competiciones")}
     <div class="vbar"><div class="vsearch wide"><input id="vc-q" type="search" placeholder="Buscar liga, copa o país" autocomplete="off"></div></div>
-    <div id="vc-list"><div class="panel empty">Cargando…</div></div></section>`;
+    <div id="vc-list">${skelRows(5)}</div></section>`;
 }
 async function vFillComps() {
   const all = await vComps(), box = document.getElementById("vc-list"); if (!box) return;
   const q = ((document.getElementById("vc-q") || {}).value || "").trim().toLowerCase(), fav = favComps();
   const L = all.filter(c => !q || (c.n + " " + c.p).toLowerCase().includes(q));
-  const item = c => `<div class="vci"><button class="vcib" data-go="comp" data-liga="${esc(c.s)}">${compImg(c)}<span><b>${esc(c.n)}${modelBySlug(c.s) ? ` <span class="tagm" title="Con probabilidades de Ballytics">%</span>` : ""}</b><small>${esc(c.p)}${c.t.includes("fem") ? " · femenino" : ""}${c.t.includes("juv") ? " · juvenil" : ""}</small></span></button><button class="vstar${fav.includes(c.s) ? " on" : ""}" data-fcomp="${esc(c.s)}" aria-label="Seguir">${fav.includes(c.s) ? "★" : "☆"}</button></div>`;
+  const item = c => `<div class="vci"><button class="vcib" data-go="comp" data-liga="${esc(c.s)}">${compImg(c)}<span><b>${esc(c.n)}${modelBySlug(c.s) ? ` <span class="tagm" title="Esta competición tiene probabilidades del modelo de Ballytics">Pronósticos</span>` : ""}</b><small>${esc(c.p)}${c.t.includes("fem") ? " · femenino" : ""}${c.t.includes("juv") ? " · juvenil" : ""}</small></span></button><button class="vstar${fav.includes(c.s) ? " on" : ""}" data-fcomp="${esc(c.s)}" aria-label="Seguir">${fav.includes(c.s) ? "★" : "☆"}</button></div>`;
   const favs = all.filter(c => fav.includes(c.s)), top = L.filter(c => c.o < 40);
   const regs = ["Selecciones", "Copas internacionales", "Sudamérica", "Europa", "Norteamérica", "Asia", "África"];
   let html = "";
@@ -1964,9 +2080,9 @@ function vComp() {
   const slug = R.liga, tabs = [["partidos", "Partidos"], ["tabla", "Tabla"], ["noticias", "Noticias"]], tab = tabs.some(t => t[0] === R.tab) ? R.tab : "partidos";
   setTimeout(() => vFillComp(slug, tab), 0);
   return `<section class="view"><button class="back" data-go="competiciones">← Competiciones</button>
-    <div class="panel lhead" id="cp-head"><div class="empty">Cargando…</div></div>
+    <div class="panel lhead" id="cp-head">${skelHead()}</div>
     <div class="mtabs vtabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" data-go="comp" data-liga="${esc(slug)}" data-tab="${k}" data-keep aria-selected="${k === tab}">${n}</button>`).join("")}</div>
-    <div id="cp-body"><div class="panel empty">Cargando…</div></div></section>`;
+    <div id="cp-body">${skelRows(5)}</div></section>`;
 }
 async function vSched(slug) {
   const c = VV.sched[slug]; if (c && Date.now() - c.t < 60000) return c.evs;
@@ -1990,7 +2106,7 @@ function stTable(groups, hi = [], slug = "") {
     return `<div class="panel flush scroll">${g.name && groups.length > 1 ? `<div class="ph"><h3>${esc(g.name)}</h3></div>` : ""}<table class="t vstt"><thead><tr><th>#</th><th>Equipo</th><th class="n">PJ</th><th class="n hide-m">G</th><th class="n hide-m">E</th><th class="n hide-m">P</th><th class="n hide-m">GF</th><th class="n hide-m">GC</th><th class="n">DG</th><th class="n">Pts</th></tr></thead><tbody>${E.map((e, i) => {
       const t = typeof e.team === "string" ? { displayName: e.team, id: e.id } : (e.team || {}), logo = ((t.logos || [])[0] || {}).href, id = String(t.id || e.id || "");
       const col = e.note && e.note.color ? `style="box-shadow:inset 3px 0 0 ${esc(e.note.color)}"` : "";
-      return `<tr class="${hi.includes(id) ? "hl" : ""}"><td ${col}><span class="pos">${esc(val(e, "rank") || i + 1)}</span></td><td class="vtm">${slug && id ? `<button class="link tlink" data-go="club" data-liga="${esc(slug)}" data-id="${esc(id)}">` : "<span>"}${logo ? `<img class="tlogo" src="${esc(logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}${esc(t.shortDisplayName || t.displayName || "")}${slug && id ? "</button>" : "</span>"}</td>
+      return `<tr class="${hi.includes(id) ? "hl" : ""}"><td ${col}><span class="pos">${esc(val(e, "rank") || i + 1)}</span></td><td class="vtm">${slug && id ? `<button class="link tlink" data-go="club" data-liga="${esc(slug)}" data-id="${esc(id)}">` : "<span>"}${logo ? `<img class="tlogo" src="${esc(logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-n="${esc(t.shortDisplayName || t.displayName || "")}" onerror="bfb(this)">` : ""}${esc(t.shortDisplayName || t.displayName || "")}${slug && id ? "</button>" : "</span>"}</td>
         <td class="n">${esc(val(e, "gamesPlayed"))}</td><td class="n hide-m">${esc(val(e, "wins"))}</td><td class="n hide-m">${esc(val(e, "ties"))}</td><td class="n hide-m">${esc(val(e, "losses"))}</td><td class="n hide-m">${esc(val(e, "pointsFor"))}</td><td class="n hide-m">${esc(val(e, "pointsAgainst"))}</td><td class="n">${esc(val(e, "pointDifferential"))}</td><td class="n"><b>${esc(val(e, "points"))}</b></td></tr>`;
     }).join("")}</tbody></table>${notes.size ? `<div class="vleg">${[...notes].map(([c, d]) => `<span><i style="background:${esc(c)}"></i>${esc(d)}</span>`).join("")}</div>` : ""}</div>`;
   }).join("");
@@ -2019,7 +2135,7 @@ async function vFillComp(slug, tab) {
   try { evs = await vSched(slug); } catch (e) {}
   const lg = (VV.sched[slug] || {}).lg || {}, name = c ? c.n : lg.name || slug, logo = c && c.l ? c.l : ((lg.logos || [])[0] || {}).href;
   if (R.v !== "comp" || R.liga !== slug) return;
-  head.innerHTML = `${logo ? `<img class="cimg xl" src="${esc(logo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : `<span class="cflag xl">${esc((c && c.f) || "⚽")}</span>`}<div><h1>${esc(name)}</h1><span class="muted">${esc(c ? c.p : "")}${lg.season && lg.season.displayName ? " · " + esc(lg.season.displayName) : ""}</span></div>
+  head.innerHTML = `${logo ? `<img class="cimg xl" src="${esc(logo)}" alt="" referrerpolicy="no-referrer" data-n="${esc(name)}" onerror="bfb(this)">` : `<span class="cflag xl">${esc((c && c.f) || "⚽")}</span>`}<div><h1>${esc(name)}</h1><span class="muted">${esc(c ? c.p : "")}${lg.season && lg.season.displayName ? " · " + esc(lg.season.displayName) : ""}</span></div>
     <div class="row" style="margin-left:auto;gap:8px">${M ? `<button class="btn sm" data-go="liga" data-liga="${M.id}">Probabilidades Ballytics</button>` : ""}<button class="vstar big${fav ? " on" : ""}" data-fcomp="${esc(slug)}" aria-label="Seguir">${fav ? "★" : "☆"}</button></div>`;
   if (tab === "partidos") {
     const now = Date.now(), live = evs.filter(isLive), next = evs.filter(e => e.state === "pre" && new Date(e.date).getTime() >= now - 3 * 3600e3).slice(0, 20), done = evs.filter(e => e.state === "post").slice(-20).reverse();
@@ -2043,9 +2159,9 @@ function vClub() {
   const slug = R.liga, id = R.id, tabs = [["partidos", "Partidos"], ["plantel", "Plantel"]], tab = tabs.some(t => t[0] === R.tab) ? R.tab : "partidos";
   setTimeout(() => vFillClub(slug, id, tab), 0);
   return `<section class="view">${slug === "sel" ? `<button class="back" data-go="selecciones">← Selecciones</button>` : `<button class="back" data-go="comp" data-liga="${esc(slug)}">← Competición</button>`}
-    <div class="panel lhead" id="cl-head"><div class="empty">Cargando…</div></div>
+    <div class="panel lhead" id="cl-head">${skelHead()}</div>
     <div class="mtabs vtabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" data-go="club" data-liga="${esc(slug)}" data-id="${esc(id)}" data-tab="${k}" data-keep aria-selected="${k === tab}">${n}</button>`).join("")}</div>
-    <div id="cl-body"><div class="panel empty">Cargando…</div></div></section>`;
+    <div id="cl-body">${skelRows(5)}</div></section>`;
 }
 function schedRow(e, teamId) {
   const c = (e.competitions || [])[0] || {}, cs = c.competitors || [], h = cs.find(x => x.homeAway === "home") || {}, a = cs.find(x => x.homeAway === "away") || {};
@@ -2066,7 +2182,7 @@ async function vFillClub(slug, id, tab) {
   const nat = slug === "sel", st = nat ? (await vSel(), VV.selById[id]) : null;
   const t = (past || fut || {}).team || {}, logo = ((t.logos || [])[0] || {}).href || t.logo || (st && st.l);
   const fav = nat && favSel().includes(id);
-  head.innerHTML = `${logo ? `<img class="cimg xl${nat ? " flagimg" : ""}" src="${esc(logo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}<div><h1>${esc(st ? st.n : t.displayName || "Equipo")}</h1><span class="muted">${esc(nat ? "Selección · " + ((VV.sel.conf[st && st.cf] || "").split(" (")[0]) : t.standingSummary || (VV.bySlug[slug] || {}).n || "")}</span></div>
+  head.innerHTML = `${logo ? `<img class="cimg xl${nat ? " flagimg" : ""}" src="${esc(logo)}" alt="" referrerpolicy="no-referrer" data-n="${esc(st ? st.abr || st.n : t.displayName || "")}" onerror="bfb(this)">` : ""}<div><h1>${esc(st ? st.n : t.displayName || "Equipo")}</h1><span class="muted">${esc(nat ? "Selección · " + ((VV.sel.conf[st && st.cf] || "").split(" (")[0]) : t.standingSummary || (VV.bySlug[slug] || {}).n || "")}</span></div>
     ${nat ? `<button class="vstar big${fav ? " on" : ""}" data-fsel="${esc(id)}" aria-label="Seguir" style="margin-left:auto">${fav ? "★" : "☆"}</button>` : ""}`;
   if (tab === "partidos") {
     const pe = ((past || {}).events || []).filter(e => (((e.competitions || [])[0] || {}).status || {}).type?.state === "post").slice(-12).reverse();
@@ -2089,7 +2205,7 @@ async function vFillClub(slug, id, tab) {
 /* ---------- noticias ---------- */
 function vNoticias() {
   setTimeout(vFillNoticias, 0);
-  return `<section class="view" aria-labelledby="h-news"><h1 id="h-news">Noticias</h1>${vHub("noticias")}<div id="vn-list"><div class="panel empty">Cargando noticias…</div></div>
+  return `<section class="view" aria-labelledby="h-news"><h1 id="h-news">Noticias</h1>${vHub("noticias")}<div id="vn-list">${skelRows(4)}</div>
     <p class="note">Noticias de ESPN Deportes. Se abren en ESPN. Agrega competiciones a "Mis competiciones" para ver primero sus noticias.</p></section>`;
 }
 async function vFillNoticias() {
@@ -2196,7 +2312,7 @@ function vEnVivo() {
   timers.push(setInterval(() => { if (R.v === "envivo" && !document.hidden && VV.state === "in") vFillMatch(true); }, 30000));
   return `<section class="view vcenter">
     <button class="back" data-go="vivo">← En vivo</button>
-    <div class="panel vhead" id="vc-head"><div class="empty">Cargando partido…</div></div>
+    <div class="panel vhead" id="vc-head">${skelHead()}</div>
     <div class="mtabs vtabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" data-go="envivo" data-id="${esc(R.id)}" data-tab="${k}" data-keep aria-selected="${k === tab}">${n}</button>`).join("")}</div>
     <div id="vc-body"></div></section>`;
 }
@@ -2227,7 +2343,7 @@ function vEvents(j, H) {
   });
 }
 const ICON = { goal: "⚽", og: "⚽", miss: "✕", yellow: `<i class="ycard"></i>`, red: `<i class="rcard"></i>`, sub: "⇄", other: "•" };
-function vLogo(t, cls = "") { return `<span class="vlogo ${cls}">${t.logo ? `<img src="${esc(t.logo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : esc((t.short || "?").slice(0, 3))}</span>`; }
+function vLogo(t, cls = "") { return `<span class="vlogo ${cls}">${t.logo ? `<img src="${esc(t.logo)}" alt="" referrerpolicy="no-referrer" data-n="${esc(t.short || t.name || "")}" onerror="bfb(this)">` : fbSpan(t.short || t.name, t.abr)}</span>`; }
 
 async function vFillMatch(force) {
   const id = R.id, head = document.getElementById("vc-head"), body = document.getElementById("vc-body");
@@ -2472,7 +2588,7 @@ function liveTableHtml(groups, lives, slug, hi = []) {
     return `<div class="panel flush scroll">${g.name && groups.length > 1 ? `<div class="ph"><h3>${esc(g.name)}</h3></div>` : ""}<table class="t vstt live"><thead><tr><th>#</th><th></th><th>Equipo</th><th class="n">PJ</th><th class="n hide-m">G</th><th class="n hide-m">E</th><th class="n hide-m">P</th><th class="n hide-m">GF</th><th class="n hide-m">GC</th><th class="n">DG</th><th class="n">Pts</th></tr></thead><tbody>${R0.map(r => {
       const mv = r.prev - r.pos, logo = ((r.t.logos || [])[0] || {}).href, col = r.e.note && r.e.note.color ? `style="box-shadow:inset 3px 0 0 ${esc(r.e.note.color)}"` : "";
       return `<tr class="${hi.includes(r.id) ? "hl" : ""}${r.live ? " isl" : ""}"><td ${col}><span class="pos">${r.pos}</span></td><td class="mv">${mv > 0 ? `<span class="up">▲${mv}</span>` : mv < 0 ? `<span class="dn">▼${-mv}</span>` : ""}</td>
-        <td class="vtm">${slug && r.id ? `<button class="link tlink" data-go="club" data-liga="${esc(slug)}" data-id="${esc(r.id)}">` : "<span>"}${logo ? `<img class="tlogo" src="${esc(logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}${esc(r.t.shortDisplayName || r.t.displayName || "")}${slug && r.id ? "</button>" : "</span>"}${r.live ? `<span class="lvb">${r.live}</span>` : ""}</td>
+        <td class="vtm">${slug && r.id ? `<button class="link tlink" data-go="club" data-liga="${esc(slug)}" data-id="${esc(r.id)}">` : "<span>"}${logo ? `<img class="tlogo" src="${esc(logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-n="${esc(r.t.shortDisplayName || r.t.displayName || "")}" onerror="bfb(this)">` : ""}${esc(r.t.shortDisplayName || r.t.displayName || "")}${slug && r.id ? "</button>" : "</span>"}${r.live ? `<span class="lvb">${r.live}</span>` : ""}</td>
         <td class="n">${r.pj}</td><td class="n hide-m">${r.g}</td><td class="n hide-m">${r.d}</td><td class="n hide-m">${r.l}</td><td class="n hide-m">${r.gf}</td><td class="n hide-m">${r.gc}</td><td class="n">${r.gf - r.gc > 0 ? "+" : ""}${r.gf - r.gc}</td><td class="n"><b>${r.pts}</b></td></tr>`; }).join("")}</tbody></table></div>`;
   }).join("") + `<p class="note"><span class="lvb">1-0</span> marcador en vivo. La tabla se recalcula como si los partidos terminaran ahora.</p>`;
 }
@@ -2541,7 +2657,7 @@ async function vFillFicha(id) {
   const news = ((o && o.news) || []).slice(0, 4);
   box.innerHTML = `<div class="panel fhero">${face(Lf, t.displayName || "", id, A.displayName, "xl")}
       <div class="fh-txt"><span class="lbl">${esc(pos)}</span><h1>${esc(A.displayName || "")}</h1>
-      ${t.id ? `<button class="link fteam" data-go="club" data-liga="${esc(tslug || "all")}" data-id="${esc(t.id)}">${tlogo ? `<img src="${esc(tlogo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}${esc(t.displayName || "")}</button>` : ""}</div>
+      ${t.id ? `<button class="link fteam" data-go="club" data-liga="${esc(tslug || "all")}" data-id="${esc(t.id)}">${tlogo ? `<img src="${esc(tlogo)}" alt="" referrerpolicy="no-referrer" data-n="${esc(t.displayName || "")}" onerror="bfb(this)">` : ""}${esc(t.displayName || "")}</button>` : ""}</div>
       <div class="fh-k">${[["Goles", sum("totalGoals")], ["Asist.", sum("goalAssists")], ["Partidos", sum("starts") + sum("subIns") || sum("starts")]].map(([l, v]) => `<div><b class="num">${v}</b><span>${l}</span></div>`).join("")}</div></div>
     <div class="ffacts">${facts.map(([l, v]) => `<div><span class="lbl">${l}</span><b>${v}</b></div>`).join("")}</div>
     ${next ? `<button class="panel fnext" data-go="envivo" data-id="${esc(next.id)}"><span class="lbl">Próximo partido</span><b>${esc((next.name || "").replace(" at ", " vs "))}</b><span class="muted">${esc(new Date(next.date).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))} · ${hhmm(next.date)} · ${esc(o.nextGame.league.shortName || "")}</span></button>` : ""}
@@ -2549,7 +2665,7 @@ async function vFillFicha(id) {
     ${log.length ? `<div class="panel flush"><div class="ph"><h3>Últimos partidos</h3></div>${log.slice(0, 10).map(({ e, m, liga }) => { const r = (m.gameResult || "").toUpperCase(), cl = r === "W" ? "G" : r === "L" ? "P" : r === "D" ? "E" : "";
         const sv = k => li(k) >= 0 ? +(e.stats || [])[li(k)] || 0 : 0, gl = sv("totalGoals"), as = sv("goalAssists"), yc = sv("yellowCards"), rc = sv("redCards");
         return `<button class="flog" data-go="envivo" data-id="${esc(m.id || e.eventId)}"><span class="faint num">${esc(new Date(m.gameDate).toLocaleDateString("es-CL", { day: "numeric", month: "short" }))}</span><span class="form"><i class="${cl}">${cl || "·"}</i></span>
-          <span class="fop">${(m.opponent || {}).logo ? `<img src="${esc(m.opponent.logo)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}${m.atVs === "@" ? "en " : "vs "}${esc((m.opponent || {}).displayName || "")}</span><span class="num">${esc(m.score || "")}</span>
+          <span class="fop">${(m.opponent || {}).logo ? `<img src="${esc(m.opponent.logo)}" alt="" referrerpolicy="no-referrer" data-n="${esc((m.opponent || {}).displayName || "")}" onerror="bfb(this)">` : ""}${m.atVs === "@" ? "en " : "vs "}${esc((m.opponent || {}).displayName || "")}</span><span class="num">${esc(m.score || "")}</span>
           <span class="fst">${"⚽".repeat(Math.min(gl, 4))}${as ? ` <small>${as} asist.</small>` : ""}${yc ? " 🟨" : ""}${rc ? " 🟥" : ""}</span></button>`; }).join("")}</div>` : ""}
     ${news.length ? `<h2>Noticias</h2>${newsCards(news)}` : ""}
     <p class="note">Datos de ESPN.</p>`;
@@ -2606,25 +2722,36 @@ function saveProde(code, nombre) { const l = myProdes().filter(x => x.code !== c
 function vProde() {
   const code = (R.id || "").toUpperCase();
   setTimeout(() => code ? vFillProde(code) : null, 0);
-  if (code) return `<section class="view"><button class="back" data-go="prode">← Mis prodes</button><div id="pr-box"><div class="panel empty">Cargando prode…</div></div></section>`;
+  if (code) return `<section class="view"><button class="back" data-go="prode">← Mis prodes</button><div id="pr-box">${skelRows(3)}</div></section>`;
   const L = myProdes(), alias = lsGet("bt_alias", "");
   return `<section class="view" aria-labelledby="h-prode"><h1 id="h-prode">Prode</h1>${vHub("prode")}
-    <div class="panel prode-hero"><div><h2>Juega a pronosticar con tus amigos</h2><p class="muted">Crea un prode, comparte el código y pronostiquen los marcadores. <b>3 puntos</b> por marcador exacto y <b>1</b> por acertar el ganador o el empate. Los pronósticos de los demás se ven cuando empieza cada partido.</p></div></div>
+    <div class="panel prode-hero"><div><h2>Juega a pronosticar con tus amigos</h2><p class="muted">Crea un prode, comparte el código y pronostiquen los marcadores. <b>3 puntos</b> por marcador exacto y <b>1</b> por acertar el ganador o el empate. Los pronósticos de los demás se ven cuando empieza cada partido.</p><p class="muted"><b>Desafía a Ballytics:</b> el modelo también juega en tu prode con el marcador que ve más probable. ¿Le ganan tus amigos?</p></div></div>
     ${L.length ? `<div class="panel stack"><h3>Mis prodes</h3><div class="slist">${L.map(p => `<button class="srow" data-go="prode" data-id="${esc(p.code)}"><span class="pcode num">${esc(p.code)}</span><span><b>${esc(p.nombre)}</b><small>Toca para pronosticar y ver el ranking</small></span><span class="sn">→</span></button>`).join("")}</div></div>` : ""}
-    <div class="grid2"><form class="panel stack" id="pr-new"><h3>Crear un prode</h3><label class="f"><span class="lbl">Nombre del prode</span><input name="nombre" maxlength="40" placeholder="Los del curso" required></label><label class="f"><span class="lbl">Tu apodo</span><input name="alias" maxlength="24" value="${esc(alias)}" placeholder="Benja" required></label><button class="btn">Crear</button></form>
-      <form class="panel stack" id="pr-join"><h3>Unirme con un código</h3><label class="f"><span class="lbl">Código</span><input name="code" maxlength="6" placeholder="ABC234" style="text-transform:uppercase" required></label><label class="f"><span class="lbl">Tu apodo</span><input name="alias" maxlength="24" value="${esc(alias)}" required></label><button class="btn">Unirme</button></form></div></section>`;
+    <div class="grid2"><form class="panel stack" id="pr-new" novalidate><h3>Crear un prode</h3><label class="f"><span class="lbl">Nombre del prode</span><input name="nombre" maxlength="40" placeholder="Los del curso" required></label><label class="f"><span class="lbl">Tu apodo</span><input name="alias" maxlength="24" value="${esc(alias)}" placeholder="Benja" required></label><button class="btn">Crear</button></form>
+      <form class="panel stack" id="pr-join" novalidate><h3>Unirme con un código</h3><label class="f"><span class="lbl">Código</span><input name="code" maxlength="6" placeholder="ABC234" style="text-transform:uppercase" required></label><label class="f"><span class="lbl">Tu apodo</span><input name="alias" maxlength="24" value="${esc(alias)}" required></label><button class="btn">Unirme</button></form></div></section>`;
 }
 document.addEventListener("submit", async e => {
   const f = e.target; if (!["pr-new", "pr-join", "pr-join2"].includes(f.id)) return;
   e.preventDefault();
-  const url = await pushCfg(); if (!url) { toast("El servidor del prode no está disponible."); return; }
-  const fd = Object.fromEntries(new FormData(f)); lsSet("bt_alias", fd.alias || "");
+  const btn = f.querySelector("button"), label = btn.textContent;
+  let msg = f.querySelector(".ferr"); if (!msg) { msg = document.createElement("p"); msg.className = "ferr"; msg.setAttribute("role", "alert"); btn.before(msg); }
+  const fail = t => { msg.textContent = t; msg.hidden = false; btn.disabled = false; btn.textContent = label; };
+  msg.hidden = true;
+  const fd = Object.fromEntries([...new FormData(f)].map(([k, v]) => [k, String(v).trim()]));
+  if (f.id === "pr-new" && !fd.nombre) return fail("Escribe un nombre para el prode.");
+  if ((f.id === "pr-join") && !/^[A-Z0-9]{4,8}$/i.test(fd.code || "")) return fail("Escribe el código que te compartieron (6 letras o números).");
+  if (!fd.alias) return fail("Escribe tu apodo: es el nombre que verán tus amigos en la tabla.");
+  btn.disabled = true; btn.textContent = f.id === "pr-new" ? "Creando…" : "Uniéndote…";
+  const url = await pushCfg(); if (!url) return fail("El servidor del prode no responde. Prueba de nuevo en unos minutos.");
+  lsSet("bt_alias", fd.alias || "");
   const path = f.id === "pr-new" ? "/prode/crear" : "/prode/unirse";
   try {
     const r = await (await fetch(url + path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...fd, code: (fd.code || f.dataset.code || "").toUpperCase(), uid: myUid() }) })).json();
-    if (!r.ok) { toast(r.error || "No se pudo."); return; }
-    saveProde(r.code, fd.nombre || f.dataset.nombre || r.code); go({ v: "prode", id: r.code });
-  } catch (x) { toast("No se pudo conectar con el servidor."); }
+    if (!r.ok) return fail(r.error === "no existe" ? "No existe un prode con ese código. Revisa que esté bien escrito." : (r.error || "No se pudo. Prueba de nuevo."));
+    saveProde(r.code, fd.nombre || f.dataset.nombre || r.code);
+    toast(f.id === "pr-new" ? `Prode creado. Comparte el código ${r.code} con tus amigos.` : "Listo, ya estás en el prode.");
+    go({ v: "prode", id: r.code });
+  } catch (x) { fail("No se pudo conectar con el servidor. Revisa tu conexión y prueba de nuevo."); }
 });
 async function prodeFixtures() {
   await vComps();
@@ -2648,14 +2775,16 @@ async function vFillProde(code) {
   const head = `<div class="panel prode-hero"><div><span class="lbl">Prode</span><h2>${esc(g.nombre)}</h2><p class="muted">Código <b class="num pcode">${esc(code)}</b> · ${g.tabla.length} participantes</p></div><button class="btn ghost sm" data-copy="${esc(link)}">Copiar invitación</button></div>
     <div class="mtabs vtabs" role="tablist">${[["pronosticar", "Pronosticar"], ["ranking", "Ranking"], ["resultados", "Resultados"]].map(([k, n]) => `<button role="tab" data-go="prode" data-id="${esc(code)}" data-tab="${k}" data-keep aria-selected="${k === tab}">${n}</button>`).join("")}</div>`;
   if (tab === "ranking") {
-    box.innerHTML = head + `<div class="panel flush scroll"><table class="t"><thead><tr><th>#</th><th>Jugador</th><th class="n">Pts</th><th class="n">Exactos</th><th class="n">Aciertos</th><th class="n hide-m">Jugados</th></tr></thead><tbody>${g.tabla.map((r, i) => `<tr class="${r.yo ? "hl" : ""}"><td><span class="pos ${i === 0 && r.pts ? "gold" : ""}">${i + 1}</span></td><td><b>${esc(r.alias)}</b>${r.yo ? ' <span class="tag">tú</span>' : ""}</td><td class="n"><b>${r.pts}</b></td><td class="n">${r.exactos}</td><td class="n">${r.aciertos}</td><td class="n hide-m">${r.jugados}</td></tr>`).join("")}</tbody></table></div>`;
+    const bot = g.tabla.find(r => r.bot), me = g.tabla.find(r => r.yo);
+    const duelo = bot && me && bot.jugados ? `<div class="panel note-panel">${me.pts > bot.pts ? `<b>Le vas ganando a Ballytics</b> por ${me.pts - bot.pts} ${me.pts - bot.pts === 1 ? "punto" : "puntos"}.` : me.pts === bot.pts ? `<b>Vas empatado con Ballytics</b> (${me.pts} pts).` : `<b>Ballytics te gana</b> por ${bot.pts - me.pts} ${bot.pts - me.pts === 1 ? "punto" : "puntos"}.`} El modelo juega con el marcador más probable de cada partido que tenga probabilidades.</div>` : "";
+    box.innerHTML = head + duelo + `<div class="panel flush scroll"><table class="t"><thead><tr><th>#</th><th>Jugador</th><th class="n">Pts</th><th class="n">Exactos</th><th class="n">Aciertos</th><th class="n hide-m">Jugados</th></tr></thead><tbody>${g.tabla.map((r, i) => `<tr class="${r.yo ? "hl" : ""}${r.bot ? " botrow" : ""}"><td><span class="pos ${i === 0 && r.pts ? "gold" : ""}">${i + 1}</span></td><td><b>${esc(r.alias)}</b>${r.yo ? ' <span class="tag">tú</span>' : ""}${r.bot ? ' <span class="tag bot" title="Pronostica el marcador más probable del modelo">IA</span>' : ""}</td><td class="n"><b>${r.pts}</b></td><td class="n">${r.exactos}</td><td class="n">${r.aciertos}</td><td class="n hide-m">${r.jugados}</td></tr>`).join("")}</tbody></table></div>`;
     return;
   }
   if (tab === "resultados") {
     const done = g.eventos.filter(e => e.otros).reverse();
     const pts = (p, r) => { if (!p || !r) return ""; const [a, b] = p.split("-").map(Number), [c, d] = r.split("-").map(Number); return a === c && b === d ? "3" : Math.sign(a - b) === Math.sign(c - d) ? "1" : "0"; };
     box.innerHTML = head + (done.length ? done.map(e => `<div class="panel stack pres"><div class="row" style="justify-content:space-between"><b>${esc(e.h)} ${e.res ? `<span class="num">${esc(e.res)}</span>` : "vs"} ${esc(e.a)}</b><span class="note">${esc(e.comp || "")} · ${esc(cuando(e.k))}</span></div>
-      <div class="ppicks">${e.otros.map(o => `<span class="pp p${pts(o.pick, e.res)}"><b>${esc(o.alias)}</b> ${esc(o.pick)}${e.res ? ` · ${pts(o.pick, e.res)} ${pts(o.pick, e.res) === "1" ? "pt" : "pts"}` : ""}</span>`).join("")}</div></div>`).join("") : `<div class="panel empty">Aún no empieza ningún partido pronosticado.</div>`);
+      <div class="ppicks">${e.otros.map(o => `<span class="pp p${pts(o.pick, e.res)}${o.bot ? " bot" : ""}"><b>${esc(o.alias)}</b> ${esc(o.pick)}${e.res ? ` · ${pts(o.pick, e.res)} ${pts(o.pick, e.res) === "1" ? "pt" : "pts"}` : ""}</span>`).join("")}</div></div>`).join("") : `<div class="panel empty">Aún no empieza ningún partido pronosticado.</div>`);
     return;
   }
   box.innerHTML = head + `<div id="pr-fx"><div class="panel empty">Buscando partidos de los próximos 7 días…</div></div>`;
@@ -2665,9 +2794,9 @@ async function vFillProde(code) {
   const el = document.getElementById("pr-fx"); if (!el) return;
   el.innerHTML = fx.length ? Object.keys(byDay).map(k => `<div class="panel flush vcomp"><div class="vch"><b>${esc(fromYmd(k).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))}</b></div>${byDay[k].map(e => { const [a, b] = (mine[e.id] || "-").split("-");
       return `<div class="prow" data-pid="${esc(e.id)}" data-k="${esc(e.date)}" data-slug="${esc(e.slug || "all")}" data-h="${esc(e.h.name)}" data-a="${esc(e.a.name)}" data-comp="${esc(e.comp)}"><span class="ptime num">${hhmm(e.date)}</span>
-        <span class="pteam r">${esc(e.h.name)}${e.h.logo ? `<img src="${esc(e.h.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}</span>
+        <span class="pteam r">${esc(e.h.name)}${e.h.logo ? `<img src="${esc(e.h.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-n="${esc(e.h.name)}" onerror="bfb(this)">` : ""}</span>
         <input class="pin" inputmode="numeric" maxlength="2" value="${esc(a || "")}" aria-label="Goles de ${esc(e.h.name)}"><span class="faint">–</span><input class="pin" inputmode="numeric" maxlength="2" value="${esc(b || "")}" aria-label="Goles de ${esc(e.a.name)}">
-        <span class="pteam">${e.a.logo ? `<img src="${esc(e.a.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}${esc(e.a.name)}</span><span class="pok">${mine[e.id] ? "✓" : ""}</span><small class="pcomp">${esc(e.comp)}</small></div>`; }).join("")}</div>`).join("")
+        <span class="pteam">${e.a.logo ? `<img src="${esc(e.a.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-n="${esc(e.a.name)}" onerror="bfb(this)">` : ""}${esc(e.a.name)}</span><span class="pok">${mine[e.id] ? "✓" : ""}</span><small class="pcomp">${esc(e.comp)}</small></div>`; }).join("")}</div>`).join("")
     : `<div class="panel empty">No hay partidos de las competiciones principales en los próximos 7 días. Marca competiciones con ⭐ para incluirlas.</div>`;
 }
 document.addEventListener("input", e => {

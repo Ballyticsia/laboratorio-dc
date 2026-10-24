@@ -904,6 +904,10 @@ def main():
     for L, out, _ in pendientes:
         with open(os.path.join(SALIDA, f"{L['id']}.json"), "w", encoding="utf-8") as f:
             json.dump(clean(out), f, ensure_ascii=False, separators=(",", ":"))
+    # marcador más probable de cada partido próximo: Ballytics juega con él en los prodes (lo lee el worker)
+    picks = {str(p["id"]): p["top"] for L, out, _ in pendientes for p in out["partidos"] if p.get("top")}
+    with open(os.path.join(SALIDA, "picks.json"), "w", encoding="utf-8") as f:
+        json.dump(dict(actualizado=now.isoformat(timespec="minutes"), picks=picks), f, ensure_ascii=False, separators=(",", ":"))
     lesiones.guardar_estado()
     cuotas.guardar_estado()
     portada["partidos"] = sorted(portada["partidos"], key=lambda p: -p["peso"])[:6]
