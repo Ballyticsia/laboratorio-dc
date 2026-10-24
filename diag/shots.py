@@ -33,8 +33,7 @@ async def page_run(name, dev, hashr, ctx):
       ver: [...document.scripts].map(x=>x.src).filter(x=>x.includes('app.js'))[0]||'',
       natNames: [...document.querySelectorAll('#vs-next .vtn')].slice(0,6).map(x=>x.textContent),
       tag: (document.querySelector('.tagm')||{}).textContent||''})""")
-    info["dbg"] = await pg.evaluate("""async () => { const o = {}; try { o.n = VV.natNext ? VV.natNext.evs.length : 'sin natNext'; o.sample = VV.natNext ? VV.natNext.evs.slice(0,3).map(e => [e.date, e.state, e.h.id, e.h.name, e.a.id]) : null; o.sel = VV.sel ? VV.sel.equipos.length : null;
-      const r = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.nations/scoreboard?dates=202611&limit=1000'); o.st = r.status; const j = await r.json(); o.evs = (j.events||[]).length; o.first = (j.events||[])[0] ? (j.events[0].date + ' ' + j.events[0].uid) : null; } catch (e) { o.err = String(e); } return o; }""")
+    info["dbg"] = await pg.evaluate("""async () => { const o = {}; try {       const r = await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.nations/scoreboard?dates=202611&limit=1000'); o.st = r.status; const j = await r.json(); o.evs = (j.events||[]).length; o.first = (j.events||[]).slice(0,4).map(e => e.date + ' ' + e.status.type.state + ' ' + e.competitions[0].competitors.map(c => c.team.id + ':' + c.team.shortDisplayName).join(' v ')); } catch (e) { o.err = String(e); } return o; }""")
     if name == "prode":
         await pg.click("#pr-new button"); await pg.wait_for_timeout(800)
         await pg.screenshot(path=f"{OUT}/{dev}_prode_vacio.png")
