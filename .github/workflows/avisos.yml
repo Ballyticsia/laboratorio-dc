@@ -65,6 +65,8 @@ jobs:
           [[kv_namespaces]]
           binding = "SUBS"
           id = "$NS"
+          [ai]
+          binding = "AI"
           [triggers]
           crons = ["* * * * *"]
           EOF

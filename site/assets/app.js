@@ -256,6 +256,7 @@ function fromHash() {
     case "ficha": return { v: "ficha", id: p[1] };
     case "prode": return { v: "prode", id: p[1], tab: p[2] };
     case "noticias": return { v: "noticias" };
+    case "ia": return { v: "ia" };
     case "comp": return { v: "comp", liga: p[1], tab: p[2] || "partidos" };
     case "club": return { v: "club", liga: p[1], id: p[2], tab: p[3] || "partidos" };
     case "": case undefined: return { v: "inicio", liga: "todas" };
@@ -293,7 +294,7 @@ function render() {
   document.querySelectorAll("[data-nav]").forEach(b => b.setAttribute("aria-current", b.dataset.nav === sec ? "page" : "false"));
   const f = { inicio: vInicio, liga: vLiga, partido: vPartido, equipo: vEquipo, registro: vRegistro, metodo: vMetodo,
     sobre: vSobre, responsable: vResponsable, jugador: vJugador, comparar: vComparar, combinada: vCombinada, seguimiento: vSeguimiento,
-    vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias, selecciones: vSelecciones, ficha: vFicha, prode: vProde, privacidad: vPrivacidad, nf: vNoEncontrado }[R.v] || vInicio;
+    vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias, selecciones: vSelecciones, ficha: vFicha, prode: vProde, privacidad: vPrivacidad, nf: vNoEncontrado, ia: vIA }[R.v] || vInicio;
   $app.innerHTML = staleBanner() + f();
   if (R.v === "partido") { bindOdds(); if (R.tab === "alineaciones" || document.getElementById("xi-adj")) loadSummary(); }
   if (R.v === "comparar") bindCompare();
@@ -480,6 +481,76 @@ function skeleton() {
     <div class="cards">${[1, 2, 3].map(() => `<div class="panel stack">${line("40%")}${line("90%")}${line("75%")}${line("60%")}</div>`).join("")}</div></section>`;
 }
 
+/* ---------------- asistente con IA ---------------- */
+// La IA (Workers AI, en el servidor de Ballytics) responde solo con los datos que se le mandan desde aquí.
+const r3 = x => x == null ? null : Math.round(x * 1000) / 1000;
+function iaCtxPartido(L, p) {
+  const k = markets(pmatrix(L, p).m), st = ODDS[p.id] || {}, q = mktOf(p), sh = rowOf(L, p.home), sa = rowOf(L, p.away);
+  const tus = Object.fromEntries(Object.entries(st).filter(([key, v]) => key[0] !== "_" && v > 1));
+  return {
+    liga: L.nombre, partido: `${p.home} (local) vs ${p.away} (visita)`, fecha: p.kickoff,
+    prob_ballytics: { local: r3(k.H), empate: r3(k.D), visita: r3(k.A), mas_2_5: r3(k.O25), ambos_marcan: r3(k.B), marcador_mas_probable: p.top },
+    goles_esperados: { local: r3(p.lh), visita: r3(p.la) },
+    fuente_prob: p.calib ? "modelo ajustado a la cuota sin margen" : "modelo propio (sin cuota)",
+    modelo_propio: p.modelo ? { local: r3(p.modelo.pH), empate: r3(p.modelo.pD), visita: r3(p.modelo.pA) } : null,
+    mercado_sin_margen: q ? { local: r3(q.p[0]), empate: r3(q.p[1]), visita: r3(q.p[2]), fuente: q.casa || "" } : null,
+    cuotas_casa: p.cuotas ? { local: p.cuotas.h, empate: p.cuotas.d, visita: p.cuotas.a, casa: p.cuotas.casa || "ESPN", linea_goles: p.cuotas.linea, mas: p.cuotas.over, menos: p.cuotas.under } : null,
+    cuotas_del_usuario: Object.keys(tus).length ? tus : null,
+    corners_esperados: p.ch != null ? r3(p.ch + p.ca) : null, tarjetas_esperadas: p.th != null ? r3(p.th + p.ta) : null,
+    tabla: { local: sh.pos ? `${sh.pos}º, ${sh.pts} pts, forma ${(sh.forma || []).join("")}` : null, visita: sa.pos ? `${sa.pos}º, ${sa.pts} pts, forma ${(sa.forma || []).join("")}` : null },
+    bajas: p.bajas ? { local: (p.bajas.h || []).slice(0, 8).map(x => `${x.jug} (${x.tipo === "Missing Fixture" ? "baja" : "duda"}${x.goles ? `, ${x.goles} goles` : ""})`), visita: (p.bajas.a || []).slice(0, 8).map(x => `${x.jug} (${x.tipo === "Missing Fixture" ? "baja" : "duda"}${x.goles ? `, ${x.goles} goles` : ""})`) } : "sin datos",
+    goleadores_probables: (p.goleadores || []).slice(0, 5).map(g => `${g.jugador} ${Math.round(g.p * 100)}%`),
+    ultimos_cruces: (p.h2h || []).slice(0, 4).map(x => `${x.home} ${x.hg}-${x.ag} ${x.away}`),
+    nota: "Probabilidades entre 0 y 1. Cuotas en formato decimal.",
+  };
+}
+function iaCtxDia() {
+  const now = Date.now();
+  const ms = allMatches().filter(p => { const t = new Date(p.kickoff).getTime(); return t > now - 2 * 3600e3 && t < now + 3 * DAYMS; }).sort((a, b) => a.kickoff.localeCompare(b.kickoff)).slice(0, 55);
+  return { hoy: new Date().toISOString().slice(0, 10), zona: "Chile", partidos: ms.map(p => { const q = mktOf(p);
+    return [p.L.nombre, `${p.home} vs ${p.away}`, new Date(p.kickoff).toLocaleString("es-CL", { weekday: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }), `L ${pct(p.pH)} E ${pct(p.pD)} V ${pct(p.pA)}`, `+2,5 ${pct(p.pO25)}`, `ambos ${pct(p.pBTTS)}`, `marcador ${p.top}`, q ? `mercado L ${pct(q.p[0])} E ${pct(q.p[1])} V ${pct(q.p[2])}` : "sin cuota"].join(" | "); }),
+    formato: "liga | partido | hora | probabilidades Ballytics | +2,5 goles | ambos marcan | marcador más probable | mercado sin margen" };
+}
+const iaMd = t => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").split(/\n+/).map(l => /^\s*[-•*] /.test(l) ? `<li>${l.replace(/^\s*[-•*] /, "")}</li>` : `<p>${l}</p>`).join("").replace(/(<li>.*?<\/li>)+/g, m => `<ul>${m}</ul>`);
+const IAH = {};   // historial por conversación (partido o jornada), solo en esta pestaña
+function iaPanel(key, sugeridas, big) {
+  const h = IAH[key] || [];
+  return `<div class="panel stack iapanel${big ? " big" : ""}" data-ia="${esc(key)}">
+    <div class="ia-h"><span class="ia-ic" aria-hidden="true">✦</span><div><h3>Pregúntale a la IA</h3><small class="muted">Responde con las probabilidades y cuotas de Ballytics</small></div></div>
+    <div class="ia-log" aria-live="polite">${h.map(m => `<div class="ia-m ${m.r}">${m.r === "ia" ? iaMd(m.t) : esc(m.t)}</div>`).join("")}</div>
+    ${h.length ? "" : `<div class="ia-sug">${sugeridas.map(x => `<button class="chip-btn" data-iaq="${esc(x)}">${esc(x)}</button>`).join("")}</div>`}
+    <form class="ia-f" data-iaf="${esc(key)}"><input name="q" maxlength="400" autocomplete="off" placeholder="${big ? "Ej: ¿qué partidos de hoy tienen más goles?" : "Pregunta sobre este partido"}" aria-label="Tu pregunta"><button class="btn" aria-label="Enviar">Preguntar</button></form>
+    <p class="note">Respuestas generadas por IA con los datos del modelo; puede equivocarse. No es un consejo de apuesta. +18.</p></div>`;
+}
+async function iaAsk(key, q) {
+  const box = document.querySelector(`[data-ia="${CSS.escape(key)}"]`); if (!box || !q.trim()) return;
+  const log = box.querySelector(".ia-log"), f = box.querySelector(".ia-f"), btn = f.querySelector("button"), sug = box.querySelector(".ia-sug");
+  const h = IAH[key] || (IAH[key] = []);
+  h.push({ r: "yo", t: q.trim() }); if (sug) sug.remove();
+  log.insertAdjacentHTML("beforeend", `<div class="ia-m yo">${esc(q.trim())}</div><div class="ia-m ia wait"><span class="dots"><i></i><i></i><i></i></span></div>`);
+  log.lastElementChild.scrollIntoView({ block: "nearest" });
+  btn.disabled = true; f.q.value = "";
+  let ctx, tipo;
+  if (key.startsWith("p:")) { const id = key.slice(2); const L = Object.values(D.ligas).find(L => L.partidos.some(x => String(x.id) === id)); const p = L && findMatch(L.id, id); ctx = p ? iaCtxPartido(L, p) : {}; tipo = "partido"; }
+  else { await D.all; ctx = iaCtxDia(); tipo = "dia"; }
+  let txt;
+  try {
+    const url = await pushCfg(); if (!url) throw new Error("sin servidor");
+    const r = await (await fetch(url + "/ia", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ q: q.trim(), uid: myUid(), tipo, ctx, hist: h.slice(0, -1).slice(-4) }) })).json();
+    txt = r.ok ? r.r : null; if (!r.ok) throw new Error(r.error || "error");
+  } catch (e) { txt = null; const w = log.querySelector(".wait"); if (w) { w.classList.remove("wait"); w.classList.add("err"); w.textContent = e.message && e.message.length > 12 ? e.message : "No pude conectar con la IA. Prueba de nuevo."; } h.pop(); btn.disabled = false; return; }
+  h.push({ r: "ia", t: txt });
+  const w = log.querySelector(".wait"); if (w) { w.classList.remove("wait"); w.innerHTML = iaMd(txt); }
+  btn.disabled = false;
+}
+document.addEventListener("submit", e => { const f = e.target.closest("[data-iaf]"); if (!f) return; e.preventDefault(); iaAsk(f.dataset.iaf, f.q.value); });
+document.addEventListener("click", e => { const b = e.target.closest("[data-iaq]"); if (!b) return; const box = b.closest("[data-ia]"); iaAsk(box.dataset.ia, b.dataset.iaq); });
+function vIA() {
+  return `<section class="view narrow" aria-labelledby="h-ia"><h1 id="h-ia">Pregúntale a la IA</h1>
+    <p class="muted">Haz preguntas sobre los partidos de los próximos 3 días. La IA lee las probabilidades del modelo, las cuotas del mercado y te explica qué ve. Para un partido en particular, abre el partido y pregunta ahí: tiene más datos (bajas, goleadores, cuotas).</p>
+    ${iaPanel("dia", ["¿Qué partidos de hoy tienen más goles?", "¿Cuál es el favorito más claro del fin de semana?", "¿Dónde ve el modelo más diferencia con el mercado?", "¿Qué partidos son más parejos?"], true)}</section>`;
+}
+
 /* ---------------- página no encontrada ---------------- */
 function vNoEncontrado(msg) {
   return `<section class="view narrow nf" aria-labelledby="h-nf"><div class="panel stack nf-box">
@@ -603,7 +674,7 @@ function vInicio() {
   return `<section class="view" aria-labelledby="h-inicio">
     <h1 id="h-inicio" class="sr">Ballytics: probabilidades de fútbol</h1>
     ${installBanner()}
-    <p class="promise">Probabilidades de fútbol explicadas, con un <button class="link" data-go="registro">registro público</button> para revisar cuánto acierta el modelo.</p>
+    <p class="promise">Probabilidades de fútbol explicadas, con un <button class="link" data-go="registro">registro público</button> para revisar cuánto acierta el modelo. <button class="ia-cta" data-go="ia"><span aria-hidden="true">✦</span> Pregúntale a la IA</button></p>
     <div class="hero panel">${carousel("hero", hero, "Partidos destacados")}</div>
     ${mine}
     <div class="row" id="partidos" style="justify-content:space-between"><h2>Partidos</h2><span class="note">Elige el día y la liga · horario local</span></div>
@@ -861,6 +932,7 @@ function vPartido() {
     ${bajasPanel(L, p)}
     <div class="panel stack previa"><h3>Previa</h3>${previa(L, p, k, ct, tt)}</div>
     ${evCalc}
+    ${iaPanel("p:" + p.id, [`¿Quién es favorito y por qué?`, `¿Habrá muchos goles?`, `¿Alguna cuota tiene valor?`, `¿Cómo afectan las bajas?`])}
     <div class="grid2">
       <div class="panel stack"><h3>Marcador exacto</h3><div class="scroll"><table class="heat">${heat}</table></div><p class="note">Filas: goles de ${esc(H)}. Columnas: goles de ${esc(A)}.</p></div>
       ${cmp ? `<div class="panel stack"><h3>Comparación de la temporada</h3><div class="cmph"><span>${badge(L, p.home)} ${esc(H)}</span><span>${esc(A)} ${badge(L, p.away)}</span></div>${cmp}</div>` : ""}
