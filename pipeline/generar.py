@@ -23,6 +23,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
 import datos  # noqa: E402
+import fotos  # noqa: E402
 import copas  # noqa: E402
 import cuotas  # noqa: E402
 import lesiones  # noqa: E402
@@ -587,6 +588,36 @@ def ledger_summary(reg, base):
 
 
 # ---------------- principal ----------------
+XI_CACHE = os.path.join(RAIZ, "data", "cache_espn", "xi")
+
+
+def xi_ultimo(event_id, team):
+    """Titulares y formación de un equipo en un partido ya jugado (sirve de alineación probable para el siguiente)."""
+    os.makedirs(XI_CACHE, exist_ok=True)
+    path = os.path.join(XI_CACHE, f"{event_id}.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            ros = json.load(f)
+    except (OSError, ValueError):
+        try:
+            j = datos._fetch(f"https://site.api.espn.com/apis/site/v2/sports/soccer/all/summary?event={event_id}")
+        except Exception:
+            return None
+        ros = [dict(team=(t.get("team") or {}).get("displayName"), formation=t.get("formation"),
+                    xi=[dict(id=str((x.get("athlete") or {}).get("id") or ""), n=(x.get("athlete") or {}).get("displayName"),
+                             c=x.get("jersey"), pos=(x.get("position") or {}).get("abbreviation"), fp=x.get("formationPlace"))
+                        for x in t.get("roster") or [] if x.get("starter")])
+               for t in j.get("rosters") or []]
+        if not any(len(t["xi"]) >= 11 for t in ros):
+            return None
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(ros, f, ensure_ascii=False)
+    t = next((t for t in ros if t["team"] == team), None)
+    if not t or len(t["xi"]) < 11:
+        return None
+    return dict(formacion=t["formation"], xi=t["xi"])
+
+
 def season_bounds(L, today):
     if L["inicio"] == 1:
         sy = today.year
@@ -731,6 +762,18 @@ def main():
                     h["s"] = h["s"][-40:]
                 if len(h["s"]) >= 2:
                     p["hist"] = h["s"][-24:]
+            if x.estado == "pendiente" and pd.Timestamp(x.kickoff).tz_localize(None) > now_ts and x.date <= hoy + pd.Timedelta(days=3):
+                xi = {}
+                for lado, team in (("h", x.home), ("a", x.away)):
+                    prev = played[(played.home == team) | (played.away == team)]
+                    if len(prev):
+                        u = prev.sort_values("kickoff").iloc[-1]
+                        t = xi_ultimo(str(u.id), team)
+                        if t:
+                            t["desde"] = dict(fecha=str(u.date.date()), rival=u.away if u.home == team else u.home)
+                            xi[lado] = t
+                if xi:
+                    p["xi_prob"] = xi
             partidos.append(p)
             if x.estado == "pendiente" and pd.Timestamp(x.kickoff).tz_localize(None) > now_ts and x.date <= hoy + pd.Timedelta(days=8):
                 preds_reg.append(p)
@@ -850,6 +893,7 @@ def main():
         lesiones.ESTADO["partidos_con_bajas"] = len(asign)
         lesiones.ESTADO["partidos_ajustados"] = n_aj
         print(f"  Bajas asignadas a {len(asign)} partidos · {n_aj} con ajuste por goleadores ausentes")
+    fotos.actualizar([(L, out) for L, out, _ in pendientes])
     # registro público (después de las bajas, para guardar también el modelo con bajas)
     jug_df = pd.concat(jugados_all, ignore_index=True) if jugados_all else pd.DataFrame(columns=["id", "hg", "ag"])
     reg = ledger_update(preds_reg, jug_df, now.isoformat(timespec="minutes"), votos_gente([str(p["id"]) for p in preds_reg]))

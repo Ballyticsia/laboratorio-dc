@@ -586,7 +586,8 @@ nav.main .dd-item:hover{background:rgba(61,139,255,.1);color:var(--ink)}
 @media (max-width:760px){
   #combobar{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px))}
   .cb-in{width:100%;justify-content:space-between}
-  .tabbar{grid-template-columns:repeat(5,1fr)}
+  .tabbar{grid-template-columns:repeat(6,1fr)}
+  .tabbar button span{font-size:9.5px;letter-spacing:.02em}
   .tabbar button{font-size:10px}
   .combo-sum .kpis{grid-template-columns:1fr}
 }
@@ -1123,3 +1124,12 @@ html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
 @media (max-width:640px){.rm-h{grid-template-columns:1fr auto}.rm-l{grid-column:1/-1}.rm-t{justify-content:flex-start;font-size:13.5px}.rm-t .badge{display:none}.rp{font-size:12.5px}.rp b{max-width:110px}}
 :root[data-theme="light"] .rp{background:#fff}
 @media (max-width:640px){.rm-p{display:grid;grid-template-columns:1fr 1fr}.rp{display:grid}.rp b{max-width:none}}
+
+/* ---------- v18: tarjetas que se pueden tocar ---------- */
+.cardlink{cursor:pointer;border-radius:12px;transition:background .15s,transform .15s}
+.cardlink:hover{background:rgba(61,139,255,.05)}
+.cardlink:active{transform:scale(.995)}
+.hero-in.cardlink:hover{background:none}
+.pform{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.pform:first-of-type{border-top:0}
+.pform-t{display:flex;align-items:center;gap:8px}
