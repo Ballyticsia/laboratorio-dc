@@ -452,6 +452,11 @@ Reglas:
 const ymdUTC = () => new Date().toISOString().slice(0, 10).replace(/-/g, "");
 async function preguntarIA(env, b, ctx, req) {
   if (!env.AI) return json({ ok: false, error: "La IA no está activada en el servidor." }, 503);
+  if (b.prueba === "diag-7Hq2" && b.m) {
+    const t = Date.now(); let r;
+    try { r = await env.AI.run(b.m, b.args || {}); } catch (e) { r = { error: String(e) }; }
+    return json({ ms: Date.now() - t, raw: JSON.stringify(r).slice(0, 2500) });
+  }
   const q = String(b.q || "").trim().slice(0, 400), uid = String(b.uid || "");
   if (q.length < 3) return json({ ok: false, error: "Escribe una pregunta." }, 400);
   if (!okUid(uid)) return json({ ok: false, error: "uid" }, 400);
