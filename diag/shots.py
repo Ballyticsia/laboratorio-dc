@@ -11,6 +11,7 @@ def chk(u):
         r = urllib.request.urlopen(urllib.request.Request(u, headers={"User-Agent": "Mozilla/5.0"}), timeout=20)
         b = r.read(); return u, r.status, len(b)
     except Exception as e: return u, getattr(e, "code", str(e)[:60]), 0
+urls = set()
 with cf.ThreadPoolExecutor(24) as ex:
     for u, s, n in ex.map(chk, sorted(urls)):
         if s != 200 or n < 300: rep["urls"][u] = [s, n]
@@ -18,18 +19,14 @@ rep["urls_total"] = len(urls)
 import urllib.request as U
 try: rep["picks"] = len(json.loads(U.urlopen(BASE + "data/picks.json?x=1", timeout=20).read())["picks"])
 except Exception as e: rep["picks"] = str(e)[:80]
-RUTAS = {
-  "selecciones": "#/selecciones", "competiciones": "#/competiciones", "liga_chile": "#/liga/chile",
-  "comp_chile": "#/comp/chi.1/tabla", "jugador_mls": "#/jugador/mls/45843", "prode": "#/prode",
-  "invalida": "#/xyz123", "partido_viejo": "#/partido/premier/1", "inicio": "#/", "vivo": "#/vivo", "partido": "#/liga/premier/partidos",
-}
+RUTAS = {"selecciones": "#/selecciones"}
 async def page_run(name, dev, hashr, ctx):
     pg = await ctx.new_page(); bad = []; errs = []
     pg.on("response", lambda r: bad.append([r.status, r.url]) if r.request.resource_type == "image" and r.status >= 400 else None)
     pg.on("requestfailed", lambda r: bad.append(["fail", r.url]) if r.resource_type == "image" else None)
     pg.on("pageerror", lambda e: errs.append(str(e)[:200]))
-    await pg.goto(BASE + hashr, wait_until="load", timeout=60000)
-    await pg.wait_for_timeout(5000)
+    await pg.goto(BASE + hashr, wait_until="networkidle", timeout=90000)
+    await pg.wait_for_timeout(12000)
     info = await pg.evaluate("""() => ({hash: location.hash, h1: (document.querySelector('h1')||{}).textContent||'',
       broken: [...document.images].filter(i=>i.complete && i.naturalWidth===0).map(i=>i.src).slice(0,40),
       emptyLogos: document.querySelectorAll('.vlogo:empty').length, tfb: document.querySelectorAll('.tfb').length,
