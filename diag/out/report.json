@@ -1,0 +1,37 @@
+{
+ "urls": {},
+ "pages": {
+  "desk_selecciones": {
+   "hash": "#/selecciones",
+   "h1": "Selecciones",
+   "broken": [],
+   "emptyLogos": 0,
+   "tfb": 0,
+   "ver": "https://ballyticsia.github.io/laboratorio-dc/assets/app.js?v=37",
+   "natNames": [],
+   "tag": "",
+   "dbg": {
+    "err": "TypeError: Failed to fetch"
+   },
+   "bad": [],
+   "errs": []
+  },
+  "mob_selecciones": {
+   "hash": "#/selecciones",
+   "h1": "Selecciones",
+   "broken": [],
+   "emptyLogos": 0,
+   "tfb": 0,
+   "ver": "https://ballyticsia.github.io/laboratorio-dc/assets/app.js?v=37",
+   "natNames": [],
+   "tag": "",
+   "dbg": {
+    "err": "TypeError: Failed to fetch"
+   },
+   "bad": [],
+   "errs": []
+  }
+ },
+ "urls_total": 0,
+ "picks": 3788
+}
