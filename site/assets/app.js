@@ -486,16 +486,18 @@ function skeleton() {
 // Se abre como panel lateral desde cualquier pantalla; en un partido conversa sobre ese partido.
 const r3 = x => x == null ? null : Math.round(x * 1000) / 1000;
 function iaCtxPartido(L, p) {
-  const k = markets(pmatrix(L, p).m), st = ODDS[p.id] || {}, q = mktOf(p), sh = rowOf(L, p.home), sa = rowOf(L, p.away), eh = statOf(L, p.home), ea = statOf(L, p.away);
+  const k = markets(pmatrix(L, p).m), st = ODDS[p.id] || {}, q = mktOf(p), pin = q && /pinnacle/i.test(q.casa || ""), sh = rowOf(L, p.home), sa = rowOf(L, p.away), eh = statOf(L, p.home), ea = statOf(L, p.away);
   const tus = Object.fromEntries(Object.entries(st).filter(([key, v]) => key[0] !== "_" && v > 1));
   return {
     liga: L.nombre, partido: `${p.home} (local) vs ${p.away} (visita)`, fecha: p.kickoff,
     prob_ballytics: { local: pct(k.H), empate: pct(k.D), visita: pct(k.A), mas_2_5: pct(k.O25), ambos_marcan: pct(k.B), marcador_mas_probable: p.top },
     cuota_justa: { local: dec(1 / k.H), empate: dec(1 / k.D), visita: dec(1 / k.A), mas_2_5: dec(1 / k.O25), ambos_marcan: dec(1 / k.B) },
-    goles_esperados: { local: dec(p.lh), visita: dec(p.la) },
+    goles_esperados: { local: dec(p.lh), visita: dec(p.la), nota: "xG previsto por el modelo" },
     fuente_prob: p.calib ? "modelo ajustado a la cuota sin margen" : "modelo propio (sin cuota)",
     modelo_propio: p.modelo ? { local: pct(p.modelo.pH), empate: pct(p.modelo.pD), visita: pct(p.modelo.pA) } : null,
-    mercado_sin_margen: q ? { local: pct(q.p[0]), empate: pct(q.p[1]), visita: pct(q.p[2]), fuente: q.casa || "" } : null,
+    comparativa_pinnacle: pin ? { pinnacle_sin_margen: { local: pct(q.p[0]), empate: pct(q.p[1]), visita: pct(q.p[2]) },
+      diferencia_modelo_propio_pts: p.modelo ? { local: sgn(Math.round((p.modelo.pH - q.p[0]) * 100)), empate: sgn(Math.round((p.modelo.pD - q.p[1]) * 100)), visita: sgn(Math.round((p.modelo.pA - q.p[2]) * 100)) } : null } : "Pinnacle no publicó cuota para este partido",
+    mercado_sin_margen: q && !pin ? { local: pct(q.p[0]), empate: pct(q.p[1]), visita: pct(q.p[2]), fuente: q.casa || "" } : null,
     cuotas_casa: p.cuotas ? { local: p.cuotas.h, empate: p.cuotas.d, visita: p.cuotas.a, casa: p.cuotas.casa || "ESPN", linea_goles: p.cuotas.linea, mas: p.cuotas.over, menos: p.cuotas.under } : null,
     cuotas_del_usuario: Object.keys(tus).length ? tus : null,
     corners_esperados: p.ch != null ? dec(p.ch + p.ca, 1) : null, tarjetas_esperadas: p.th != null ? dec(p.th + p.ta, 1) : null,
@@ -508,13 +510,15 @@ function iaCtxPartido(L, p) {
   };
 }
 const iaPartidosProx = () => { const now = Date.now();
-  return allMatches().filter(p => { const t = new Date(p.kickoff).getTime(); return t > now - 2 * 3600e3 && t < now + 3 * DAYMS; }).sort((a, b) => a.kickoff.localeCompare(b.kickoff)).slice(0, 50); };
+  return allMatches().filter(p => { const t = new Date(p.kickoff).getTime(); return t > now - 2 * 3600e3 && t < now + 3 * DAYMS; }).sort((a, b) => a.kickoff.localeCompare(b.kickoff)).slice(0, 45); };
 function iaCtxDia() {
   return { hoy: new Date().toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }), zona: "Chile",
-    formato: "liga | partido | hora | prob. Ballytics local/empate/visita | +2,5 goles | ambos marcan | marcador más probable | tiros al arco por partido (local–visita) | córners esperados | mercado sin margen",
+    formato: "liga | partido | hora | prob. Ballytics local/empate/visita | xG previsto (local–visita) | +2,5 goles | ambos marcan | marcador más probable | tiros al arco por partido (local–visita) | córners esperados | tarjetas esperadas | bajas | Pinnacle o mercado sin margen",
     partidos: iaPartidosProx().map(p => { const q = mktOf(p), eh = statOf(p.L, p.home), ea = statOf(p.L, p.away);
-      return [p.L.nombre, `${p.home} vs ${p.away}`, new Date(p.kickoff).toLocaleString("es-CL", { weekday: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }), `L ${pct(p.pH)} E ${pct(p.pD)} V ${pct(p.pA)}`, `+2,5 ${pct(p.pO25)}`, `ambos ${pct(p.pBTTS)}`, p.top,
-        eh.tiros_arco != null ? `tiros ${dec(eh.tiros_arco, 1)}–${dec(ea.tiros_arco, 1)}` : "", p.ch != null ? `córners ${dec(p.ch + p.ca, 1)}` : "", q ? `mercado L ${pct(q.p[0])} E ${pct(q.p[1])} V ${pct(q.p[2])}` : "sin cuota"].filter(Boolean).join(" | "); }) };
+      return [p.L.nombre, `${p.home} vs ${p.away}`, new Date(p.kickoff).toLocaleString("es-CL", { weekday: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }), `L ${pct(p.pH)} E ${pct(p.pD)} V ${pct(p.pA)}`, `xG ${dec(p.lh, 1)}–${dec(p.la, 1)}`, `+2,5 ${pct(p.pO25)}`, `ambos ${pct(p.pBTTS)}`, p.top,
+        eh.tiros_arco != null ? `tiros ${dec(eh.tiros_arco, 1)}–${dec(ea.tiros_arco, 1)}` : "", p.ch != null ? `córners ${dec(p.ch + p.ca, 1)}` : "", p.th != null ? `tarjetas ${dec(p.th + p.ta, 1)}` : "",
+        p.bajas ? `bajas ${(p.bajas.h || []).filter(x => x.tipo === "Missing Fixture").length}–${(p.bajas.a || []).filter(x => x.tipo === "Missing Fixture").length}` : "",
+        q ? `${/pinnacle/i.test(q.casa || "") ? "Pinnacle" : "mercado"} L ${pct(q.p[0])} E ${pct(q.p[1])} V ${pct(q.p[2])}` : "sin cuota"].filter(Boolean).join(" | "); }) };
 }
 const iaMd = t => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^#{1,4} (.+)$/gm, "<b>$1</b>").split(/\n+/).map(l => /^\s*[-•*] /.test(l) ? `<li>${l.replace(/^\s*[-•*] /, "")}</li>` : `<p>${l}</p>`).join("").replace(/(<li>.*?<\/li>)+/g, m => `<ul>${m}</ul>`);
 // partidos que la IA nombró en su respuesta → tarjetas para tocar, ver el partido o armar la combinada

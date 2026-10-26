@@ -61,6 +61,7 @@ jobs:
           name = "ballytics-avisos"
           main = "index.js"
           compatibility_date = "2025-01-01"
+          compatibility_flags = ["nodejs_compat"]
           workers_dev = true
           [[kv_namespaces]]
           binding = "SUBS"
@@ -75,7 +76,18 @@ jobs:
       - name: Instalar el servidor
         if: steps.s.outputs.ok == 'si'
         working-directory: worker
-        run: npx --yes wrangler@4 deploy
+        run: |
+          npm install --omit=dev --no-audit --no-fund
+          npx --yes wrangler@4 deploy
+      - name: Clave de Gemini para la IA (si existe el secreto)
+        if: steps.s.outputs.ok == 'si'
+        working-directory: worker
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$GEMINI_API_KEY" ]; then printf '%s' "$GEMINI_API_KEY" | npx --yes wrangler@4 secret put GEMINI_API_KEY; else echo "Sin GEMINI_API_KEY: la IA usa solo Cloudflare."; fi
       - name: Probar y guardar la dirección para el sitio
         if: steps.s.outputs.ok == 'si'
         run: |
