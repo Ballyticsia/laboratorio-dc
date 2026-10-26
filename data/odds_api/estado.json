@@ -1,6 +1,6 @@
 {
  "activa": true,
- "creditos_usados": 2,
+ "creditos_usados": 0,
  "restantes": 360,
  "consultas": {
   "soccer_epl": "sin partidos cerca",
@@ -21,12 +21,12 @@
   "soccer_uefa_europa_conference_league": "sin partidos cerca",
   "soccer_conmebol_copa_sudamericana": "sin partidos cerca",
   "soccer_mexico_ligamx": "sin partidos cerca",
-  "soccer_turkey_super_league": "actualizada",
+  "soccer_turkey_super_league": "copia",
   "soccer_spl": "sin partidos cerca",
   "soccer_belgium_first_div": "sin partidos cerca"
  },
  "errores": [],
  "ligas": {},
  "partidos_con_cuota": 45,
- "actualizado": "2026-10-26T14:58+00:00"
+ "actualizado": "2026-10-26T16:58+00:00"
 }
