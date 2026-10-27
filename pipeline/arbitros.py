@@ -104,26 +104,34 @@ def _r(v, n=2):
 
 def _stats_liga(out):
     """Árbitro de cada resultado y de cada partido próximo; estadísticas de la temporada."""
-    res = [x for x in out.get("resultados", []) if x.get("arbitro") and isinstance(x.get("t"), list) and len(x["t"]) == 2 and None not in x["t"] and x.get("hg") is not None]
-    if not res:
+    res = [x for x in out.get("resultados", []) if x.get("arbitro") and x.get("hg") is not None]
+    if len(res) < 10:
         return {}, {}, {}
-    n = len(res)
-    liga = {"tpp": sum(sum(x["t"]) for x in res) / n, "penpp": sum(_pens(x, "h") + _pens(x, "a") for x in res) / n,
+    # tarjetas: ESPN no las publica en todas las ligas (Uruguay, Paraguay…). Solo se usan si la mayoría de los
+    # partidos las trae; si no, no se muestran (mejor nada que un 0,4 por partido falso).
+    con_t = lambda x: isinstance(x.get("t"), list) and len(x["t"]) == 2 and None not in x["t"] and sum(x["t"]) > 0
+    hay_t = sum(1 for x in res if con_t(x)) >= 0.7 * len(res)
+    for x in res:
+        x["_t"] = con_t(x) if hay_t else False
+    n, rt = len(res), [x for x in res if x["_t"]]
+    liga = {"tpp": sum(sum(x["t"]) for x in rt) / len(rt) if rt else None, "penpp": sum(_pens(x, "h") + _pens(x, "a") for x in res) / n,
             "local": sum(1 for x in res if x["hg"] > x["ag"]) / n}
     por = defaultdict(list)
     for x in res:
         por[x["arbitro"]].append(x)
     arb = {}
     for nombre, xs in por.items():
-        k = len(xs)
-        arb[nombre] = {"n": nombre, "pj": k, "tpp": sum(sum(x["t"]) for x in xs) / k, "penpp": sum(_pens(x, "h") + _pens(x, "a") for x in xs) / k,
-                       "local": sum(1 for x in xs if x["hg"] > x["ag"]) / k}
+        k, xt = len(xs), [x for x in xs if x["_t"]]
+        arb[nombre] = {"n": nombre, "pj": k, "tpp": sum(sum(x["t"]) for x in xt) / len(xt) if xt else None, "pjt": len(xt),
+                       "penpp": sum(_pens(x, "h") + _pens(x, "a") for x in xs) / k, "local": sum(1 for x in xs if x["hg"] > x["ag"]) / k}
     # promedio de cada equipo con todos los árbitros (tarjetas recibidas y penales)
-    eq = defaultdict(lambda: {"pj": 0, "t": 0, "pf": 0, "pc": 0})
+    eq = defaultdict(lambda: {"pj": 0, "pjt": 0, "t": 0, "pf": 0, "pc": 0})
     for x in res:
         for lado, team, otro in (("h", x["home"], "a"), ("a", x["away"], "h")):
             e = eq[team]; i = 0 if lado == "h" else 1
-            e["pj"] += 1; e["t"] += x["t"][i]; e["pf"] += _pens(x, lado); e["pc"] += _pens(x, otro)
+            e["pj"] += 1; e["pf"] += _pens(x, lado); e["pc"] += _pens(x, otro)
+            if x["_t"]:
+                e["pjt"] += 1; e["t"] += x["t"][i]
     return liga, arb, {"res": res, "eq": eq}
 
 
@@ -131,15 +139,17 @@ def _equipo_con(ctx, nombre, team):
     xs = [x for x in ctx["res"] if x["arbitro"] == nombre and team in (x["home"], x["away"])]
     if not xs:
         return {"pj": 0}
-    g = e = p = t = pf = pc = 0
+    g = e = p = t = kt = pf = pc = 0
     for x in xs:
         lado = "h" if x["home"] == team else "a"; i = 0 if lado == "h" else 1
         mio, suyo = (x["hg"], x["ag"]) if lado == "h" else (x["ag"], x["hg"])
         g += mio > suyo; e += mio == suyo; p += mio < suyo
-        t += x["t"][i]; pf += _pens(x, lado); pc += _pens(x, "a" if lado == "h" else "h")
-    k, base = len(xs), ctx["eq"].get(team) or {"pj": 0}
-    return {"pj": k, "g": g, "e": e, "p": p, "tpp": _r(t / k), "pf": pf, "pc": pc,
-            "tpp_todos": _r(base["t"] / base["pj"]) if base["pj"] else None,
+        pf += _pens(x, lado); pc += _pens(x, "a" if lado == "h" else "h")
+        if x["_t"]:
+            t += x["t"][i]; kt += 1
+    k, base = len(xs), ctx["eq"].get(team) or {"pj": 0, "pjt": 0}
+    return {"pj": k, "g": g, "e": e, "p": p, "tpp": _r(t / kt) if kt else None, "pf": pf, "pc": pc,
+            "tpp_todos": _r(base["t"] / base["pjt"]) if base.get("pjt") else None,
             "pf_todos": _r(base["pf"] / base["pj"]) if base["pj"] else None, "pc_todos": _r(base["pc"] / base["pj"]) if base["pj"] else None}
 
 
@@ -169,6 +179,10 @@ def actualizar_ligas(ligas):
                 else:
                     p.pop("arbitro_n", None)
             continue
+        if not liga["penpp"]:   # liga sin penales marcados en los datos de ESPN: no se muestran
+            liga["penpp"] = None
+            for a_ in arb.values():
+                a_["penpp"] = None
         out["arbitros_liga"] = {"tpp": _r(liga["tpp"]), "penpp": _r(liga["penpp"]), "local": _r(liga["local"], 3)}
         out["arbitros"] = sorted(({"n": a["n"], "pj": a["pj"], "tpp": _r(a["tpp"]), "penpp": _r(a["penpp"]), "local": _r(a["local"], 3)} for a in arb.values()),
                                  key=lambda a: (-a["pj"], a["n"]))
@@ -179,12 +193,16 @@ def actualizar_ligas(ligas):
             a = arb.get(nombre)
             info = {"n": nombre, "pj": a["pj"] if a else 0}
             if a:
-                # factor de tarjetas con "prior" de la liga: con pocos partidos se parece al promedio
-                fac = ((a["tpp"] * a["pj"] + liga["tpp"] * K_PRIOR) / (a["pj"] + K_PRIOR)) / liga["tpp"] if liga["tpp"] else 1
-                info.update(tpp=_r(a["tpp"]), penpp=_r(a["penpp"]), local=_r(a["local"], 3), factor_tarjetas=_r(fac, 3),
-                            tarjetas_aj=_r((p["th"] + p["ta"]) * fac) if p.get("th") is not None and p.get("ta") is not None else None)
+                info.update(tpp=_r(a["tpp"]), penpp=_r(a["penpp"]), local=_r(a["local"], 3))
+                if a["tpp"] is not None and liga["tpp"]:
+                    # factor de tarjetas con "prior" de la liga: con pocos partidos se parece al promedio
+                    fac = ((a["tpp"] * a["pjt"] + liga["tpp"] * K_PRIOR) / (a["pjt"] + K_PRIOR)) / liga["tpp"]
+                    info.update(factor_tarjetas=_r(fac, 3),
+                                tarjetas_aj=_r((p["th"] + p["ta"]) * fac) if p.get("th") is not None and p.get("ta") is not None else None)
             info["eq"] = {"h": _equipo_con(ctx, nombre, p["home"]), "a": _equipo_con(ctx, nombre, p["away"])}
             p["arbitro"] = info
+        for x in out.get("resultados", []):
+            x.pop("_t", None)
         hechos += 1
     print(f"  Árbitros: {hechos} ligas con datos")
 
