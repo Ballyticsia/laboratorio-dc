@@ -41,8 +41,14 @@ jobs:
       - name: Bajar datos y reajustar el modelo
         env:
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
-          API_FOOTBALL_MIN_HORAS: "6"   # plan gratis (100 consultas/día); con Pro se puede bajar a 2
-          API_FOOTBALL_DIAS: "2"        # plan gratis: solo de ayer a mañana; con Pro puede ser 3
+          # plan Pro de API-Football (7.500 consultas al día, desde el 27-10-2026)
+          API_FOOTBALL_MIN_HORAS: "2"   # bajas de cada fecha, como mucho cada 2 horas
+          API_FOOTBALL_DIAS: "3"        # de ayer a pasado mañana
+          XG_MIN_HORAS: "2"
+          XG_MAX_POR_CORRIDA: "60"
+          XG_RESERVA: "1500"            # consultas que siempre quedan libres en el día
+          FOTOS_MAX: "120"
+          FOTOS_RESERVA: "1500"
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           ODDS_API_MIN_HORAS: "20"      # plan gratis (500 créditos/mes): cada liga se actualiza ~1 vez al día antes de jugar
         run: python pipeline/generar.py
