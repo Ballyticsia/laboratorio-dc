@@ -1,0 +1,17 @@
+name: Diagnóstico penales
+on:
+  push:
+    branches: [diagnostico]
+    paths: [diag/pen.py, .github/workflows/diag.yml]
+permissions:
+  contents: write
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - run: python diag/pen.py
+      - run: |
+          git config user.name "Claude"; git config user.email "noreply@anthropic.com"
+          git add -f diag/out && git commit -m "Resultado diagnóstico" && git push -f origin HEAD:diagnostico
