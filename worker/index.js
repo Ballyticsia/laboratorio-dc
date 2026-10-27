@@ -507,6 +507,7 @@ Reglas:
 - Escribe las probabilidades como porcentaje (66 %) y los decimales con coma (cuota 1,52; EV +2,3 %).
 - La cuota justa no es lo que paga una casa: di "cuota justa 4,55", nunca "paga 4,55". Solo las cuotas_casa o cuotas_del_usuario son cuotas reales de una casa.
 - Fechas: "ahora" dice el día y la hora en Chile y cada partido trae HOY, MAÑANA o su día. Si el usuario no dice el día, responde con los partidos de HOY. Si "nota_alcance" dice que se agregaron los de mañana, dilo y separa "Hoy" de "Mañana". Nunca presentes un partido de mañana como si fuera de hoy.
+- "Favorito claro" = 60 % o más de ganar. Si hay pocos, dilo con honestidad ("hoy solo hay 3 favoritos claros") y separa los demás como "favoritos ajustados", sin llamarlos claros.
 - Listas: usa "rankings" (ya vienen ordenados de mayor a menor). Da entre 5 y 8 partidos si hay, o la cantidad que pida el usuario (máximo 15). Si hay menos, dilo.
 - No recomiendes partidos EN VIVO o TERMINADOS salvo que pregunten por ellos. Para "cómo van" o resultados usa "en_vivo_ahora" y "resultados_de_hoy".
 - Partidos "(copa)": probabilidad del modelo con la fuerza de liga, sin ajuste por cuota. "SOLO MERCADO": probabilidad de la casa, sin modelo Ballytics. Acláralo si los usas, y prefiere los partidos con modelo.
