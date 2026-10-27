@@ -432,9 +432,13 @@ def props(clave_p, clave_r):
 def ledger_update(pred_rows, jugados, now_iso, votos=None):
     # lh…top = modelo propio; m* = mercado sin margen; f* = probabilidad Ballytics (ajustada a la cuota si la hay)
     cols = ["id", "liga", "kickoff", "home", "away", "lh", "la", "pH", "pD", "pA", "pO25", "pBTTS", "top", "predicho", "hg", "ag", "mH", "mD", "mA",
-            "fH", "fD", "fA", "fO25", "fBTTS", "ftop", "jH", "jD", "jA", "jO25", "vH", "vD", "vA", "vN", "cE", "tE", "cR", "tR"]
+            "fH", "fD", "fA", "fO25", "fBTTS", "ftop", "jH", "jD", "jA", "jO25", "vH", "vD", "vA", "vN", "cE", "tE", "cR", "tR",
+            # CLV: cuota de ESPN (sin margen) la primera vez que aparece (e*) con el modelo propio de ese momento (o*), y la última antes del inicio (k*)
+            "eH", "eD", "eA", "oH", "oD", "oA", "et", "kH", "kD", "kA", "kt"]
     reg = pd.read_csv(REGISTRO, dtype={"id": str}) if os.path.exists(REGISTRO) else pd.DataFrame(columns=cols)
     reg = reg.reindex(columns=cols).set_index("id", drop=False)
+    for c_ in ("et", "kt", "predicho", "top", "ftop"):   # columnas de texto (fechas y marcadores)
+        reg[c_] = reg[c_].astype("object")
     for a, b in (("fH", "pH"), ("fD", "pD"), ("fA", "pA"), ("fO25", "pO25"), ("fBTTS", "pBTTS"), ("ftop", "top")):
         reg[a] = reg[a].where(reg[a].notna(), reg[b])   # filas antiguas: lo publicado era el modelo propio
     for p in pred_rows:
@@ -451,6 +455,11 @@ def ledger_update(pred_rows, jugados, now_iso, votos=None):
         q, _, _ = mercado_q(p.get("cuotas"), p.get("mercado"))
         if q is not None:
             reg.loc[p["id"], ["mH", "mD", "mA"]] = q.round(4)
+        qd, _, _ = mercado_q(p.get("cuotas"), None)   # siempre la misma fuente (ESPN, cada 2 horas) para medir el movimiento
+        if qd is not None and pd.Timestamp(now_iso) < pd.Timestamp(p["kickoff"]):
+            if pd.isna(reg.at[p["id"], "eH"]):
+                reg.loc[p["id"], ["eH", "eD", "eA", "oH", "oD", "oA", "et"]] = [*qd.round(4), own["pH"], own["pD"], own["pA"], now_iso]
+            reg.loc[p["id"], ["kH", "kD", "kA", "kt"]] = [*qd.round(4), now_iso]
         reg.loc[p["id"], ["cE", "tE"]] = [r(p["ch"] + p["ca"], 2) if p.get("ch") is not None and p.get("ca") is not None else np.nan,
                                           r(p["th"] + p["ta"], 2) if p.get("th") is not None and p.get("ta") is not None else np.nan]
         pj = REGJ.setdefault(str(p["id"]), {})
@@ -481,9 +490,49 @@ def ledger_update(pred_rows, jugados, now_iso, votos=None):
     return reg
 
 
+def clv_summary(reg):
+    """¿El modelo propio se adelanta al mercado? Para cada partido ya empezado con cuota temprana y de cierre:
+    el lado donde el modelo veía más valor contra la cuota temprana (≥ 2 puntos) y cuánto se movió la cuota hacia ese lado."""
+    c = reg.dropna(subset=["eH", "oH", "kH", "et", "kt"]).copy()
+    out = {"desde": str(reg.et.dropna().min())[:10] if reg.et.notna().any() else None,
+           "midiendo": int((reg.eH.notna() & reg.hg.isna()).sum()), "n": 0}
+    if not len(c):
+        return out
+    ahora = pd.Timestamp.now(tz="UTC")
+    c = c[pd.to_datetime(c.kickoff, utc=True) < ahora]
+    c = c[(pd.to_datetime(c.kt, utc=True) - pd.to_datetime(c.et, utc=True)).dt.total_seconds() >= 6 * 3600]
+    if not len(c):
+        return out
+    E, O, K = (c[cs].astype(float).values for cs in (["eH", "eD", "eA"], ["oH", "oD", "oA"], ["kH", "kD", "kA"]))
+    d = O - E; i = d.argmax(1); ix = np.arange(len(c)); fuerza = d[ix, i]
+    sel = fuerza >= 0.02
+    if not sel.any():
+        out["sin_senal"] = int(len(c))
+        return out
+    mov = K[ix, i] - E[ix, i]                 # cambio de la probabilidad del mercado en ese lado
+    cuota = K[ix, i] / np.clip(E[ix, i], 1e-6, None) - 1   # cuánto mejor era la cuota temprana (1/E) que la de cierre (1/K)
+    m, cu, cs = mov[sel], cuota[sel], c[sel]
+    out.update(n=int(sel.sum()), a_favor=r((m > 0.0025).mean()), en_contra=r((m < -0.0025).mean()),
+               mov_pts=r(m.mean() * 100, 2), clv_cuota=r(cu.mean(), 4))
+    lados = np.array(["local", "empate", "visita"])[i[sel]]
+    por = []
+    for lg, idx in pd.Series(range(len(cs)), index=cs.liga.values).groupby(level=0):
+        v = idx.values
+        if len(v) >= 3:
+            por.append(dict(liga=lg, n=int(len(v)), a_favor=r((m[v] > 0.0025).mean()), mov_pts=r(m[v].mean() * 100, 2)))
+    out["por_liga"] = sorted(por, key=lambda x: -x["n"])
+    ult = cs.assign(lado_=lados, mod_=O[ix, i][sel], tem_=E[ix, i][sel], cie_=K[ix, i][sel]).sort_values("kickoff").tail(12)
+    out["ultimos"] = [dict(liga=x.liga, home=x.home, away=x.away, kickoff=x.kickoff, lado=x.lado_, modelo=r(x.mod_), temprana=r(x.tem_), cierre=r(x.cie_)) for x in ult.itertuples()][::-1]
+    return out
+
+
 def ledger_summary(reg, base):
     g = reg.dropna(subset=["hg", "ag"]).copy()
     out = {"desde": None, "n": 0, "filas": [], "serie": []}
+    try:
+        out["clv"] = clv_summary(reg)
+    except Exception as e:   # el CLV nunca debe impedir publicar el registro
+        print("  (CLV no calculado:", e, ")")
     if len(reg) and reg.predicho.notna().any():
         out["desde"] = str(reg.predicho.dropna().min())[:10]
     if len(g):

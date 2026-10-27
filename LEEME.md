@@ -103,6 +103,10 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - La ficha de jugador (`#/ficha/<id>`) lee directo de ESPN; la curva de probabilidad en vivo se calcula en el navegador con el marcador, el minuto y las rojas.
 - `pipeline/copas.py` simula la fase de liga de las copas UEFA y las llaves de ida y vuelta de CONMEBOL.
 
+## CLV (¿el modelo se adelanta al mercado?)
+- Desde el 27-10-2026, `data/registro.csv` guarda para cada partido la cuota de ESPN sin margen la primera vez que aparece (`eH`, `eD`, `eA`, con el modelo propio de ese momento en `oH`, `oD`, `oA` y la hora en `et`) y la última antes del inicio (`kH`, `kD`, `kA`, `kt`).
+- `clv_summary` en `pipeline/generar.py` toma el resultado donde el modelo veía al menos 2 puntos más que la primera cuota y mide cuánto se movió el mercado hacia ese lado hasta el cierre. Se muestra en Resultados del modelo, con el detalle por liga.
+
 ## Ballytics IA
 - El servidor de avisos tiene `/ia`. Primero usa **Gemini** con el SDK oficial `@google/genai` (secreto de GitHub `GEMINI_API_KEY`, que el robot copia como secreto del worker al instalarlo). Modelos: `gemini-3.5-flash-lite` y, si falla, `gemini-flash-lite-latest`, con razonamiento mínimo para que responda en menos de un segundo.
 - Si Gemini falla o se acaba su cuota, responde la IA gratis de Cloudflare (Gemma 4, gpt-oss-120b o Mistral Small).

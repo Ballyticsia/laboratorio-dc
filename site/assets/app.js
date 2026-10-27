@@ -623,7 +623,8 @@ async function iaCtxDia(q) {
     en_vivo_ahora: vivos, resultados_de_hoy: finales,
     equipos_consultados: equipos.length ? equipos : undefined,
     registro_modelo: g && g.n ? { partidos_calificados: g.n, acierto_ganador: pct(g.acierto_1x2, 1), aciertos_si_no: G ? `${G.aciertos} de ${G.n} (${pct(G.aciertos / G.n, 1)})` : null,
-      por_mercado: G ? G.por.map(x => `${x.mercado} ${pct(x.acierto, 0)} en ${x.n}`) : null, log_loss: `${dec(g.logloss, 3)} (respuesta ingenua ${dec(g.logloss_ingenuo, 3)}; menos es mejor)` } : null,
+      por_mercado: G ? G.por.map(x => `${x.mercado} ${pct(x.acierto, 0)} en ${x.n}`) : null, log_loss: `${dec(g.logloss, 3)} (respuesta ingenua ${dec(g.logloss_ingenuo, 3)}; menos es mejor)`,
+      clv: g.clv && g.clv.n ? `En ${g.clv.n} partidos donde el modelo veía más que la cuota temprana, el mercado se movió hacia el modelo el ${pct(g.clv.a_favor, 0)} de las veces (movimiento medio ${dec(g.clv.mov_pts, 1)} puntos)` : "el CLV recién empieza a medirse" } : null,
   };
   return { ctx, idmap };
 }
@@ -1287,6 +1288,7 @@ function vRegistro() {
       ${filas.length > lim ? `<button class="vmore" id="reg-more">Ver ${Math.min(30, filas.length - lim)} partidos más (${filas.length - lim} restantes)</button>` : ""}</div>
     ${regMercados(g.mercados)}
     ${g.vs_mercado ? `<div class="panel stack"><h3>Ballytics, modelo propio y mercado</h3><div class="kpis">${kpi("m", "Log-loss Ballytics", dec(g.vs_mercado.ballytics, 3), g.vs_mercado.acierto_ballytics != null ? `acierto ${pct(g.vs_mercado.acierto_ballytics, 1)}` : "")}${kpi("", "Log-loss modelo propio", dec(g.vs_mercado.modelo, 3), g.vs_mercado.acierto_modelo != null ? `acierto ${pct(g.vs_mercado.acierto_modelo, 1)}` : "")}${kpi("k", "Log-loss mercado", dec(g.vs_mercado.mercado, 3), g.vs_mercado.acierto_mercado != null ? `acierto ${pct(g.vs_mercado.acierto_mercado, 1)}` : "")}${kpi("", "Partidos con cuota", g.vs_mercado.n, "")}</div><p class="note">Solo partidos en que ESPN publicó cuotas antes del inicio. Menos es mejor.</p></div>` : ""}
+    ${clvPanel(g.clv)}
     <div class="panel stack"><h3>La gente contra Ballytics</h3>${g.gente && g.gente.n ? `<div class="kpis">${kpi("m", "Acierto Ballytics", pct(g.gente.acierto_ballytics, 1), `log-loss ${dec(g.gente.logloss_ballytics, 3)}`)}${kpi(g.gente.acierto_gente > g.gente.acierto_ballytics ? "k" : "", "Acierto de la gente", pct(g.gente.acierto_gente, 1), `log-loss ${dec(g.gente.logloss_gente, 3)}`)}${kpi("", "Partidos con votos", g.gente.n, `${g.gente.votos} votos`)}</div>` : ""}<p class="note">${g.gente && g.gente.n ? "Partidos con al menos 3 votos en “¿Quién gana?”. El voto más repetido cuenta como el pronóstico de la gente." : "Se llena cuando la gente vote en “¿Quién gana?” y se jueguen esos partidos (mínimo 3 votos por partido)."}</p></div>
     <div class="panel stack"><h3>¿Sirve el ajuste por bajas?</h3>${g.bajas && g.bajas.n ? `<div class="kpis">${kpi("m", "Log-loss modelo propio", dec(g.bajas.modelo, 3), "")}${kpi(g.bajas.con_bajas <= g.bajas.modelo ? "k" : "", "Log-loss con bajas", dec(g.bajas.con_bajas, 3), g.bajas.con_bajas <= g.bajas.modelo ? "mejora" : "no mejora")}${kpi("", "Partidos con bajas", g.bajas.n, "")}</div>` : ""}<p class="note">${g.bajas && g.bajas.n ? "Solo partidos en que faltó algún goleador. Menos es mejor." : "Se llena cuando se jueguen partidos en que faltó algún goleador por lesión o suspensión."}</p></div>
     ${g.n ? `<div class="grid2">
@@ -1298,6 +1300,21 @@ function vRegistro() {
 }
 document.addEventListener("change", e => { if (e.target.id === "reg-liga") { VV.regLiga = e.target.value; VV.regLim = 30; go({ v: "registro", tab: R.tab, keepScroll: true }); } });
 document.addEventListener("click", e => { if (e.target.id === "reg-more") { VV.regLim = (VV.regLim || 30) + 30; go({ v: "registro", tab: R.tab, keepScroll: true }); } });
+/* ---------- registro: ¿el modelo se adelanta al mercado? (CLV) ---------- */
+function clvPanel(c) {
+  if (!c) return "";
+  const tip = help("CLV (valor contra la cuota de cierre). Para cada partido se guarda la cuota la primera vez que aparece y la última antes del inicio (ESPN, misma casa). Si el modelo propio veía al menos 2 puntos más que esa primera cuota en un resultado, se mira si después el mercado se movió hacia ese lado. Que el mercado se mueva hacia el modelo seguido es la mejor señal temprana de que el modelo encuentra algo que la casa todavía no veía.");
+  if (!c.n) return `<div class="panel stack"><h3>¿El modelo se adelanta al mercado? (CLV) ${tip}</h3>
+    <p class="note">${c.desde ? `Se mide desde el ${fecha(c.desde + "T12:00")}.` : "Empieza a medirse con la próxima actualización."} ${c.midiendo ? `Hay ${c.midiendo} partidos con su primera cuota guardada esperando su cuota de cierre.` : ""} Los resultados aparecen cuando empiecen esos partidos.</p></div>`;
+  const pocos = c.n < 50;
+  return `<div class="panel stack"><h3>¿El modelo se adelanta al mercado? (CLV) ${tip}</h3>
+    <div class="kpis">${kpi("m", "Señales del modelo", c.n, `partidos donde veía ≥ 2 puntos más que la cuota`)}${kpi(c.a_favor >= .5 ? "k" : "", "El mercado fue hacia el modelo", pct(c.a_favor, 0), `en contra ${pct(c.en_contra, 0)}`)}${kpi("", "Movimiento medio", `${c.mov_pts > 0 ? "+" : ""}${dec(c.mov_pts, 1)} pts`, "de la probabilidad del mercado en ese lado")}${kpi("", "CLV de cuota", `${c.clv_cuota > 0 ? "+" : "−"}${pct(Math.abs(c.clv_cuota), 1)}`, "cuota temprana contra la de cierre")}</div>
+    ${pocos ? `<div class="note-panel"><b>Muestra chica (${c.n} señales).</b> Con menos de 50 señales el resultado cambia mucho por azar; sirve para seguirlo, no para concluir.</div>` : ""}
+    ${(c.por_liga || []).length ? `<div class="scroll"><table class="t"><thead><tr><th>Liga</th><th class="n">Señales</th><th class="n">A favor</th><th class="n">Movimiento</th></tr></thead><tbody>${c.por_liga.map(x => `<tr><td class="team">${D.ligas[x.liga] ? leagueMark(D.ligas[x.liga]) + esc(D.ligas[x.liga].nombre) : esc(x.liga)}</td><td class="n">${x.n}</td><td class="n ${x.a_favor >= .5 ? "good" : "bad"}">${pct(x.a_favor, 0)}</td><td class="n">${x.mov_pts > 0 ? "+" : ""}${dec(x.mov_pts, 1)}</td></tr>`).join("")}</tbody></table></div>` : ""}
+    ${(c.ultimos || []).length ? `<div class="scroll"><table class="t"><thead><tr><th>Partido</th><th>Lado</th><th class="n">Modelo</th><th class="n">Cuota temprana</th><th class="n">Cierre</th></tr></thead><tbody>${c.ultimos.map(x => { const L = D.ligas[x.liga] || { equipos: {} };
+      return `<tr><td><b>${esc(corto(L, x.home))} vs ${esc(corto(L, x.away))}</b><small class="faint" style="display:block">${esc(fecha(x.kickoff))}</small></td><td>${esc(x.lado)}</td><td class="n">${pct(x.modelo)}</td><td class="n">${pct(x.temprana)}</td><td class="n ${x.cierre > x.temprana ? "good" : x.cierre < x.temprana ? "bad" : ""}">${pct(x.cierre)}</td></tr>`; }).join("")}</tbody></table></div>` : ""}
+    <p class="note">Cuotas de ESPN (DraftKings) sin margen, guardadas cada 2 horas. Medido desde el ${c.desde ? esc(fecha(c.desde + "T12:00")) : "—"}${c.midiendo ? ` · ${c.midiendo} partidos esperando su cuota de cierre` : ""}.</p></div>`;
+}
 /* ---------- registro: todos los mercados ---------- */
 function regMercados(M) {
   if (!M || !Object.keys(M).length) return "";
