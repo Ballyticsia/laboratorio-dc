@@ -49,6 +49,7 @@ jobs:
           XG_RESERVA: "1500"            # consultas que siempre quedan libres en el día
           FOTOS_MAX: "120"
           FOTOS_RESERVA: "1500"
+          AF_ESPERA: "0.3"              # el plan Pro permite 300 consultas por minuto
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           ODDS_API_MIN_HORAS: "20"      # plan gratis (500 créditos/mes): cada liga se actualiza ~1 vez al día antes de jugar
         run: python pipeline/generar.py

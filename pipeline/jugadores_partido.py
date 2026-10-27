@@ -18,6 +18,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
+ESPERA = float(os.environ.get("AF_ESPERA", "6.5"))   # segundos entre consultas (plan gratis: 10 por minuto; Pro: 300)
 
 AF = "https://v3.football.api-sports.io"
 CF = "https://api.cloudflare.com/client/v4/accounts/{acc}/storage/kv/namespaces"
@@ -80,7 +81,7 @@ def af(path):
     global restantes, ultima
     if restantes is not None and restantes <= RESERVA:
         raise RuntimeError("reserva")
-    espera = 6.5 - (time.time() - ultima)
+    espera = ESPERA - (time.time() - ultima)
     if espera > 0:
         time.sleep(espera)
     req = urllib.request.Request(AF + path, headers={"x-apisports-key": KEY, "Accept": "application/json"})

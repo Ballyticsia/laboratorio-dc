@@ -18,6 +18,7 @@ from datetime import date, datetime, timezone
 
 import datos
 import lesiones
+ESPERA = float(os.environ.get("AF_ESPERA", "6.5"))   # segundos entre consultas (plan gratis: 10 por minuto; Pro: 300)
 
 RAIZ = os.path.join(os.path.dirname(__file__), "..")
 ESTADO_P = os.path.join(RAIZ, "data", "api_football", "fotos_estado.json")
@@ -54,7 +55,7 @@ def nombre_igual(a, b):
 
 
 def af(path):
-    espera = 6.5 - (time.time() - _ultima[0])
+    espera = ESPERA - (time.time() - _ultima[0])
     if espera > 0:
         time.sleep(espera)
     j = lesiones._get(path)

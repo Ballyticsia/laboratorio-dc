@@ -24,6 +24,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       JUG_MAX: "25"        # plan Pro: hasta 25 partidos por corrida
       JUG_RESERVA: "1000"  # nunca bajar de esto en el día
+      AF_ESPERA: "0.3"     # el plan Pro permite 300 consultas por minuto
     steps:
       - uses: actions/checkout@v6
         with:
