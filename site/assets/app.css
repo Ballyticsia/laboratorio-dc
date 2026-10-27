@@ -1334,3 +1334,17 @@ body.ia-open #iafab{display:none}
   .ia-bub{max-width:80%}
 }
 @keyframes iapop{from{transform:scale(.97);opacity:.4}to{transform:none;opacity:1}}
+/* v24: tanda de penales */
+.vsc .vpen{display:block;font-size:10.5px;font-weight:700;color:var(--muted);text-align:center;margin-top:2px;letter-spacing:.02em}
+.vhpen{display:block;font:700 15px var(--f-mono);color:var(--pitch);margin-top:4px}
+.pso-row{display:grid;grid-template-columns:26px minmax(0,1fr) auto 34px;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+.pso-row:first-of-type{border-top:0}
+.pso-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pso-k{display:flex;gap:6px}
+.pso-d{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1.5px dashed var(--line);font-size:12px;font-weight:800}
+.pso-d.ok{border:0;background:color-mix(in srgb,#22c55e 85%,#000 0%);color:#fff}
+.pso-d.ko{border:0;background:#ef4444;color:#fff}
+.pso-t{font-size:22px;text-align:right}
+.pso-list{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;margin-top:4px}
+.pso-list .ok{color:var(--ink)}.pso-list .ko{color:#ef4444}
+@media (max-width:520px){.pso-d{width:20px;height:20px;font-size:10px}.pso-k{gap:4px}}

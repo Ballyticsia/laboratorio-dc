@@ -1538,7 +1538,8 @@ async function pollLive() {
       (j.events || []).forEach(ev => {
         const c = (ev.competitions || [])[0] || {}, st = (ev.status || c.status || {}), ty = st.type || {};
         const cs = c.competitors || [], h = cs.find(x => x.homeAway === "home") || {}, a = cs.find(x => x.homeAway === "away") || {};
-        LIVE[String(ev.id)] = { state: ty.state, clock: st.displayClock || "", hg: h.score, ag: a.score };
+        const pens = /pen|shootout/i.test((ty.shortDetail || "") + (ty.name || ""));
+        LIVE[String(ev.id)] = { state: ty.state, clock: pens && ty.state === "in" ? "Penales" : st.displayClock || "", hg: h.score, ag: a.score, sh: h.shootoutScore, sa: a.shootoutScore };
       });
     } catch (e) { liveOK = false; return; }
   }
@@ -1552,11 +1553,11 @@ function paintLive() {
   });
   document.querySelectorAll("[data-live-s]").forEach(el => {
     const L = LIVE[el.dataset.liveS]; if (!L || L.state === "pre") return;
-    el.innerHTML = `<span class="s live-score ${L.state === "in" ? "on" : ""}">${esc(L.hg)}–${esc(L.ag)}</span><span class="l">${L.state === "in" ? "en vivo" : "final"}</span>`;
+    el.innerHTML = `<span class="s live-score ${L.state === "in" ? "on" : ""}">${esc(L.hg)}–${esc(L.ag)}</span><span class="l">${L.sh != null ? `pen. ${esc(L.sh)}-${esc(L.sa)}` : L.state === "in" ? "en vivo" : "final"}</span>`;
   });
   document.querySelectorAll("[data-live-mini]").forEach(el => {
     const L = LIVE[el.dataset.liveMini]; if (!L || L.state === "pre") return;
-    el.innerHTML = `<span class="${L.state === "in" ? "livetag" : "fttag"}">${L.state === "in" ? esc(L.clock) : "Final"}</span> <b class="num">${esc(L.hg)} – ${esc(L.ag)}</b>`;
+    el.innerHTML = `<span class="${L.state === "in" ? "livetag" : "fttag"}">${L.state === "in" ? esc(L.clock) : "Final"}</span> <b class="num">${esc(L.hg)} – ${esc(L.ag)}</b>${L.sh != null ? ` <small class="num">(pen. ${esc(L.sh)}-${esc(L.sa)})</small>` : ""}`;
   });
   document.querySelectorAll("[data-live-box]").forEach(el => {
     const L = LIVE[el.dataset.liveBox];
@@ -2263,7 +2264,7 @@ function vParse(e) {
   const lid = String(e.uid || "").split("~l:")[1]?.split("~")[0] || "";
   const note = c.altGameNote || "", known = VV.byId[lid];
   const side = k => { const x = (c.competitors || []).find(y => y.homeAway === k) || {}, tm = x.team || {};
-    return { id: String(tm.id || ""), name: tm.shortDisplayName || tm.displayName || "", full: tm.displayName || "", abr: tm.abbreviation, logo: tm.logo, color: tm.color, score: x.score, winner: x.winner }; };
+    return { id: String(tm.id || ""), name: tm.shortDisplayName || tm.displayName || "", full: tm.displayName || "", abr: tm.abbreviation, logo: tm.logo, color: tm.color, score: x.score, so: x.shootoutScore, winner: x.winner }; };
   return { id: String(e.id), lid, comp: known ? known.n : (note.split(",")[0] || "Otras competiciones"), slug: known ? known.s : null,
     ronda: note.includes(",") ? note.split(",").slice(1).join(",").trim() : "", date: e.date, state: t.state, detail: t.shortDetail || t.detail || "",
     clock: st.displayClock, period: st.period, h: esNat(side("home")), a: esNat(side("away")), o: t.state === "pre" ? espnOdds(c) : null };
@@ -2305,14 +2306,16 @@ function vModel(id) {
   return null;
 }
 const isLive = e => e.state === "in";
-const vClock = e => /half|HT|Entretiempo/i.test(e.detail) ? "ET" : (e.clock && e.clock !== "0'" ? e.clock : e.detail);
+const enPenales = e => /pens|penal|shootout/i.test(e.detail || "") || e.period >= 5;
+const vClock = e => enPenales(e) ? "Penales" : /half|HT|Entretiempo/i.test(e.detail) ? "ET" : (e.clock && e.clock !== "0'" ? e.clock : e.detail);
 function vTeam(e, k, cls) {
   const t = e[k], img = t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-n="${esc(t.short || t.name)}" onerror="bfb(this)">` : fbSpan(t.name, t.abr);
   return `<span class="vt ${cls}${e.state === "post" && t.winner ? " win" : ""}"><span class="vtn">${esc(t.name)}</span><span class="vlogo">${img}</span></span>`;
 }
 function vRow(e) {
   const m = vModel(e.id), f = followed()[e.id];
-  const sc = e.state === "pre" ? `<span class="vtime">${hhmm(e.date)}</span>` : `<span class="vsc num">${esc(e.h.score ?? "")}<i>-</i>${esc(e.a.score ?? "")}</span>`;
+  const so = e.h.so != null && e.a.so != null && (e.h.so || e.a.so || enPenales(e)) ? `<small class="vpen">pen. ${esc(e.h.so)}-${esc(e.a.so)}</small>` : "";
+  const sc = e.state === "pre" ? `<span class="vtime">${hhmm(e.date)}</span>` : `<span class="vsc num">${esc(e.h.score ?? "")}<i>-</i>${esc(e.a.score ?? "")}${so}</span>`;
   const st = isLive(e) ? `<span class="vmin live">${esc(vClock(e))}</span>` : e.state === "post" ? `<span class="vmin">${/pen|AET|ET/i.test(e.detail) && e.detail !== "FT" ? esc(e.detail) : "Final"}</span>` : /postp|cancel|susp|delay/i.test(e.detail) ? `<span class="vmin warn">${esc(e.detail)}</span>` : `<span class="vmin">&nbsp;</span>`;
   return `<div class="vrow ${e.state}" data-go="envivo" data-id="${esc(e.id)}" role="link" tabindex="0">
     ${st}<span class="vmid">${vTeam(e, "h", "l")}${sc}${vTeam(e, "a", "r")}</span>
@@ -2663,18 +2666,33 @@ document.addEventListener("pointerdown", e => { const r = e.target.closest && e.
 function vHeader(j) {
   const c = ((j.header || {}).competitions || [])[0] || {}, st = c.status || {}, t = st.type || {}, lg = (j.header || {}).league || {};
   const side = k => { const x = (c.competitors || []).find(y => y.homeAway === k) || {}, tm = x.team || {};
-    return { id: String(tm.id || ""), name: tm.displayName || tm.name || "", short: tm.shortDisplayName || tm.displayName || "", logo: tm.logo || ((tm.logos || [])[0] || {}).href, color: tm.color, score: x.score, rec: (x.record || [])[0] }; };
+    return { id: String(tm.id || ""), name: tm.displayName || tm.name || "", short: tm.shortDisplayName || tm.displayName || "", logo: tm.logo || ((tm.logos || [])[0] || {}).href, color: tm.color, score: x.score, so: x.shootoutScore, rec: (x.record || [])[0] }; };
   return { state: t.state, detail: t.shortDetail || t.detail || "", clock: st.displayClock, period: st.period, date: c.date, h: side("home"), a: side("away"),
     league: lg.name || "", slug: lg.slug || "", lid: String(lg.id || ""), note: (c.notes || [])[0] ? c.notes[0].headline : "" };
 }
 const minOf = H => { if (H.state === "post") return 90; if (H.state !== "in") return 0; const m = parseInt(String(H.clock || "0"), 10) || 0; return /half|HT|Entretiempo/i.test(H.detail) ? 45 : Math.min(m, 90); };
 function vEvents(j, H) {
-  return (j.keyEvents || []).filter(e => e.type && /goal|card|substitution|penalty/i.test((e.type.type || "") + (e.type.text || ""))).map(e => {
+  // los penales de la tanda no son goles del partido: van en su propio panel
+  const tanda = new Set((j.shootout || []).flatMap(t => (t.shots || []).map(x => x.player)));
+  const deTanda = e => e.shootout === true || (tanda.size && /penalty/i.test((e.type.text || "") + (e.type.type || "")) && (e.participants || []).some(p => tanda.has((p.athlete || {}).displayName)) && parseInt((e.clock || {}).displayValue || "0", 10) >= 90 && (e.period || {}).number >= 5);
+  return (j.keyEvents || []).filter(e => e.type && !deTanda(e) && /goal|card|substitution|penalty/i.test((e.type.type || "") + (e.type.text || ""))).map(e => {
     const ty = (e.type.type || e.type.text || "").toLowerCase(), team = String((e.team || {}).id || ""), lado = team === H.h.id ? "h" : team === H.a.id ? "a" : "";
     const who = (e.participants || []).map(p => (p.athlete || {}).displayName).filter(Boolean);
     const kind = /own/.test(ty) ? "og" : /missed|saved/.test(ty) ? "miss" : /goal|scored/.test(ty) ? "goal" : /red/.test(ty) ? "red" : /yellow/.test(ty) ? "yellow" : /substitution/.test(ty) ? "sub" : "other";
     return { min: (e.clock || {}).displayValue || "", lado, kind, who, text: e.text || "", pen: /penalty/.test(ty) };
   });
+}
+/* tanda de penales, lanzamiento por lanzamiento (ESPN: summary.shootout) */
+function vShootout(j, H) {
+  const T = j.shootout || []; if (!T.length) return "";
+  const de = id => T.find(t => String(t.id) === String(id)) || { shots: [] };
+  const th = de(H.h.id), ta = de(H.a.id), n = Math.max(5, th.shots.length, ta.shots.length);
+  const fila = (t, eq, so) => `<div class="pso-row">${vLogo(t)}<b class="pso-n">${esc(t.short)}</b><span class="pso-k">${Array.from({ length: n }, (_, i) => { const x = eq.shots[i];
+      return x ? `<span class="pso-d ${x.didScore ? "ok" : "ko"}" title="${esc(x.player)}: ${x.didScore ? "convirtió" : "falló"}">${x.didScore ? "✓" : "✕"}</span>` : `<span class="pso-d"></span>`; }).join("")}</span><b class="pso-t num">${esc(so ?? eq.shots.filter(x => x.didScore).length)}</b></div>`;
+  const orden = [...th.shots.map(x => ({ ...x, t: H.h })), ...ta.shots.map(x => ({ ...x, t: H.a }))].sort((a, b) => a.shotNumber - b.shotNumber || (a.t === H.h ? -1 : 1));
+  return `<div class="panel stack pso"><div class="row" style="justify-content:space-between;align-items:baseline"><h3>Tanda de penales</h3>${H.state === "in" ? `<span class="vmin live">En curso</span>` : `<span class="note">Final</span>`}</div>
+    ${fila(H.h, th, H.h.so)}${fila(H.a, ta, H.a.so)}
+    <div class="pso-list">${orden.map(x => `<span class="${x.didScore ? "ok" : "ko"}">${x.didScore ? "✓" : "✕"} ${esc(x.player)} <small class="faint">${esc(x.t.short)}</small></span>`).join("")}</div></div>`;
 }
 const ICON = { goal: "⚽", og: "⚽", miss: "✕", yellow: `<i class="ycard"></i>`, red: `<i class="rcard"></i>`, sub: "⇄", other: "•" };
 function vLogo(t, cls = "") { return `<span class="vlogo ${cls}">${t.logo ? `<img src="${esc(t.logo)}" alt="" referrerpolicy="no-referrer" data-n="${esc(t.short || t.name || "")}" onerror="bfb(this)">` : fbSpan(t.short || t.name, t.abr)}</span>`; }
@@ -2688,18 +2706,19 @@ async function vFillMatch(force) {
   await vComps();
   const H = vHeader(j), evs = vEvents(j, H), c = VV.byId[H.lid], comp = c ? c.n : H.league, m = vModel(id); VV.state = H.state;
   const goals = l => evs.filter(e => (e.kind === "goal" && e.lado === l) || (e.kind === "og" && e.lado && e.lado !== l)).map(e => `${esc((e.who[0] || "").split(" ").slice(-1)[0])} ${esc(e.min)}${e.kind === "og" ? " (ec)" : e.pen ? " (p)" : ""}`).join(", ");
-  const status = H.state === "in" ? `<span class="vmin live big">${esc(/half|HT/i.test(H.detail) ? "Entretiempo" : H.clock || H.detail)}</span>` : H.state === "post" ? `<span class="vmin big">${esc(H.detail && H.detail !== "FT" ? H.detail : "Final")}</span>` : `<span class="vmin big">${esc(new Date(H.date).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))} · ${hhmm(H.date)}</span>`;
+  const pens = H.h.so != null && H.a.so != null && (H.h.so || H.a.so || /pen/i.test(H.detail) || H.period >= 5);
+  const status = H.state === "in" && (/pen|shootout/i.test(H.detail) || H.period >= 5) ? `<span class="vmin live big">Penales</span>` : H.state === "in" ? `<span class="vmin live big">${esc(/half|HT/i.test(H.detail) ? "Entretiempo" : H.clock || H.detail)}</span>` : H.state === "post" ? `<span class="vmin big">${esc(H.detail && H.detail !== "FT" ? H.detail : "Final")}</span>` : `<span class="vmin big">${esc(new Date(H.date).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))} · ${hhmm(H.date)}</span>`;
   await vSel();
   const tslug = t => VV.selById[t.id] ? "sel" : H.slug;
   const tl = (t, cls) => tslug(t) && t.id ? `<button class="vhteam tbtn" data-go="club" data-liga="${esc(tslug(t))}" data-id="${esc(t.id)}">${vLogo(t, "xl")}<b>${esc(t.short)}</b><small>${goals(cls)}</small></button>` : `<div class="vhteam">${vLogo(t, "xl")}<b>${esc(t.short)}</b><small>${goals(cls)}</small></div>`;
   const f = followed()[id];
   head.innerHTML = `<div class="vhcomp">${H.slug ? `<button class="link" data-go="comp" data-liga="${esc(H.slug)}">${esc(comp)}</button>` : esc(comp)}${H.note ? ` · ${esc(H.note)}` : ""}</div>
     <div class="vhrow">${tl(H.h, "h")}
-      <div class="vhmid">${H.state === "pre" ? `<span class="vhsc num">vs</span>` : `<span class="vhsc num">${esc(H.h.score ?? 0)} – ${esc(H.a.score ?? 0)}</span>`}${status}</div>
+      <div class="vhmid">${H.state === "pre" ? `<span class="vhsc num">vs</span>` : `<span class="vhsc num">${esc(H.h.score ?? 0)} – ${esc(H.a.score ?? 0)}</span>`}${pens ? `<span class="vhpen num">Penales ${esc(H.h.so)} – ${esc(H.a.so)}</span>` : ""}${status}</div>
       ${tl(H.a, "a")}</div>
     <div class="row" style="justify-content:center;margin-top:10px;gap:8px">${H.state !== "post" ? `<button class="btn ghost sm vbell2${f ? " on" : ""}" data-follow="${esc(id)}">${f ? "🔔 Siguiendo" : "🔕 Avisarme de goles"}</button>` : ""}${m ? `<button class="btn ghost sm" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">Análisis de Ballytics →</button>` : ""}</div>`;
   const tab = R.tab || "resumen";
-  if (tab === "resumen") { body.innerHTML = videosHtml(j) + vCurvePanel(j, H, evs, m) + (H.state !== "post" || true ? voteBox(id, H.date, H.h.short, H.a.short, m ? [m.p.pH, m.p.pD, m.p.pA] : null) : "") + vKeyStats(j, H) + vTimeline(evs, H) + vInfo(j, H, m); hydrateVotes(); }
+  if (tab === "resumen") { body.innerHTML = videosHtml(j) + vShootout(j, H) + (pens && H.state === "in" ? "" : vCurvePanel(j, H, evs, m)) + (H.state !== "post" || true ? voteBox(id, H.date, H.h.short, H.a.short, m ? [m.p.pH, m.p.pD, m.p.pA] : null) : "") + vKeyStats(j, H) + vTimeline(evs, H) + vInfo(j, H, m); hydrateVotes(); }
   const hasXI = (j.rosters || []).some(t => (t.roster || []).some(x => x.starter));
   if (tab === "alineaciones" && !hasXI && m && m.p.xi_prob) { VV.lastPitch = null; body.innerHTML = vPitch({ rosters: xiRosters(m.p.xi_prob), keyEvents: [] }, H, null).replace("<h3>Alineaciones", "<h3>Alineación probable") + `<div class="panel stack">${xiProbNote(m.p.xi_prob, m.p.bajas, k => k === "h" ? H.h.short : H.a.short)}</div>`; }
   else if (tab === "alineaciones") { body.innerHTML = vPitch(j, H, id); loadMatchPlayers(id, H, j).then(ch => { if (ch && R.v === "envivo" && R.id === id && (R.tab || "resumen") === "alineaciones") body.innerHTML = vPitch(j, H, id); }); }

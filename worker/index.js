@@ -302,7 +302,7 @@ function cuotasESPN(c) {
 function corto(e) {
   const c = (e.competitions || [])[0] || {}, st = c.status || e.status || {}, t = st.type || {};
   const side = k => { const x = (c.competitors || []).find(y => y.homeAway === k) || {}, tm = x.team || {};
-    return { id: String(tm.id || ""), name: tm.shortDisplayName || tm.displayName || "", full: tm.displayName || "", abr: tm.abbreviation, logo: tm.logo, color: tm.color, score: x.score, winner: x.winner }; };
+    return { id: String(tm.id || ""), name: tm.shortDisplayName || tm.displayName || "", full: tm.displayName || "", abr: tm.abbreviation, logo: tm.logo, color: tm.color, score: x.score, winner: x.winner, ...(x.shootoutScore != null ? { so: x.shootoutScore } : {}) }; };
   const o = t.state === "pre" ? cuotasESPN(c) : null;
   return { id: String(e.id), uid: e.uid, note: c.altGameNote || "", date: e.date, state: t.state, detail: t.shortDetail || t.detail || "", clock: st.displayClock, period: st.period, h: side("home"), a: side("away"), ...(o ? { o } : {}) };
 }
