@@ -94,7 +94,7 @@ def main():
         malos = [k for k, v in (j.get("picks") or {}).items() if not (str(k).isdigit() and re.fullmatch(r"\d{1,2}-\d{1,2}", str(v)))]
         if malos:
             err(f"picks.json: {len(malos)} pronósticos con formato inválido")
-    for extra in ("metodologia.json", "fotos.json"):
+    for extra in ("metodologia.json", "fotos.json", "arbitros.json"):
         p = os.path.join(DATA, extra)
         if os.path.exists(p):
             leer(p)

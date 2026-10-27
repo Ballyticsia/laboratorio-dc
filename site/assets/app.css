@@ -1310,3 +1310,27 @@ body.ia-open #iafab{display:none}
 .iad-new+.iad-x{margin-left:8px}
 .iad-new[hidden]+.iad-x{margin-left:auto}
 .iac-t .vlogo{width:22px;height:22px}
+/* v23: árbitros, cuenta regresiva y IA al centro */
+.arbp .arb-n{font-family:var(--f-display);font-size:18px;letter-spacing:.03em}
+.arbp .kpi small{font-size:11px;font-weight:600;margin-left:4px}
+.mrow .cdown.sm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;padding:0 5px;box-sizing:border-box}
+@media (min-width:761px){.mrow{grid-template-columns:64px minmax(0,1fr) 170px 64px}}
+/* preguntas populares: todas visibles, en cuadrícula */
+.ia-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ia-grid button{display:flex;align-items:flex-start;gap:8px;text-align:left;border:1px solid var(--line);background:var(--panel,transparent);color:var(--ink);border-radius:14px;padding:10px 12px;font:600 13px/1.35 var(--f-body);cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
+.ia-grid button:hover{border-color:var(--pitch);background:color-mix(in srgb,var(--pitch) 8%,transparent);transform:translateY(-1px)}
+.ia-q-ic{flex:none;color:#b18cff;font-size:12px;margin-top:1px}
+@media (max-width:420px){.ia-grid{grid-template-columns:minmax(0,1fr)}}
+/* IA en computador: ventana grande al centro (en el teléfono, pantalla completa) */
+@media (min-width:761px){
+  .iad{justify-content:center;align-items:center;padding:24px}
+  .iad-in{width:min(900px,94vw);height:min(86vh,860px);border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.45);animation:iapop .2s ease-out}
+  .ia-hello h2{font-size:28px}
+  .ia-hello p{max-width:52ch;font-size:15px}
+  .ia-orb{width:68px;height:68px;font-size:32px;border-radius:20px}
+  .ia-scroll{padding:22px 28px}
+  .ia-f{margin:0 28px}
+  .ia-legal{margin:8px 28px 16px}
+  .ia-bub{max-width:80%}
+}
+@keyframes iapop{from{transform:scale(.97);opacity:.4}to{transform:none;opacity:1}}

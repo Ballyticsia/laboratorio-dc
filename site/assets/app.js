@@ -34,13 +34,15 @@ const pts5 = f => (f || []).reduce((s, c) => s + ({ G: 3, E: 1, P: 0 }[c] || 0),
 
 function info(L, t) { return (L && L.equipos && L.equipos[t]) || {}; }
 const corto = (L, t) => info(L, t).corto || t;
+const LOK = window.__lok || (window.__lok = new Set());   // escudos que ya cargaron en esta visita
+const LOK_JS = "this.parentNode.classList.add('ok');window.__lok.add(this.getAttribute('src'))";
 function badge(L, t, size = "") {
   const i = info(L, t), c = i.color && /^[0-9a-f]{6}$/i.test(i.color) ? i.color : null;
   const bg = c ? "#" + c : hashColor(t), fg = c && lum(c) > 0.62 ? "#07090f" : "#fff";
   const ab = (i.abr || t.replace(/[^A-Za-zÀ-ÿ ]/g, "").split(" ").map(w => w[0]).join("").slice(0, 3)).toUpperCase();
   const logo = typeof i.logo === "string" && /^https:\/\//.test(i.logo) ? i.logo : null;
-  const img = logo ? `<img class="crest" src="${esc(logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onload="this.parentNode.classList.add('ok')" onerror="this.parentNode.classList.remove('logo');this.remove()">` : "";
-  return `<span class="badge ${size}${logo ? " logo" : ""}" style="background:${bg};color:${fg}" aria-hidden="true">${esc(ab)}${img}</span>`;
+  const img = logo ? `<img class="crest" src="${esc(logo)}" alt="" loading="${LOK.has(logo) ? "eager" : "lazy"}" decoding="async" referrerpolicy="no-referrer" onload="${LOK_JS}" onerror="this.parentNode.classList.remove('logo');this.remove()">` : "";
+  return `<span class="badge ${size}${logo ? " logo" : ""}${logo && LOK.has(logo) ? " ok" : ""}" style="background:${bg};color:${fg}" aria-hidden="true">${esc(ab)}${img}</span>`;
 }
 /* si un escudo o bandera no carga, se reemplaza por un emblema con iniciales (nunca queda un cuadro vacío) */
 window.bfb = img => {
@@ -75,7 +77,7 @@ function face(L, t, jid, name, size = "", alt = "") {
 function leagueMark(L, size = "") {
   const logo = L.logo && /^(https:\/\/|assets\/logos\/)/.test(L.logo) ? L.logo : null;
   const ab = L.nombre.split(" ").map(w => w[0]).join("").slice(0, 3).toUpperCase();
-  return `<span class="lmark ${size}${logo ? " logo" : ""}" aria-hidden="true">${esc(ab)}${logo ? `<img src="${esc(logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onload="this.parentNode.classList.add('ok')" onerror="this.parentNode.classList.remove('logo');this.remove()">` : ""}</span>`;
+  return `<span class="lmark ${size}${logo ? " logo" : ""}${logo && LOK.has(logo) ? " ok" : ""}" aria-hidden="true">${esc(ab)}${logo ? `<img src="${esc(logo)}" alt="" loading="${LOK.has(logo) ? "eager" : "lazy"}" referrerpolicy="no-referrer" onload="${LOK_JS}" onerror="this.parentNode.classList.remove('logo');this.remove()">` : ""}</span>`;
 }
 
 /* ---------------- modelo (igual que en Python) ---------------- */
@@ -510,8 +512,15 @@ function iaCtxPartido(L, p) {
     tabla: { local: sh.pos ? `${sh.pos}º, ${sh.pts} pts, forma ${(sh.forma || []).join("")}` : null, visita: sa.pos ? `${sa.pos}º, ${sa.pts} pts, forma ${(sa.forma || []).join("")}` : null },
     bajas: p.bajas ? { local: (p.bajas.h || []).slice(0, 8).map(x => `${x.jug} (${x.tipo === "Missing Fixture" ? "baja" : "duda"}${x.goles ? `, ${x.goles} goles` : ""})`), visita: (p.bajas.a || []).slice(0, 8).map(x => `${x.jug} (${x.tipo === "Missing Fixture" ? "baja" : "duda"}${x.goles ? `, ${x.goles} goles` : ""})`) } : "sin datos",
     goleadores_probables: (p.goleadores || []).slice(0, 5).map(g => `${g.jugador} ${pct(g.p)}`),
+    arbitro: p.arbitro && p.arbitro.n ? iaArb(L, p) : "sin árbitro designado todavía",
     ultimos_cruces: (p.h2h || []).slice(0, 4).map(x => `${x.home} ${x.hg}-${x.ag} ${x.away}`),
   };
+}
+function iaArb(L, p) {
+  const a = p.arbitro, lg = L.arbitros_liga || {}, eq = e => e && e.pj ? `${e.pj} PJ, ${e.g}-${e.e}-${e.p}, ${dec(e.tpp, 1)} tarjetas/PJ (con todos los árbitros ${dec(e.tpp_todos, 1)}), penales ${e.pf} a favor y ${e.pc} en contra` : "no lo ha dirigido esta temporada";
+  return { nombre: a.n, partidos_temporada: a.pj, tarjetas_por_partido: a.tpp != null ? `${dec(a.tpp, 1)} (liga ${dec(lg.tpp, 1)})` : null, penales_por_partido: a.penpp != null ? `${dec(a.penpp, 2)} (liga ${dec(lg.penpp, 2)})` : null,
+    gana_local: a.local != null ? `${pct(a.local, 0)} (liga ${pct(lg.local, 0)})` : null, tarjetas_esperadas_ajustadas_por_arbitro: a.tarjetas_aj != null ? dec(a.tarjetas_aj, 1) : null,
+    con_local: eq((a.eq || {}).h), con_visita: eq((a.eq || {}).a), nota: "Con pocos partidos las diferencias son casi siempre azar: no digas que un árbitro favorece o perjudica a un equipo." };
 }
 // ---- qué días pide el usuario
 const DOW = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"], DOW_ES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
@@ -579,6 +588,7 @@ async function iaCtxDia(q) {
     return [...base, `${c.kind === "copa" ? "modelo (fuerza de liga, sin cuota)" : "Ballytics"} L ${pct(k.H)} E ${pct(k.D)} V ${pct(k.A)}`, `xG ${dec(k.lh, 1)}–${dec(k.la, 1)}`, `+2,5 ${pct(k.O25)}`, `ambos ${pct(k.B)}`,
       p ? `marcador ${p.top}` : "", eh.tiros_arco != null ? `tiros al arco ${dec(eh.tiros_arco, 1)}–${dec(ea.tiros_arco, 1)}` : "",
       p && p.ch != null ? `córners ${dec(p.ch + p.ca, 1)}` : "", p && p.th != null ? `tarjetas ${dec(p.th + p.ta, 1)}` : "",
+      p && p.arbitro && p.arbitro.n ? `árbitro ${p.arbitro.n}${p.arbitro.tpp != null ? ` (${dec(p.arbitro.tpp, 1)} tarjetas/PJ)` : ""}` : "",
       p && p.bajas ? `bajas ${(p.bajas.h || []).filter(x => x.tipo === "Missing Fixture").length}–${(p.bajas.a || []).filter(x => x.tipo === "Missing Fixture").length}` : "",
       p ? merK(mktOf(p)) : c.q ? merK(c.q) : ""].filter(Boolean).join(" | ");
   };
@@ -686,7 +696,7 @@ function iaChat(scope, mode) {
     : (iaScopeAuto() !== "dia" ? `<div class="ia-scope"><span>Sobre todos los partidos</span><button class="link" data-iascope="${iaScopeAuto()}">Volver a este partido</button></div>` : "");
   const welcome = `<div class="ia-hello"><span class="ia-orb" aria-hidden="true">✦</span><h2>Bienvenido a <span class="ia-grad">Ballytics IA</span> <span class="ia-beta">Beta</span></h2>
     <p>${mp ? `Pregúntame lo que quieras de <b>${esc(corto(mp.L, mp.p.home))} vs ${esc(corto(mp.L, mp.p.away))}</b>: favoritos, goles, bajas, cuotas.` : "Soy tu analista de fútbol. Pregúntame por los partidos de hoy, de mañana o del finde, por un equipo, por lo que está en vivo o por cómo le va al modelo."}</p></div>
-    <div class="ia-pop"><span class="lbl">Preguntas populares</span><div class="ia-rows"><div class="ia-row">${sug.slice(0, half).map(x => `<button data-iaq="${esc(x)}">${esc(x)}</button>`).join("")}</div><div class="ia-row">${sug.slice(half).map(x => `<button data-iaq="${esc(x)}">${esc(x)}</button>`).join("")}</div></div></div>`;
+    <div class="ia-pop"><span class="lbl">Preguntas populares</span><div class="ia-grid">${sug.map(x => `<button data-iaq="${esc(x)}"><span class="ia-q-ic" aria-hidden="true">✦</span><span>${esc(x)}</span></button>`).join("")}</div></div>`;
   const last = h.length - 1;
   const log = h.map((m, i) => m.r === "ia" ? `<div class="ia-m ia"><span class="ia-av" aria-hidden="true">✦</span><div class="ia-bub">${iaMd(m.t)}${m.cards || ""}${i === last && (m.sug || []).length ? `<div class="ia-next">${m.sug.map(x => `<button data-iaq="${esc(x)}">${esc(x)}</button>`).join("")}</div>` : ""}</div></div>` : `<div class="ia-m yo"><div class="ia-bub">${esc(m.t)}</div></div>`).join("");
   return `<div class="iachat ${mode}" data-ia="${esc(scope)}">${chip}<div class="ia-scroll">${h.length ? `<div class="ia-log" aria-live="polite">${log}</div>` : welcome}</div>
@@ -907,12 +917,13 @@ let sortState = { col: null, dir: -1 };
 function vLiga() {
   const L = D.ligas[R.liga] || D.ligas[ligasIds()[0]];
   const tabs = [["resumen", "Resumen"], ["tabla", "Tabla"], ["partidos", "Partidos"], ["estadisticas", "Estadísticas"], ["jugadores", "Jugadores"],
-    ["rachas", "Rachas"], ["corners", "Córners y tarjetas"], ["proyeccion", "Proyección"], ["fuerza", "Fuerza"], ["comparar", "Comparar"]]
-    .filter(([k]) => L.tabla_ok || k === "comparar" || (k === "tabla" && (L.grupos || []).length) || !["tabla", "proyeccion", "fuerza"].includes(k));
+    ["rachas", "Rachas"], ["corners", "Córners y tarjetas"], ["arbitros", "Árbitros"], ["proyeccion", "Proyección"], ["fuerza", "Fuerza"], ["comparar", "Comparar"]]
+    .filter(([k]) => L.tabla_ok || k === "comparar" || (k === "tabla" && (L.grupos || []).length) || !["tabla", "proyeccion", "fuerza"].includes(k))
+    .filter(([k]) => k !== "arbitros" || (L.arbitros || []).length);
   if (L.copa) tabs.splice(2, 0, ["copa", "Simulación"]);
   if (R.tab === "comparar") { R = { v: "comparar", liga: L.id }; return vComparar(); }
   const tab = tabs.some(t => t[0] === R.tab) ? R.tab : "resumen";
-  const body = ({ resumen: lResumen, tabla: lTabla, partidos: lPartidos, estadisticas: lStats, jugadores: lJug, rachas: lRachas, corners: lCorners, proyeccion: lProy, fuerza: lFuerza, copa: lCopa }[tab])(L);
+  const body = ({ resumen: lResumen, tabla: lTabla, partidos: lPartidos, estadisticas: lStats, jugadores: lJug, rachas: lRachas, corners: lCorners, arbitros: lArbitros, proyeccion: lProy, fuerza: lFuerza, copa: lCopa }[tab])(L);
   return `<section class="view" aria-labelledby="h-liga">
     <div class="lhead panel">${leagueMark(L, "xl")}<div><h1 id="h-liga">${esc(L.nombre)}</h1><span class="muted">${esc(L.pais)} · datos hasta ${L.datos_hasta ? fecha(L.datos_hasta + "T12:00") : "—"}</span></div><span class="lh-act">${starBtn("l", L.id, "Seguir esta liga")}</span></div>
     <div class="tabs2 wide" role="group" aria-label="Sección">${tabs.map(([k, n]) => `<button data-go="liga" data-liga="${L.id}" data-tab="${k}" aria-pressed="${k === tab}">${n}</button>`).join("")}</div>
@@ -1127,6 +1138,7 @@ function vPartido() {
   if (tab === "resumen") body = `
     ${cerca ? `<div id="xi-adj"></div>` : ""}
     ${bajasPanel(L, p)}
+    ${arbPanel(L, p)}
     <div class="panel stack previa"><h3>Previa</h3>${previa(L, p, k, ct, tt)}</div>
     ${evCalc}
     ${iaTeaser(p)}
@@ -1655,6 +1667,30 @@ function bajasPanel(L, p) {
     ${p.ajuste ? `<p class="note">Por los goleadores ausentes, el modelo ajusta los goles esperados a <b>${dec(p.ajuste.lh, 2)} – ${dec(p.ajuste.la, 2)}</b>.</p>` : ""}</div>`;
 }
 
+/* ---------------- árbitro (API-Football) ---------------- */
+function arbPanel(L, p) {
+  const a = p.arbitro; if (!a || !a.n) return "";
+  const lg = L.arbitros_liga || {}, pocos = (a.pj || 0) < 8;
+  const cmp = (v, base, fmt, mayorMal) => v == null ? "—" : `${fmt(v)}${base != null ? ` <small class="${Math.abs(v - base) / (base || 1) > .15 ? (v > base === mayorMal ? "bad" : "good") : "faint"}">liga ${fmt(base)}</small>` : ""}`;
+  const fila = (lado, t) => { const e = (a.eq || {})[lado] || { pj: 0 };
+    if (!e.pj) return `<tr><td class="team">${badge(L, t)}${esc(corto(L, t))}</td><td class="n" colspan="4"><span class="faint">No lo ha dirigido esta temporada</span></td></tr>`;
+    return `<tr><td class="team">${badge(L, t)}${esc(corto(L, t))}</td><td class="n">${e.pj}</td><td class="n">${e.g}-${e.e}-${e.p}</td>
+      <td class="n">${dec(e.tpp, 1)}${e.tpp_todos != null ? ` <small class="faint">(${dec(e.tpp_todos, 1)} con todos)</small>` : ""}</td><td class="n">${e.pf} / ${e.pc}</td></tr>`; };
+  return `<div class="panel stack arbp"><div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px"><h3>Árbitro ${help("Árbitro designado según API-Football. Los números son de esta temporada en esta liga: tarjetas y penales por partido y cuánto gana el local cuando dirige él, comparados con el promedio de la liga. Con pocos partidos las diferencias son casi siempre azar.")}</h3><b class="arb-n">${esc(a.n)}</b></div>
+    ${a.pj ? `<div class="kpis">${kpi("m", "Partidos esta temporada", a.pj, L.nombre)}${kpi("", "Tarjetas por partido", cmp(a.tpp, lg.tpp, v => dec(v, 1), true), "")}${kpi("", "Penales por partido", cmp(a.penpp, lg.penpp, v => dec(v, 2), true), "")}${kpi("", "Gana el local", cmp(a.local, lg.local, v => pct(v, 0), true), "")}</div>
+    <div class="scroll"><table class="t compact"><thead><tr><th>Con este árbitro</th><th class="n">PJ</th><th class="n">G-E-P</th><th class="n">Tarjetas recibidas</th><th class="n">Penales a favor / en contra</th></tr></thead><tbody>${fila("h", p.home)}${fila("a", p.away)}</tbody></table></div>
+    ${a.tarjetas_aj != null && p.th != null ? `<p class="note">Tarjetas esperadas del modelo: <b>${dec(p.th + p.ta, 1)}</b>. Ajustadas por lo estricto que es este árbitro: <b>${dec(a.tarjetas_aj, 1)}</b>. ${help("El ajuste mezcla su promedio con el de la liga según cuántos partidos haya dirigido, para no exagerar con pocos partidos. Se medirá en el registro si mejora la predicción antes de usarlo en el modelo.")}</p>` : ""}
+    ${pocos ? `<p class="note">Con ${a.pj} partidos dirigidos los promedios todavía cambian mucho por azar.</p>` : ""}` : `<p class="note">Todavía no dirige partidos de ${esc(L.nombre)} esta temporada.</p>`}</div>`;
+}
+function lArbitros(L) {
+  const A = L.arbitros || [], lg = L.arbitros_liga || {};
+  if (!A.length) return `<div class="panel empty">Sin árbitros registrados para esta liga todavía.</div>`;
+  return `<div class="panel flush scroll"><div class="ph"><h3>Árbitros de la temporada</h3><span class="note">Promedio de la liga: ${dec(lg.tpp, 1)} tarjetas · ${dec(lg.penpp, 2)} penales · local gana ${pct(lg.local, 0)}</span></div>
+    <table class="t"><thead><tr><th>Árbitro</th><th class="n">Partidos</th><th class="n">Tarjetas/PJ</th><th class="n">Penales/PJ</th><th class="n">Gana el local</th></tr></thead><tbody>${A.map(a => `<tr><td><b>${esc(a.n)}</b></td><td class="n">${a.pj}</td>
+      <td class="n ${a.pj >= 5 && a.tpp > lg.tpp * 1.15 ? "bad" : a.pj >= 5 && a.tpp < lg.tpp * .85 ? "good" : ""}">${dec(a.tpp, 1)}</td><td class="n">${dec(a.penpp, 2)}</td><td class="n">${pct(a.local, 0)}</td></tr>`).join("")}</tbody></table>
+    <p class="note" style="padding:0 16px 14px">Datos de API-Football cruzados con los resultados de ESPN. En rojo, los que sacan bastante más tarjetas que el promedio; en verde, bastante menos (con al menos 5 partidos). Son estadísticas, no juicios sobre los árbitros.</p></div>`;
+}
+
 /* ---------------- previa automática ---------------- */
 function previa(L, p, k, ct, tt) {
   const H = corto(L, p.home), A = corto(L, p.away), sh = rowOf(L, p.home), sa = rowOf(L, p.away), s1 = statOf(L, p.home), s2 = statOf(L, p.away);
@@ -1841,7 +1877,7 @@ function countdown(iso) {
 function paintCountdown() {
   const narrow = window.innerWidth <= 760;
   document.querySelectorAll("[data-cd]").forEach(el => { let t = countdown(el.dataset.cd);
-    if (t && narrow && el.classList.contains("sm")) t = t.replace(/^en /, "").replace(" h ", "h ").replace(" min", "m").replace(" d ", "d ").replace(/ h$/, "h");
+    if (t && el.classList.contains("sm")) t = t.replace(/^en /, "").replace(" h ", "h ").replace(/ min$/, "m").replace(" d ", "d ").replace(/ h$/, "h");   // "1h 35m": cabe en la columna de la hora
     el.textContent = t; el.hidden = !t; });
 }
 setInterval(paintCountdown, 30000);
@@ -2644,7 +2680,7 @@ async function vFillMatch(force) {
   const id = R.id, head = document.getElementById("vc-head"), body = document.getElementById("vc-body");
   if (!head || !body) return;
   let j;
-  try { [j] = await Promise.all([vSummary(id, force), vComps(), vSel()]); } catch (e) { head.innerHTML = `<div class="empty">No pude cargar este partido. Prueba de nuevo en un rato.</div>`; return; }
+  try { [j] = await Promise.all([vSummary(id, force), vComps(), vSel(), arbDia()]); } catch (e) { head.innerHTML = `<div class="empty">No pude cargar este partido. Prueba de nuevo en un rato.</div>`; return; }
   if (R.v !== "envivo" || R.id !== id) return;
   await vComps();
   const H = vHeader(j), evs = vEvents(j, H), c = VV.byId[H.lid], comp = c ? c.n : H.league, m = vModel(id); VV.state = H.state;
@@ -2660,7 +2696,7 @@ async function vFillMatch(force) {
       ${tl(H.a, "a")}</div>
     <div class="row" style="justify-content:center;margin-top:10px;gap:8px">${H.state !== "post" ? `<button class="btn ghost sm vbell2${f ? " on" : ""}" data-follow="${esc(id)}">${f ? "🔔 Siguiendo" : "🔕 Avisarme de goles"}</button>` : ""}${m ? `<button class="btn ghost sm" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">Análisis de Ballytics →</button>` : ""}</div>`;
   const tab = R.tab || "resumen";
-  if (tab === "resumen") { body.innerHTML = videosHtml(j) + vCurvePanel(j, H, evs, m) + (H.state !== "post" || true ? voteBox(id, H.date, H.h.short, H.a.short, m ? [m.p.pH, m.p.pD, m.p.pA] : null) : "") + vKeyStats(j, H) + vTimeline(evs, H) + vInfo(j); hydrateVotes(); }
+  if (tab === "resumen") { body.innerHTML = videosHtml(j) + vCurvePanel(j, H, evs, m) + (H.state !== "post" || true ? voteBox(id, H.date, H.h.short, H.a.short, m ? [m.p.pH, m.p.pD, m.p.pA] : null) : "") + vKeyStats(j, H) + vTimeline(evs, H) + vInfo(j, H, m); hydrateVotes(); }
   const hasXI = (j.rosters || []).some(t => (t.roster || []).some(x => x.starter));
   if (tab === "alineaciones" && !hasXI && m && m.p.xi_prob) { VV.lastPitch = null; body.innerHTML = vPitch({ rosters: xiRosters(m.p.xi_prob), keyEvents: [] }, H, null).replace("<h3>Alineaciones", "<h3>Alineación probable") + `<div class="panel stack">${xiProbNote(m.p.xi_prob, m.p.bajas, k => k === "h" ? H.h.short : H.a.short)}</div>`; }
   else if (tab === "alineaciones") { body.innerHTML = vPitch(j, H, id); loadMatchPlayers(id, H, j).then(ch => { if (ch && R.v === "envivo" && R.id === id && (R.tab || "resumen") === "alineaciones") body.innerHTML = vPitch(j, H, id); }); }
@@ -2671,9 +2707,20 @@ async function vFillMatch(force) {
     body.innerHTML = !g.length ? `<div class="panel empty">Sin tabla para esta competición.</div>` : lives.length ? liveTableHtml(g, lives, H.slug, [H.h.id, H.a.id]) : stTable(g, [H.h.id, H.a.id], H.slug); }
   if (tab === "minuto") body.innerHTML = vComments(j);
 }
-function vInfo(j) {
+const ARB_STOP = new Set(["fc", "cf", "sc", "ac", "afc", "cd", "club", "de", "del", "la", "el", "al", "the", "fk", "sk", "ca", "cr", "u", "sad", "deportivo", "atletico", "sporting", "real", "united", "city", "y"]);
+const arbTok = n => String(n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length > 2 && !ARB_STOP.has(w));
+const arbIgual = (a, b) => { const A = arbTok(a), B = arbTok(b); return A.some(w => B.some(x => x === w || (w.length > 3 && (x.startsWith(w) || w.startsWith(x))))); };
+async function arbDia() { if (VV.arbDia) return VV.arbDia; try { VV.arbDia = await vget("data/arbitros.json?t=" + Math.floor(Date.now() / 6e5)); } catch (e) { VV.arbDia = {}; } return VV.arbDia; }
+function arbDeEvento(H) {
+  const t = new Date(H.date).getTime(), dias = [-1, 0, 1].map(k => new Date(t + k * DAYMS).toISOString().slice(0, 10));
+  for (const d of dias) for (const [f, h, a, r] of (VV.arbDia || {})[d] || []) if (Math.abs(new Date(f).getTime() - t) < 12 * 3600e3 && arbIgual(h, H.h.name || H.h.short) && arbIgual(a, H.a.name || H.a.short)) return r;
+  return null;
+}
+function vInfo(j, H, m) {
   const gi = j.gameInfo || {}, v = gi.venue || {}, ref = (gi.officials || [])[0], tv = ((j.broadcasts || [])[0] || {});
-  const items = [v.fullName ? `Estadio: <b>${esc(v.fullName)}</b>${v.address && v.address.city ? ` (${esc(v.address.city)})` : ""}` : "", ref ? `Árbitro: <b>${esc(ref.displayName || ref.fullName || "")}</b>` : "", gi.attendance ? `Público: <b>${Number(gi.attendance).toLocaleString("es-CL")}</b>` : ""].filter(Boolean);
+  const arb = ref ? (ref.displayName || ref.fullName || "") : (m && m.p.arbitro && m.p.arbitro.n) || (H ? arbDeEvento(H) : null);
+  const arbLink = m && m.p.arbitro && m.p.arbitro.pj ? ` <button class="link" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">ver su análisis →</button>` : "";
+  const items = [v.fullName ? `Estadio: <b>${esc(v.fullName)}</b>${v.address && v.address.city ? ` (${esc(v.address.city)})` : ""}` : "", arb ? `Árbitro: <b>${esc(arb)}</b>${arbLink}` : "", gi.attendance ? `Público: <b>${Number(gi.attendance).toLocaleString("es-CL")}</b>` : ""].filter(Boolean);
   return items.length ? `<div class="panel stack"><h3>Información</h3><p class="note" style="font-size:14px">${items.join(" · ")}</p></div>` : "";
 }
 function vPrevia(j, H, m) {

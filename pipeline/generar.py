@@ -24,6 +24,7 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(__file__))
 import datos  # noqa: E402
 import fotos  # noqa: E402
+import arbitros  # noqa: E402
 import copas  # noqa: E402
 import cuotas  # noqa: E402
 import lesiones  # noqa: E402
@@ -945,6 +946,11 @@ def main():
         lesiones.ESTADO["partidos_ajustados"] = n_aj
         print(f"  Bajas asignadas a {len(asign)} partidos · {n_aj} con ajuste por goleadores ausentes")
     fotos.actualizar([(L, out) for L, out, _ in pendientes])
+    try:   # árbitros (API-Football): nunca deben impedir publicar
+        arbitros.actualizar_ligas([(L, out) for L, out, _ in pendientes])
+        arbitros.actualizar_dias()
+    except Exception as e:
+        print("  ✗ árbitros:", e)
     # registro público (después de las bajas, para guardar también el modelo con bajas)
     jug_df = pd.concat(jugados_all, ignore_index=True) if jugados_all else pd.DataFrame(columns=["id", "hg", "ag"])
     reg = ledger_update(preds_reg, jug_df, now.isoformat(timespec="minutes"), votos_gente([str(p["id"]) for p in preds_reg]))
