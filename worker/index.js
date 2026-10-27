@@ -285,11 +285,26 @@ async function jugador(env, id, ctx, req) {
 }
 
 /* ================= partidos del día (formato corto) ================= */
+const amer = v => { v = Number(v); return !v || isNaN(v) ? null : Math.round((1 + (v > 0 ? v / 100 : 100 / -v)) * 1000) / 1000; };
+function cuotasESPN(c) {
+  for (const o of c.odds || []) {
+    if (!o || typeof o !== "object") continue;
+    const ml = o.moneyline || {}, pick = k => { const x = ml[k] || {}; return amer((x.close || {}).odds) || amer((x.open || {}).odds); };
+    const h = pick("home") || amer((o.homeTeamOdds || {}).moneyLine), a = pick("away") || amer((o.awayTeamOdds || {}).moneyLine), d = pick("draw") || amer((o.drawOdds || {}).moneyLine);
+    if (!(h && a && d)) continue;
+    const out = { h, d, a, casa: (o.provider || {}).displayName || (o.provider || {}).name || "" };
+    const t = o.total || {}, ov = amer(((t.over || {}).close || {}).odds), un = amer(((t.under || {}).close || {}).odds), l = Number(o.overUnder);
+    if (l && ov && un) Object.assign(out, { linea: l, over: ov, under: un });
+    return out;
+  }
+  return null;
+}
 function corto(e) {
   const c = (e.competitions || [])[0] || {}, st = c.status || e.status || {}, t = st.type || {};
   const side = k => { const x = (c.competitors || []).find(y => y.homeAway === k) || {}, tm = x.team || {};
     return { id: String(tm.id || ""), name: tm.shortDisplayName || tm.displayName || "", full: tm.displayName || "", abr: tm.abbreviation, logo: tm.logo, color: tm.color, score: x.score, winner: x.winner }; };
-  return { id: String(e.id), uid: e.uid, note: c.altGameNote || "", date: e.date, state: t.state, detail: t.shortDetail || t.detail || "", clock: st.displayClock, period: st.period, h: side("home"), a: side("away") };
+  const o = t.state === "pre" ? cuotasESPN(c) : null;
+  return { id: String(e.id), uid: e.uid, note: c.altGameNote || "", date: e.date, state: t.state, detail: t.shortDetail || t.detail || "", clock: st.displayClock, period: st.period, h: side("home"), a: side("away"), ...(o ? { o } : {}) };
 }
 async function dia(ctx, fechas) {
   const ds = fechas.filter(d => /^\d{8}$/.test(d)).slice(0, 3);
@@ -456,6 +471,12 @@ const IA_TOPE_DIA = 400, IA_TOPE_PERSONA = 20;
 // Si Gemini falla o se acaba su cuota, responde la IA gratis de Cloudflare (IA_MODELOS).
 const GEMINI_MODELOS = ["gemini-3.5-flash-lite", "gemini-flash-lite-latest"];
 const conTope = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("tiempo")), ms))]);
+const IA_ESQUEMA = { type: "OBJECT", properties: {
+  respuesta: { type: "STRING", description: "La respuesta para el usuario, con formato (viñetas, negritas)." },
+  partidos: { type: "ARRAY", description: "Partidos que nombras en la respuesta, en el mismo orden, con el mercado del que hablas.", items: { type: "OBJECT", properties: {
+    id: { type: "STRING", description: "id del partido en DATOS (m1, m2, x1…)" }, mercado: { type: "STRING", enum: ["H", "D", "A", "O25", "U25", "BY", "BN"], description: "H gana local, D empate, A gana visita, O25 más de 2,5, U25 menos de 2,5, BY ambos marcan sí, BN ambos marcan no" } }, required: ["id", "mercado"] } },
+  siguientes: { type: "ARRAY", items: { type: "STRING" }, description: "2 o 3 preguntas cortas que el usuario podría hacer después, escritas como si las hiciera él." } },
+  required: ["respuesta", "partidos", "siguientes"] };
 async function gemini(env, sistema, hist, q, fallos) {
   if (!env.GEMINI_API_KEY) return null;
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
@@ -463,9 +484,16 @@ async function gemini(env, sistema, hist, q, fallos) {
   for (const model of GEMINI_MODELOS) {
     try {
       const r = await conTope(ai.models.generateContent({ model, contents,
-        config: { systemInstruction: sistema, maxOutputTokens: 800, temperature: 0.3, thinkingConfig: { thinkingLevel: "minimal" } } }), 20000);
+        config: { systemInstruction: sistema, maxOutputTokens: 1800, temperature: 0.3, thinkingConfig: { thinkingLevel: "minimal" }, responseMimeType: "application/json", responseSchema: IA_ESQUEMA } }), 25000);
       const t = (r && r.text || "").trim();
-      if (t) return { txt: t, modelo: model };
+      if (t) {
+        try {
+          const j = JSON.parse(t), txt = String(j.respuesta || "").trim();
+          const refs = (Array.isArray(j.partidos) ? j.partidos : []).filter(x => x && /^[mx]\d{1,3}$/.test(x.id) && ["H", "D", "A", "O25", "U25", "BY", "BN"].includes(x.mercado)).slice(0, 10).map(x => ({ id: x.id, mercado: x.mercado }));
+          const sug = (Array.isArray(j.siguientes) ? j.siguientes : []).map(x => String(x).trim().slice(0, 90)).filter(Boolean).slice(0, 3);
+          if (txt) return { txt, refs, sug, modelo: model };
+        } catch (e) { return { txt: t, refs: [], sug: [], modelo: model }; }
+      }
       fallos.push(model + ": vacío");
     } catch (e) { fallos.push(model + ": " + String(e.message || e).slice(0, 140)); }
   }
@@ -473,11 +501,17 @@ async function gemini(env, sistema, hist, q, fallos) {
 }
 const IA_SISTEMA = `Eres el asistente de Ballytics, una página chilena de probabilidades de fútbol hecha con un modelo estadístico (Dixon-Coles ajustado a las cuotas sin margen cuando existen).
 Reglas:
-- Responde en español neutro (de Chile), claro y breve: máximo 170 palabras. Usa viñetas cortas con "- " cuando ayude y **negrita** solo para lo clave.
+- Responde en español neutro (de Chile), claro y directo: máximo 220 palabras. Usa viñetas cortas con "- " (una línea por partido en las listas) y **negrita** solo para lo clave.
 - Usa SOLO los datos que vienen en DATOS. No inventes cuotas, lesiones, alineaciones, rachas ni resultados. Si falta un dato (por ejemplo, la cuota de un mercado), dilo y no calcules el valor de ese mercado.
 - Explica con números: probabilidad del modelo, cuota justa (1 / probabilidad) y, si el usuario o los datos traen cuotas, el valor esperado (EV = probabilidad × cuota − 1).
 - Escribe las probabilidades como porcentaje (66 %) y los decimales con coma (cuota 1,52; EV +2,3 %).
 - La cuota justa no es lo que paga una casa: di "cuota justa 4,55", nunca "paga 4,55". Solo las cuotas_casa o cuotas_del_usuario son cuotas reales de una casa.
+- Fechas: "ahora" dice el día y la hora en Chile y cada partido trae HOY, MAÑANA o su día. Si el usuario no dice el día, responde con los partidos de HOY. Si "nota_alcance" dice que se agregaron los de mañana, dilo y separa "Hoy" de "Mañana". Nunca presentes un partido de mañana como si fuera de hoy.
+- Listas: usa "rankings" (ya vienen ordenados de mayor a menor). Da entre 5 y 8 partidos si hay, o la cantidad que pida el usuario (máximo 15). Si hay menos, dilo.
+- No recomiendes partidos EN VIVO o TERMINADOS salvo que pregunten por ellos. Para "cómo van" o resultados usa "en_vivo_ahora" y "resultados_de_hoy".
+- Partidos "(copa)": probabilidad del modelo con la fuerza de liga, sin ajuste por cuota. "SOLO MERCADO": probabilidad de la casa, sin modelo Ballytics. Acláralo si los usas, y prefiere los partidos con modelo.
+- Si preguntan por un equipo, usa "equipos_consultados". Si preguntan cuánto acierta el modelo, usa "registro_modelo" y recuerda que la muestra es chica si son menos de 100 partidos.
+- Para combinadas, usa partidos distintos y da la probabilidad total (multiplica las probabilidades) y su cuota justa.
 - Tono cercano y entusiasta, como un buen analista. Puedes usar 1 o 2 emojis de fútbol. Cuando nombres un partido, escribe los dos equipos ("Arsenal vs Everton").
 - No prometas ganancias ni digas "apuesta a" o montos. Si piden una recomendación, di qué ve más probable el modelo y si alguna cuota tiene valor según el modelo, y recuerda en una línea que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero.
 - Si hablan de apostar, agrega al final una línea corta: "Juega con responsabilidad (+18)."
@@ -490,7 +524,7 @@ async function preguntarIA(env, b, ctx, req) {
   const q = String(b.q || "").trim().slice(0, 400), uid = String(b.uid || "");
   if (q.length < 3) return json({ ok: false, error: "Escribe una pregunta." }, 400);
   if (!okUid(uid)) return json({ ok: false, error: "uid" }, 400);
-  const datos = JSON.stringify(b.ctx || {}).slice(0, 14000);
+  const datos = JSON.stringify(b.ctx || {}).slice(0, 32000);
   const hist = (Array.isArray(b.hist) ? b.hist : []).slice(-4).map(m => ({ role: m.r === "ia" ? "assistant" : "user", content: String(m.t || "").slice(0, 700) })).filter(m => m.content);
   // respuestas repetidas (misma pregunta y mismos datos) salen de la caché y no gastan
   const cache = caches.default, ck = new Request("https://ia.ballytics/" + await hash(q.toLowerCase() + "|" + datos + "|" + JSON.stringify(hist)));
@@ -507,7 +541,8 @@ async function preguntarIA(env, b, ctx, req) {
   const messages = [{ role: "system", content: sistema }, ...hist, { role: "user", content: q }];
   let txt = "", modelo = "", fallos = [];
   const g = await gemini(env, sistema, hist, q, fallos);
-  if (g) { txt = g.txt; modelo = g.modelo; }
+  let refs = [], sug = [];
+  if (g) { txt = g.txt; modelo = g.modelo; refs = g.refs || []; sug = g.sug || []; }
   for (const [m, args] of (txt ? [] : IA_MODELOS)) {
     try {
       const r = await env.AI.run(m, args(messages));
@@ -519,7 +554,7 @@ async function preguntarIA(env, b, ctx, req) {
     } catch (e) { txt = ""; fallos.push(m.split("/").pop() + ": " + String(e).slice(0, 160)); }
   }
   if (!txt) return json({ ok: false, error: "La IA no respondió. Prueba de nuevo en un rato." }, 502);
-  const out = { ok: true, r: txt.slice(0, 2500), modelo, quedan: Math.max(0, IA_TOPE_PERSONA - dia.u[h]), ...(fallos.length ? { fallos } : {}) };
+  const out = { ok: true, r: txt.slice(0, 3500), refs, sug, modelo, quedan: Math.max(0, IA_TOPE_PERSONA - dia.u[h]), ...(fallos.length ? { fallos } : {}) };
   ctx.waitUntil(cache.put(ck, json(out, 200, { "cache-control": "public, max-age=1800" })));
   return json(out);
 }
@@ -539,7 +574,7 @@ export default {
       else if (p === "/afestado") res = json({ ok: true, ...((await env.SUBS.get("afrem", "json")) || {}), pedidos: Object.keys((await env.SUBS.get("afped", "json")) || {}).length });
       else if (p.startsWith("/prode/") && req.method === "GET") res = await prodeVer(env, p.split("/")[2] || "", u.searchParams.get("uid"), ctx);
       else if (req.method === "POST") {
-        if (+(req.headers.get("content-length") || 0) > (p === "/ia" ? 20000 : 8192)) return cors(req, json({ ok: false, error: "demasiado grande" }, 413));
+        if (+(req.headers.get("content-length") || 0) > (p === "/ia" ? 60000 : 8192)) return cors(req, json({ ok: false, error: "demasiado grande" }, 413));
         const b = await req.json().catch(() => ({}));
         if (p === "/ia") return cors(req, await preguntarIA(env, b, ctx, req));
         const R = { "/follow": follow, "/unfollow": unfollow, "/prefs": setPrefs, "/novedades": novedades, "/voto": votar, "/prode/crear": prodeCrear, "/prode/unirse": prodeUnirse, "/prode/pick": prodePick, "/borrar": borrar }[p];

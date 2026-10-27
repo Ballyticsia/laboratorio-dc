@@ -482,14 +482,18 @@ function skeleton() {
 }
 
 /* ---------------- asistente con IA ---------------- */
-// La IA (Workers AI, en el servidor de Ballytics) responde solo con los datos que se le mandan desde aquí.
-// Se abre como panel lateral desde cualquier pantalla; en un partido conversa sobre ese partido.
-const r3 = x => x == null ? null : Math.round(x * 1000) / 1000;
+// La IA (Gemini en el servidor de Ballytics; si falla, la IA gratis de Cloudflare) responde solo con los datos que se
+// le mandan desde aquí. Antes de preguntar se arma: qué días pide el usuario (hoy por defecto), todos los partidos
+// de esos días con el modelo (también copas entre equipos que el modelo conoce), los que solo tienen cuota de mercado,
+// rankings ya ordenados, partidos en vivo y resultados, el detalle de los equipos que nombra y cómo le va al modelo.
+const iaNorm = x => String(x || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const COMUNES = new Set(["como", "real", "union", "nacional", "universidad", "independiente", "deportivo", "atletico", "sport", "city", "united", "club"]);
+const reWord = n => new RegExp(`(^|[^a-z0-9])${iaNorm(n).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z0-9]|$)`);
 function iaCtxPartido(L, p) {
   const k = markets(pmatrix(L, p).m), st = ODDS[p.id] || {}, q = mktOf(p), pin = q && /pinnacle/i.test(q.casa || ""), sh = rowOf(L, p.home), sa = rowOf(L, p.away), eh = statOf(L, p.home), ea = statOf(L, p.away);
   const tus = Object.fromEntries(Object.entries(st).filter(([key, v]) => key[0] !== "_" && v > 1));
   return {
-    liga: L.nombre, partido: `${p.home} (local) vs ${p.away} (visita)`, fecha: p.kickoff,
+    liga: L.nombre, partido: `${p.home} (local) vs ${p.away} (visita)`, cuando: `${iaDia(p.kickoff)} ${hhmm(p.kickoff)}`,
     prob_ballytics: { local: pct(k.H), empate: pct(k.D), visita: pct(k.A), mas_2_5: pct(k.O25), ambos_marcan: pct(k.B), marcador_mas_probable: p.top },
     cuota_justa: { local: dec(1 / k.H), empate: dec(1 / k.D), visita: dec(1 / k.A), mas_2_5: dec(1 / k.O25), ambos_marcan: dec(1 / k.B) },
     goles_esperados: { local: dec(p.lh), visita: dec(p.la), nota: "xG previsto por el modelo" },
@@ -509,54 +513,167 @@ function iaCtxPartido(L, p) {
     ultimos_cruces: (p.h2h || []).slice(0, 4).map(x => `${x.home} ${x.hg}-${x.ag} ${x.away}`),
   };
 }
-const iaPartidosProx = () => { const now = Date.now();
-  return allMatches().filter(p => { const t = new Date(p.kickoff).getTime(); return t > now - 2 * 3600e3 && t < now + 3 * DAYMS; }).sort((a, b) => a.kickoff.localeCompare(b.kickoff)).slice(0, 45); };
-function iaCtxDia() {
-  return { hoy: new Date().toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }), zona: "Chile",
-    formato: "liga | partido | hora | prob. Ballytics local/empate/visita | xG previsto (local–visita) | +2,5 goles | ambos marcan | marcador más probable | tiros al arco por partido (local–visita) | córners esperados | tarjetas esperadas | bajas | Pinnacle o mercado sin margen",
-    partidos: iaPartidosProx().map(p => { const q = mktOf(p), eh = statOf(p.L, p.home), ea = statOf(p.L, p.away);
-      return [p.L.nombre, `${p.home} vs ${p.away}`, new Date(p.kickoff).toLocaleString("es-CL", { weekday: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }), `L ${pct(p.pH)} E ${pct(p.pD)} V ${pct(p.pA)}`, `xG ${dec(p.lh, 1)}–${dec(p.la, 1)}`, `+2,5 ${pct(p.pO25)}`, `ambos ${pct(p.pBTTS)}`, p.top,
-        eh.tiros_arco != null ? `tiros ${dec(eh.tiros_arco, 1)}–${dec(ea.tiros_arco, 1)}` : "", p.ch != null ? `córners ${dec(p.ch + p.ca, 1)}` : "", p.th != null ? `tarjetas ${dec(p.th + p.ta, 1)}` : "",
-        p.bajas ? `bajas ${(p.bajas.h || []).filter(x => x.tipo === "Missing Fixture").length}–${(p.bajas.a || []).filter(x => x.tipo === "Missing Fixture").length}` : "",
-        q ? `${/pinnacle/i.test(q.casa || "") ? "Pinnacle" : "mercado"} L ${pct(q.p[0])} E ${pct(q.p[1])} V ${pct(q.p[2])}` : "sin cuota"].filter(Boolean).join(" | "); }) };
+// ---- qué días pide el usuario
+const DOW = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"], DOW_ES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const dia0 = () => { const t = new Date(); t.setHours(0, 0, 0, 0); return t; };
+const diaN = n => { const t = dia0(); t.setDate(t.getDate() + n); return t; };
+function iaDia(iso) { const k = Math.round((new Date(new Date(iso).toDateString()) - dia0()) / DAYMS);
+  return k === 0 ? "HOY" : k === 1 ? "MAÑANA" : k === -1 ? "AYER" : new Date(iso).toLocaleDateString("es-CL", { weekday: "long", day: "numeric" }).toUpperCase(); }
+function iaAlcance(q) {
+  const s = iaNorm(q), dow = new Date().getDay();
+  if (/pasado manana/.test(s)) return { a: 2, b: 3, nombre: "pasado mañana" };
+  if (/\bmanana\b/.test(s) && !/(de|en|por|esta) la manana/.test(s)) return { a: 1, b: 2, nombre: "mañana" };
+  if (/finde|fin de semana/.test(s)) return { a: dow === 6 || dow === 0 ? 0 : 6 - dow, b: dow === 0 ? 1 : 8 - dow, nombre: "el fin de semana" };
+  for (let i = 0; i < 7; i++) if (reWord(DOW[i]).test(s)) { const k = (i - dow + 7) % 7; return { a: k, b: k + 1, nombre: k === 0 ? "hoy" : k === 1 ? "mañana" : "el " + DOW_ES[i] }; }
+  if (/semana|proximos dias|7 dias/.test(s)) return { a: 0, b: 7, nombre: "los próximos 7 días" };
+  if (/\bhoy\b|esta noche|esta tarde|ahora|en vivo|jugando/.test(s)) return { a: 0, b: 1, nombre: "hoy" };
+  return { a: 0, b: 1, nombre: "hoy", auto: true };
 }
-const iaMd = t => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^#{1,4} (.+)$/gm, "<b>$1</b>").split(/\n+/).map(l => /^\s*[-•*] /.test(l) ? `<li>${l.replace(/^\s*[-•*] /, "")}</li>` : `<p>${l}</p>`).join("").replace(/(<li>.*?<\/li>)+/g, m => `<ul>${m}</ul>`);
-// partidos que la IA nombró en su respuesta → tarjetas para tocar, ver el partido o armar la combinada
-function iaMencionados(txt, scope) {
-  const T = txt.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(), hit = [];
-  const ms = scope.startsWith("p:") ? [] : iaPartidosProx();
-  const re = n => new RegExp(`(^|[^a-z])${String(n).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z]|$)`);
-  ms.forEach(p => { const names = [p.home, p.away, corto(p.L, p.home), corto(p.L, p.away)].filter(n => n && n.length > 3);
-    let pos = -1; names.forEach(n => { const m = T.search(re(n)); if (m >= 0 && (pos < 0 || m < pos)) pos = m; });
-    const both = [[p.home, corto(p.L, p.home)], [p.away, corto(p.L, p.away)]].filter(ns => ns.some(n => n && n.length > 3 && re(n).test(T))).length;
-    if (pos >= 0 && !hit.some(h => h.p.id === p.id)) hit.push({ p, pos, both }); });
-  const dos = hit.filter(h => h.both === 2);   // si nombró "A vs B", solo esos; si no, los equipos sueltos
-  return (dos.length ? dos : hit).sort((a, b) => a.pos - b.pos).slice(0, 4).map(h => h.p);
+// copas: si los dos equipos están en el modelo de alguna liga (p. ej. Premier + Championship), se calcula con ese modelo
+function iaModeloPara(h, a) {
+  let alt = null;
+  for (const id of ligasIds()) { const L = D.ligas[id], M = L && L.modelo; if (!M || !M.equipos || !M.equipos[h] || !M.equipos[a]) continue;
+    if ((L.tabla || []).some(s => s.equipo === h || s.equipo === a)) return L; alt = alt || L; }
+  return alt;
 }
-function iaCards(ms, q, txt) {
-  if (!ms.length) return "";
-  const s = (q + " " + txt).toLowerCase(), modo = /ambos/.test(s) ? "BY" : /gol|over|\+2,5|más de 2/.test(s) ? "O25" : "1X2";
-  const pick = p => { if (modo === "O25") return ["O25", "Goles: Más de 2,5", p.pO25]; if (modo === "BY") return ["BY", "Ambos marcan: Sí", p.pBTTS];
-    const m = Math.max(p.pH, p.pD, p.pA); return m === p.pH ? ["H", `Gana ${corto(p.L, p.home)}`, p.pH] : m === p.pA ? ["A", `Gana ${corto(p.L, p.away)}`, p.pA] : ["D", "Empate", p.pD]; };
-  const btn = (p, key, lab, pr, txtb) => `<button class="addsel iasel" data-sel="${key}" data-label="${esc(lab)}" data-liga="${p.L.id}" data-mid="${esc(p.id)}" aria-pressed="${inCombo(p.id, key)}" title="Agregar a la combinada"><span>${txtb}</span><b class="num">${pct(pr)}</b></button>`;
-  const cards = ms.map(p => `<div class="iacard"><button class="iac-top" data-go="partido" data-liga="${p.L.id}" data-id="${esc(p.id)}">${leagueMark(p.L, "sm")}<span class="iac-lg">${esc(p.L.nombre)} · ${esc(cuando(p.kickoff))}</span><span class="iac-go">Ver partido ›</span></button>
-      <div class="iac-t"><span>${badge(p.L, p.home)}<b>${esc(corto(p.L, p.home))}</b></span><span class="faint">vs</span><span><b>${esc(corto(p.L, p.away))}</b>${badge(p.L, p.away)}</span></div>
-      <div class="iac-b">${btn(p, "H", `Gana ${corto(p.L, p.home)}`, p.pH, "1")}${btn(p, "D", "Empate", p.pD, "X")}${btn(p, "A", `Gana ${corto(p.L, p.away)}`, p.pA, "2")}${p.pO25 != null ? btn(p, "O25", "Goles: Más de 2,5", p.pO25, "+2,5") : ""}${p.pBTTS != null ? btn(p, "BY", "Ambos marcan: Sí", p.pBTTS, "Ambos") : ""}</div></div>`).join("");
-  const picks = ms.map(p => ({ p, k: pick(p) })), tot = picks.reduce((a, x) => a * x.k[2], 1);
-  const combo = ms.length > 1 ? `<button class="iacombo" data-iacombo='${esc(JSON.stringify(picks.map(x => [x.p.L.id, x.p.id, x.k[0], x.k[1]])))}'><span><b>Agregar a mi combinada</b><small>${picks.map(x => esc(x.k[1])).join(" + ")}</small></span><span class="num"><b>${pct(tot, 1)}</b><small>cuota justa ${dec(1 / tot)}</small></span></button>` : "";
-  return `<div class="iacards">${cards}${combo}</div>`;
+const iaEvId = c => String(c.kind === "liga" ? c.p.id : c.ev.id);
+async function iaCandidatos(al) {
+  const now = Date.now(), desde = diaN(al.a).getTime(), hasta = diaN(al.b).getTime(), out = [];
+  const enRango = t => t >= desde && t < hasta && t > now - 3 * 3600e3;
+  allMatches().forEach(p => { const t = new Date(p.kickoff).getTime(); if (enRango(t)) out.push({ kind: "liga", p, L: p.L, t, home: p.home, away: p.away, comp: p.L.nombre,
+    k: { H: p.pH, D: p.pD, A: p.pA, O25: p.pO25, B: p.pBTTS, lh: p.lh, la: p.la } }); });
+  const keys = []; for (let i = al.a; i < Math.min(al.b, al.a + 7); i++) keys.push(ymd(diaN(i)));
+  if (al.a > 0) keys.unshift(ymd(diaN(0)));   // siempre se mira hoy, para saber qué está en vivo
+  const evs = (await Promise.all([...new Set(keys)].map(k => withTimeout(vFetchDay(k), 8000).catch(() => [])))).flat();
+  const ya = new Set(out.map(iaEvId)), live = {};
+  for (const e of evs) {
+    if (e.state === "in" || e.state === "post") live[String(e.id)] = e;
+    if (ya.has(String(e.id))) continue;
+    const t = new Date(e.date).getTime(); if (!enRango(t) || e.state === "post") continue;
+    const hn = e.h.full || e.h.name, an = e.a.full || e.a.name, L = iaModeloPara(hn, an);
+    if (L) { const [lh, la] = rates(L.modelo, hn, an), mk = markets(matrixLam(lh, la, L.modelo.rho).m);
+      out.push({ kind: "copa", ev: e, L, t, home: hn, away: an, comp: e.comp, q: e.o ? noVig(e.o) : null, k: { H: mk.H, D: mk.D, A: mk.A, O25: mk.O25, B: mk.B, lh, la } }); ya.add(String(e.id)); continue; }
+    const C = VV.byId[e.lid], q = e.o ? noVig(e.o) : null;
+    if (q && C && C.o <= 100 && !(C.t || []).includes("juv")) { out.push({ kind: "mercado", ev: e, t, home: hn, away: an, comp: e.comp, q, k: { H: q.p[0], D: q.p[1], A: q.p[2], O25: q.o } }); ya.add(String(e.id)); }
+  }
+  return { out: out.sort((x, y) => x.t - y.t), live, evs };
+}
+async function iaCtxDia(q) {
+  await D.all; await Promise.all([vComps(), vSel()]);
+  let al = iaAlcance(q), C = await iaCandidatos(al), nota = "";
+  const now = Date.now(), sinEmpezar = cs => cs.filter(c => c.kind !== "mercado" && !C.live[iaEvId(c)] && c.t > now).length;
+  if (al.auto && sinEmpezar(C.out) < 6) {
+    const n = sinEmpezar(C.out); al = { a: 0, b: 2, nombre: "hoy y mañana" }; C = await iaCandidatos(al);
+    nota = `Hoy quedan solo ${n} partidos con probabilidades de Ballytics sin empezar. También van los de mañana (marcados MAÑANA): dilo claramente y separa hoy de mañana.`;
+  }
+  const idmap = {}; let nm = 0, nx = 0;
+  const modelo = C.out.filter(c => c.kind !== "mercado").slice(0, 80), merc = C.out.filter(c => c.kind === "mercado").slice(0, 30);
+  modelo.forEach(c => { c.id = "m" + (++nm); idmap[c.id] = c; }); merc.forEach(c => { c.id = "x" + (++nx); idmap[c.id] = c; });
+  const est = c => { const e = C.live[iaEvId(c)]; if (!e) return ""; const sc = `${e.h.score ?? 0}-${e.a.score ?? 0}`; return e.state === "in" ? ` | EN VIVO ${e.clock || e.detail} ${sc}` : ` | TERMINADO ${sc}`; };
+  const cuando = c => `${iaDia(new Date(c.t).toISOString())} ${hhmm(new Date(c.t).toISOString())}`;
+  const merK = q => q ? `${/pinnacle/i.test(q.casa || "") ? "Pinnacle" : "mercado " + (q.casa || "")} L ${pct(q.p[0])} E ${pct(q.p[1])} V ${pct(q.p[2])}` : "sin cuota";
+  const linea = c => {
+    const k = c.k, base = [c.id, cuando(c), c.kind === "copa" ? `${c.comp} (copa)` : c.comp, `${c.home} vs ${c.away}${est(c)}`];
+    if (c.kind === "mercado") return [...base, `SOLO MERCADO ${merK(c.q)}`, k.O25 != null ? `+2,5 ${pct(k.O25)}` : ""].filter(Boolean).join(" | ");
+    const p = c.p, eh = c.L ? statOf(c.L, c.home) : {}, ea = c.L ? statOf(c.L, c.away) : {};
+    return [...base, `${c.kind === "copa" ? "modelo (fuerza de liga, sin cuota)" : "Ballytics"} L ${pct(k.H)} E ${pct(k.D)} V ${pct(k.A)}`, `xG ${dec(k.lh, 1)}–${dec(k.la, 1)}`, `+2,5 ${pct(k.O25)}`, `ambos ${pct(k.B)}`,
+      p ? `marcador ${p.top}` : "", eh.tiros_arco != null ? `tiros al arco ${dec(eh.tiros_arco, 1)}–${dec(ea.tiros_arco, 1)}` : "",
+      p && p.ch != null ? `córners ${dec(p.ch + p.ca, 1)}` : "", p && p.th != null ? `tarjetas ${dec(p.th + p.ta, 1)}` : "",
+      p && p.bajas ? `bajas ${(p.bajas.h || []).filter(x => x.tipo === "Missing Fixture").length}–${(p.bajas.a || []).filter(x => x.tipo === "Missing Fixture").length}` : "",
+      p ? merK(mktOf(p)) : c.q ? merK(c.q) : ""].filter(Boolean).join(" | ");
+  };
+  // rankings ya ordenados (solo partidos que no empezaron), para que la IA no tenga que ordenar
+  const pre = modelo.filter(c => !C.live[iaEvId(c)] && c.t > now);
+  const top = (f, fmt, n = 10, arr = pre) => arr.filter(c => f(c) != null && !isNaN(f(c))).sort((a, b) => f(b) - f(a)).slice(0, n).map(c => `${c.id} ${c.home} vs ${c.away} (${cuando(c)}): ${fmt(c)}`);
+  const fav = c => Math.max(c.k.H, c.k.A), favN = c => c.k.H >= c.k.A ? `gana ${c.home} ${pct(c.k.H)}` : `gana ${c.away} ${pct(c.k.A)}`;
+  const rankings = {
+    favoritos_claros: top(fav, favN), mas_goles: top(c => c.k.O25, c => `+2,5 goles ${pct(c.k.O25)}`), pocos_goles: top(c => c.k.O25 == null ? null : 1 - c.k.O25, c => `menos de 2,5 ${pct(1 - c.k.O25)}`, 6),
+    ambos_marcan: top(c => c.k.B, c => `ambos marcan ${pct(c.k.B)}`), mas_parejos: top(c => -Math.max(c.k.H, c.k.D, c.k.A), c => `L ${pct(c.k.H)} E ${pct(c.k.D)} V ${pct(c.k.A)}`, 6),
+    mas_empate: top(c => c.k.D, c => `empate ${pct(c.k.D)}`, 5),
+    diferencia_con_mercado: top(c => { const q = c.p && mktOf(c.p); if (!q || !c.p.modelo) return null; const o = [c.p.modelo.pH, c.p.modelo.pD, c.p.modelo.pA]; return Math.max(...o.map((v, i) => Math.abs(v - q.p[i]))); },
+      c => { const q = mktOf(c.p), o = [c.p.modelo.pH, c.p.modelo.pD, c.p.modelo.pA], i = [0, 1, 2].sort((a, b) => Math.abs(o[b] - q.p[b]) - Math.abs(o[a] - q.p[a]))[0];
+        return `${["local", "empate", "visita"][i]}: modelo propio ${pct(o[i])} vs ${/pinnacle/i.test(q.casa || "") ? "Pinnacle" : "mercado"} ${pct(q.p[i])}`; }, 6),
+    mas_corners: top(c => c.p && c.p.ch != null ? c.p.ch + c.p.ca : null, c => `${dec(c.p.ch + c.p.ca, 1)} córners`, 6),
+    mas_tarjetas: top(c => c.p && c.p.th != null ? c.p.th + c.p.ta : null, c => `${dec(c.p.th + c.p.ta, 1)} tarjetas`, 6),
+    favoritos_solo_mercado: top(fav, c => `${favN(c)} (mercado ${c.q.casa || ""})`, 6, merc.filter(c => c.t > now && !C.live[iaEvId(c)])),
+  };
+  Object.keys(rankings).forEach(k => { if (!rankings[k].length) delete rankings[k]; });
+  // en vivo y resultados de hoy (competiciones conocidas)
+  const hoyK = ymd(new Date()), conocida = e => VV.byId[e.lid] && VV.byId[e.lid].o <= 100;
+  const vivos = C.evs.filter(e => e.state === "in" && conocida(e)).slice(0, 20).map(e => `${e.comp}: ${e.h.name} ${e.h.score ?? 0}-${e.a.score ?? 0} ${e.a.name} (${e.clock || e.detail})`);
+  const finales = C.evs.filter(e => e.state === "post" && localDay(e.date) === hoyK && conocida(e)).slice(0, 20).map(e => `${e.comp}: ${e.h.name} ${e.h.score ?? 0}-${e.a.score ?? 0} ${e.a.name}`);
+  // equipos que nombra el usuario: detalle completo de su próximo partido
+  // nombres de equipo que también son palabras comunes ("¿Cómo llega…?") solo cuentan escritos con mayúscula y no al inicio
+  const nombra = n => { const k = iaNorm(n); if (!COMUNES.has(k)) return reWord(n).test(s);
+    const m = q.replace(/^[\s¿¡"']*\S+/, "").match(new RegExp(`(^|[^\\wÀ-ÿ])${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^\\wÀ-ÿ]|$)`)); return !!m; };
+  const s = iaNorm(q), vistos = new Set(), equipos = [];
+  allMatches().filter(p => new Date(p.kickoff).getTime() > now - 3 * 3600e3).sort((a, b) => a.kickoff.localeCompare(b.kickoff)).forEach(p => {
+    if (equipos.length >= 2 || vistos.has(p.id)) return;
+    const names = [p.home, p.away, corto(p.L, p.home), corto(p.L, p.away)].filter(n => n && n.length > 3);
+    if (names.some(nombra)) { vistos.add(p.id); equipos.push(iaCtxPartido(p.L, p)); }
+  });
+  const g = D.registro, G = g && g.global;
+  const ahora = new Date();
+  const ctx = {
+    ahora: `${ahora.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}, ${hhmm(ahora.toISOString())} (hora de Chile)`,
+    alcance: al.nombre, nota_alcance: nota || (al.auto ? "El usuario no dijo el día: se usan los partidos de HOY." : ""),
+    cobertura: `${modelo.length} partidos con probabilidades de Ballytics y ${merc.length} solo con cuota de mercado para ${al.nombre}`,
+    formato: "id | día y hora | competición | partido (y estado si empezó) | probabilidades local/empate/visita | xG previsto | +2,5 | ambos marcan | marcador más probable | tiros al arco | córners | tarjetas | bajas confirmadas | Pinnacle o mercado sin margen",
+    partidos: modelo.map(linea), solo_mercado: merc.map(linea), rankings,
+    en_vivo_ahora: vivos, resultados_de_hoy: finales,
+    equipos_consultados: equipos.length ? equipos : undefined,
+    registro_modelo: g && g.n ? { partidos_calificados: g.n, acierto_ganador: pct(g.acierto_1x2, 1), aciertos_si_no: G ? `${G.aciertos} de ${G.n} (${pct(G.aciertos / G.n, 1)})` : null,
+      por_mercado: G ? G.por.map(x => `${x.mercado} ${pct(x.acierto, 0)} en ${x.n}`) : null, log_loss: `${dec(g.logloss, 3)} (respuesta ingenua ${dec(g.logloss_ingenuo, 3)}; menos es mejor)` } : null,
+  };
+  return { ctx, idmap };
+}
+const iaMd = t => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^#{1,4} (.+)$/gm, "<b>$1</b>").split(/\n+/).map(l => /^\s*[-•*] /.test(l) ? `<li>${l.replace(/^\s*[-•*] /, "")}</li>` : /^\s*\d+[.)] /.test(l) ? `<li>${l.replace(/^\s*\d+[.)] /, "")}</li>` : `<p>${l}</p>`).join("").replace(/(<li>.*?<\/li>)+/g, m => `<ul>${m}</ul>`);
+// ---- tarjetas de los partidos que nombró la IA
+const MKT = { H: ["1", c => c.k.H, c => `Gana ${c.L ? corto(c.L, c.home) : c.home}`], D: ["X", c => c.k.D, () => "Empate"], A: ["2", c => c.k.A, c => `Gana ${c.L ? corto(c.L, c.away) : c.away}`],
+  O25: ["+2,5", c => c.k.O25, () => "Goles: Más de 2,5"], U25: ["−2,5", c => c.k.O25 == null ? null : 1 - c.k.O25, () => "Goles: Menos de 2,5"],
+  BY: ["Ambos", c => c.k.B, () => "Ambos marcan: Sí"], BN: ["No ambos", c => c.k.B == null ? null : 1 - c.k.B, () => "Ambos marcan: No"] };
+function iaCardsRefs(refs, idmap) {
+  const seen = new Set(), items = refs.map(r => ({ m: MKT[r.mercado] ? r.mercado : null, c: idmap[r.id] })).filter(x => x.c && !seen.has(x.c.id) && seen.add(x.c.id)).slice(0, 8);
+  if (!items.length) return "";
+  const card = ({ c, m }) => {
+    if (c.kind === "liga") {
+      const p = c.p, L = c.L, keys = ["H", "D", "A", m === "U25" ? "U25" : "O25", m === "BN" ? "BN" : "BY"];
+      const btns = keys.map(k => { const pr = MKT[k][1](c); return pr == null ? "" : `<button class="addsel iasel${k === m ? " rec" : ""}" data-sel="${k}" data-label="${esc(MKT[k][2](c))}" data-liga="${L.id}" data-mid="${esc(p.id)}" aria-pressed="${inCombo(p.id, k)}" title="Agregar a la combinada"><span>${MKT[k][0]}</span><b class="num">${pct(pr)}</b></button>`; }).join("");
+      return `<div class="iacard"><button class="iac-top" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}">${leagueMark(L, "sm")}<span class="iac-lg">${esc(L.nombre)} · ${esc(cuando(p.kickoff))}</span><span class="iac-go">Ver partido ›</span></button>
+        <div class="iac-t"><span>${badge(L, p.home)}<b>${esc(corto(L, p.home))}</b></span><span class="faint">vs</span><span><b>${esc(corto(L, p.away))}</b>${badge(L, p.away)}</span></div><div class="iac-b">${btns}</div></div>`;
+    }
+    const e = c.ev, keys = ["H", "D", "A", "O25"].filter(k => MKT[k][1](c) != null);
+    return `<div class="iacard"><button class="iac-top" data-go="envivo" data-id="${esc(e.id)}"><span class="iac-lg">${esc(c.comp)} · ${esc(cuando(e.date))}</span><span class="iac-go">Ver partido ›</span></button>
+      <div class="iac-t"><span>${vLogo(e.h)}<b>${esc(e.h.name)}</b></span><span class="faint">vs</span><span><b>${esc(e.a.name)}</b>${vLogo(e.a)}</span></div>
+      <div class="iac-b ro">${keys.map(k => `<span class="iasel${k === m ? " rec" : ""}"><span>${MKT[k][0]}</span><b class="num">${pct(MKT[k][1](c))}</b></span>`).join("")}</div>
+      <p class="iac-note">${c.kind === "copa" ? "Estimación del modelo con la fuerza de liga (sin ajuste por cuota)" : `Probabilidad del mercado (${esc(c.q.casa || "casa")}), sin modelo Ballytics`}</p></div>`;
+  };
+  const picks = items.filter(x => x.c.kind === "liga" && x.m && MKT[x.m][1](x.c) != null).map(x => ({ c: x.c, k: x.m, pr: MKT[x.m][1](x.c) }));
+  const tot = picks.reduce((a, x) => a * x.pr, 1);
+  const combo = picks.length > 1 ? `<button class="iacombo" data-iacombo='${esc(JSON.stringify(picks.map(x => [x.c.L.id, x.c.p.id, x.k, MKT[x.k][2](x.c)])))}'><span><b>Agregar a mi combinada</b><small>${picks.map(x => esc(MKT[x.k][2](x.c))).join(" + ")}</small></span><span class="num"><b>${pct(tot, 1)}</b><small>cuota justa ${dec(1 / tot)}</small></span></button>` : "";
+  return `<div class="iacards">${items.map(card).join("")}${combo}</div>`;
+}
+// respaldo (IA sin respuesta estructurada): busca en el texto los equipos de los partidos enviados
+function iaRefsPorNombre(txt, idmap) {
+  const T = iaNorm(txt), hit = [];
+  Object.values(idmap).forEach(c => { const names = [c.home, c.away, c.L ? corto(c.L, c.home) : "", c.L ? corto(c.L, c.away) : ""].filter(n => n && n.length > 3 && !COMUNES.has(iaNorm(n)));
+    const pos = Math.min(...names.map(n => { const m = T.search(reWord(n)); return m < 0 ? Infinity : m; }));
+    const both = [[c.home, c.L && corto(c.L, c.home)], [c.away, c.L && corto(c.L, c.away)]].filter(ns => ns.some(n => n && n.length > 3 && reWord(n).test(T))).length;
+    if (pos < Infinity) hit.push({ c, pos, both }); });
+  const dos = hit.filter(h => h.both === 2);
+  return (dos.length ? dos : hit).sort((a, b) => a.pos - b.pos).slice(0, 6).map(h => ({ id: h.c.id, mercado: null }));
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-iacombo]"); if (!b) return;
   JSON.parse(b.dataset.iacombo).forEach(([liga, mid, key, label]) => { if (inCombo(mid, key)) return; const p = findMatch(liga, mid); if (!p) return;
     COMBO.push({ liga, mid, key, label, home: p.home, away: p.away, kickoff: p.kickoff }); });
   saveCombo(); paintComboBar(); b.classList.add("ok"); b.querySelector("b").textContent = "Agregada a tu combinada ✓";
-  b.closest(".iacards").querySelectorAll(".iasel").forEach(x => x.setAttribute("aria-pressed", String(inCombo(x.dataset.mid, x.dataset.sel))));
+  b.closest(".iacards").querySelectorAll(".addsel.iasel").forEach(x => x.setAttribute("aria-pressed", String(inCombo(x.dataset.mid, x.dataset.sel))));
 });
 const IAH = {};   // conversaciones por tema (jornada o partido), solo en esta pestaña
 const IA_SUG = {
-  dia: ["¿Qué partidos de hoy tienen más goles?", "Dame una combinada de favoritos para el finde", "¿Alguna sugerencia sobre tiros al arco?", "¿Dónde ve el modelo más diferencia con el mercado?", "¿Cuál es el favorito más claro?", "¿Qué partidos son más parejos?", "¿Dónde es más probable que marquen ambos?", "¿Qué partido tiene más córners?"],
-  p: ["¿Quién es favorito y por qué?", "¿Habrá muchos goles?", "¿Alguna cuota tiene valor?", "¿Cómo afectan las bajas?", "¿Quién puede marcar?", "¿Qué dice el historial?"],
+  dia: ["¿Cuáles son los favoritos claros de hoy?", "¿Qué partidos de hoy tienen más goles?", "Arma una combinada de 3 favoritos para el finde", "¿Cómo van los partidos en vivo?", "¿Dónde ve el modelo más diferencia con Pinnacle?", "¿Qué partidos de mañana son más parejos?", "¿Dónde es más probable que marquen ambos?", "¿Cuánto acierta el modelo?"],
+  p: ["¿Quién es favorito y por qué?", "¿Habrá muchos goles?", "¿Alguna cuota tiene valor?", "¿Cómo afectan las bajas?", "¿Quién puede marcar?", "¿Qué dice Pinnacle?"],
 };
 let IASCOPE = "dia";
 function iaScopeAuto() { return R.v === "partido" && findMatch(R.liga, R.id) ? "p:" + R.id : "dia"; }
@@ -565,51 +682,55 @@ function iaChat(scope, mode) {
   const h = IAH[scope] || [], mp = iaMatchOf(scope);
   const sug = IA_SUG[scope.startsWith("p:") ? "p" : "dia"], half = Math.ceil(sug.length / 2);
   const chip = mp ? `<div class="ia-scope">${badge(mp.L, mp.p.home)}<span>Sobre <b>${esc(corto(mp.L, mp.p.home))} vs ${esc(corto(mp.L, mp.p.away))}</b></span><button class="link" data-iascope="dia">Preguntar por todos los partidos</button></div>`
-    : (iaScopeAuto() !== "dia" ? `<div class="ia-scope"><span>Sobre los partidos de los próximos 3 días</span><button class="link" data-iascope="${iaScopeAuto()}">Volver a este partido</button></div>` : "");
+    : (iaScopeAuto() !== "dia" ? `<div class="ia-scope"><span>Sobre todos los partidos</span><button class="link" data-iascope="${iaScopeAuto()}">Volver a este partido</button></div>` : "");
   const welcome = `<div class="ia-hello"><span class="ia-orb" aria-hidden="true">✦</span><h2>Bienvenido a <span class="ia-grad">Ballytics IA</span> <span class="ia-beta">Beta</span></h2>
-    <p>${mp ? `Pregúntame lo que quieras de <b>${esc(corto(mp.L, mp.p.home))} vs ${esc(corto(mp.L, mp.p.away))}</b>: favoritos, goles, bajas, cuotas.` : "Soy tu analista de fútbol. Pídeme los partidos más interesantes de los próximos días y te explico lo que dice el modelo, con sus números."}</p></div>
+    <p>${mp ? `Pregúntame lo que quieras de <b>${esc(corto(mp.L, mp.p.home))} vs ${esc(corto(mp.L, mp.p.away))}</b>: favoritos, goles, bajas, cuotas.` : "Soy tu analista de fútbol. Pregúntame por los partidos de hoy, de mañana o del finde, por un equipo, por lo que está en vivo o por cómo le va al modelo."}</p></div>
     <div class="ia-pop"><span class="lbl">Preguntas populares</span><div class="ia-rows"><div class="ia-row">${sug.slice(0, half).map(x => `<button data-iaq="${esc(x)}">${esc(x)}</button>`).join("")}</div><div class="ia-row">${sug.slice(half).map(x => `<button data-iaq="${esc(x)}">${esc(x)}</button>`).join("")}</div></div></div>`;
-  const log = h.map(m => m.r === "ia" ? `<div class="ia-m ia"><span class="ia-av" aria-hidden="true">✦</span><div class="ia-bub">${iaMd(m.t)}${m.cards || ""}</div></div>` : `<div class="ia-m yo"><div class="ia-bub">${esc(m.t)}</div></div>`).join("");
+  const last = h.length - 1;
+  const log = h.map((m, i) => m.r === "ia" ? `<div class="ia-m ia"><span class="ia-av" aria-hidden="true">✦</span><div class="ia-bub">${iaMd(m.t)}${m.cards || ""}${i === last && (m.sug || []).length ? `<div class="ia-next">${m.sug.map(x => `<button data-iaq="${esc(x)}">${esc(x)}</button>`).join("")}</div>` : ""}</div></div>` : `<div class="ia-m yo"><div class="ia-bub">${esc(m.t)}</div></div>`).join("");
   return `<div class="iachat ${mode}" data-ia="${esc(scope)}">${chip}<div class="ia-scroll">${h.length ? `<div class="ia-log" aria-live="polite">${log}</div>` : welcome}</div>
     <form class="ia-f" data-iaf="${esc(scope)}"><input name="q" maxlength="400" autocomplete="off" placeholder="Pregúntame lo que quieras" aria-label="Tu pregunta"><button class="ia-send" aria-label="Enviar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-6 16-3-7z"/></svg></button></form>
     <p class="ia-legal">Respuestas generadas por IA con los datos del modelo; puede equivocarse. No es un consejo de apuesta. +18.</p></div>`;
 }
 function iaRepaint() {
-  const d = document.getElementById("iad"); if (d && !d.hidden) d.querySelector(".iad-body").innerHTML = iaChat(IASCOPE, "drawer");
+  const d = document.getElementById("iad"); if (d && !d.hidden) { d.querySelector(".iad-body").innerHTML = iaChat(IASCOPE, "drawer"); const r = d.querySelector("[data-iareset]"); if (r) r.hidden = !(IAH[IASCOPE] || []).length; }
   const pg = document.getElementById("ia-page"); if (pg) pg.innerHTML = iaChat("dia", "page");
   const sc = document.querySelector(".iachat .ia-scroll"); if (sc) sc.scrollTop = sc.scrollHeight;
 }
 function iaOpen(scope) {
   let d = document.getElementById("iad");
   if (!d) { d = document.createElement("aside"); d.id = "iad"; d.className = "iad"; d.setAttribute("role", "dialog"); d.setAttribute("aria-label", "Ballytics IA"); d.hidden = true;
-    d.innerHTML = `<div class="iad-in"><header class="iad-h"><span class="ia-ic sm" aria-hidden="true">✦</span><b>Ballytics IA</b><span class="ia-beta">Beta</span><button class="iad-x" data-iaclose aria-label="Cerrar">×</button></header><div class="iad-body"></div></div>`;
+    d.innerHTML = `<div class="iad-in"><header class="iad-h"><span class="ia-ic sm" aria-hidden="true">✦</span><b>Ballytics IA</b><span class="ia-beta">Beta</span><button class="iad-new" data-iareset hidden>Nueva conversación</button><button class="iad-x" data-iaclose aria-label="Cerrar">×</button></header><div class="iad-body"></div></div>`;
     document.body.appendChild(d); }
   IASCOPE = scope || iaScopeAuto(); d.hidden = false; document.body.classList.add("ia-open"); iaRepaint();
   setTimeout(() => { const i = d.querySelector(".ia-f input"); if (i && window.innerWidth > 760) i.focus(); }, 50);
 }
 function iaClose() { const d = document.getElementById("iad"); if (d) d.hidden = true; document.body.classList.remove("ia-open"); }
+const IA_BUSY = {};
 async function iaAsk(scope, q) {
-  q = q.trim(); if (!q) return;
+  q = q.trim(); if (!q || IA_BUSY[scope]) return; IA_BUSY[scope] = true;
   const h = IAH[scope] || (IAH[scope] = []);
   h.push({ r: "yo", t: q }); iaRepaint();
   const box = document.querySelector(`.iachat[data-ia="${CSS.escape(scope)}"]`);
-  if (box) { box.querySelector(".ia-log").insertAdjacentHTML("beforeend", `<div class="ia-m ia wait"><span class="ia-av spin" aria-hidden="true">✦</span><div class="ia-bub"><span class="muted">Pensando</span> <span class="dots"><i></i><i></i><i></i></span></div></div>`);
+  if (box) { box.querySelector(".ia-log").insertAdjacentHTML("beforeend", `<div class="ia-m ia wait"><span class="ia-av spin" aria-hidden="true">✦</span><div class="ia-bub"><span class="muted">Revisando los partidos</span> <span class="dots"><i></i><i></i><i></i></span></div></div>`);
     box.querySelector(".ia-f button").disabled = true; const sc = box.querySelector(".ia-scroll"); sc.scrollTop = sc.scrollHeight; }
-  let ctx, tipo; const mp = iaMatchOf(scope);
-  if (mp) { ctx = iaCtxPartido(mp.L, mp.p); tipo = "partido"; } else { await D.all; ctx = iaCtxDia(); tipo = "dia"; }
   try {
+    let ctx, tipo, idmap = {}; const mp = iaMatchOf(scope);
+    if (mp) { ctx = iaCtxPartido(mp.L, mp.p); tipo = "partido"; } else { ({ ctx, idmap } = await iaCtxDia(q)); tipo = "dia"; }
     const url = await pushCfg(); if (!url) throw new Error("No pude conectar con la IA. Prueba de nuevo.");
     const r = await (await fetch(url + "/ia", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ q, uid: myUid(), tipo, ctx, hist: h.slice(0, -1).slice(-4).map(m => ({ r: m.r, t: m.t })) }) })).json();
     if (!r.ok) throw new Error(r.error || "La IA no respondió. Prueba de nuevo.");
-    h.push({ r: "ia", t: r.r, cards: iaCards(iaMencionados(r.r, scope), q, r.r) });
-  } catch (e) { h.pop(); iaRepaint(); const b = document.querySelector(`.iachat[data-ia="${CSS.escape(scope)}"] .ia-scroll`); if (b) b.insertAdjacentHTML("beforeend", `<div class="ia-m ia err"><div class="ia-bub">${esc(e.message && e.message.length > 12 ? e.message : "No pude conectar con la IA. Prueba de nuevo.")}</div></div>`); return; }
-  iaRepaint();
+    const refs = tipo === "dia" ? (Array.isArray(r.refs) && r.refs.length ? r.refs : iaRefsPorNombre(r.r, idmap)) : [];
+    h.push({ r: "ia", t: r.r, cards: iaCardsRefs(refs, idmap), sug: (r.sug || []).slice(0, 3) });
+  } catch (e) { h.pop(); IA_BUSY[scope] = false; iaRepaint(); const b = document.querySelector(`.iachat[data-ia="${CSS.escape(scope)}"] .ia-scroll`); if (b) b.insertAdjacentHTML("beforeend", `<div class="ia-m ia err"><div class="ia-bub">${esc(e.message && e.message.length > 12 ? e.message : "No pude conectar con la IA. Prueba de nuevo.")}</div></div>`); return; }
+  IA_BUSY[scope] = false; iaRepaint();
 }
 document.addEventListener("submit", e => { const f = e.target.closest("[data-iaf]"); if (!f) return; e.preventDefault(); iaAsk(f.dataset.iaf, f.q.value); });
 document.addEventListener("click", e => {
   const q = e.target.closest("[data-iaq]"); if (q) { const box = q.closest("[data-ia]"); if (box) iaAsk(box.dataset.ia, q.dataset.iaq); else { iaOpen(q.dataset.iascopeq || undefined); setTimeout(() => iaAsk(IASCOPE, q.dataset.iaq), 30); } return; }
   const o = e.target.closest("[data-iaopen]"); if (o) { e.preventDefault(); iaOpen(o.dataset.iaopen || undefined); return; }
   const s = e.target.closest("[data-iascope]"); if (s) { IASCOPE = s.dataset.iascope; iaRepaint(); return; }
+  if (e.target.closest("[data-iareset]")) { IAH[IASCOPE] = []; iaRepaint(); return; }
   if (e.target.closest("[data-iaclose]") || e.target.id === "iad") { iaClose(); return; }
   if (e.target.closest("#iad [data-go]")) iaClose();
 });
@@ -2072,6 +2193,15 @@ function modelBySlug(slug) { return Object.values(D.ligas || {}).find(L => L.slu
 /* ---------- partidos del día ---------- */
 // ESPN entrega las selecciones con nombre en inglés: se traducen con assets/selecciones.json
 function esNat(o) { const t = o && VV.selById && VV.selById[o.id]; if (t) { o.name = t.n; o.full = t.n; if (t.abr) o.abr = t.abr; } return o; }
+// cuotas de ESPN (formato americano → decimal), solo antes del partido
+const amer = v => { v = Number(v); return !v || isNaN(v) ? null : Math.round((1 + (v > 0 ? v / 100 : 100 / -v)) * 1000) / 1000; };
+function espnOdds(c) {
+  for (const o of c.odds || []) { if (!o || typeof o !== "object") continue;
+    const ml = o.moneyline || {}, pick = k => { const x = ml[k] || {}; return amer((x.close || {}).odds) || amer((x.open || {}).odds); };
+    const h = pick("home") || amer((o.homeTeamOdds || {}).moneyLine), a = pick("away") || amer((o.awayTeamOdds || {}).moneyLine), d = pick("draw") || amer((o.drawOdds || {}).moneyLine);
+    if (h && a && d) return { h, d, a, casa: (o.provider || {}).displayName || (o.provider || {}).name || "" }; }
+  return null;
+}
 function vParse(e) {
   const c = (e.competitions || [])[0] || {}, st = c.status || e.status || {}, t = st.type || {};
   const lid = String(e.uid || "").split("~l:")[1]?.split("~")[0] || "";
@@ -2080,13 +2210,13 @@ function vParse(e) {
     return { id: String(tm.id || ""), name: tm.shortDisplayName || tm.displayName || "", full: tm.displayName || "", abr: tm.abbreviation, logo: tm.logo, color: tm.color, score: x.score, winner: x.winner }; };
   return { id: String(e.id), lid, comp: known ? known.n : (note.split(",")[0] || "Otras competiciones"), slug: known ? known.s : null,
     ronda: note.includes(",") ? note.split(",").slice(1).join(",").trim() : "", date: e.date, state: t.state, detail: t.shortDetail || t.detail || "",
-    clock: st.displayClock, period: st.period, h: esNat(side("home")), a: esNat(side("away")) };
+    clock: st.displayClock, period: st.period, h: esNat(side("home")), a: esNat(side("away")), o: t.state === "pre" ? espnOdds(c) : null };
 }
 /* evento en formato corto (servidor de Ballytics) → mismo formato que vParse */
 function vParseC(x) {
   const lid = String(x.uid || "").split("~l:")[1]?.split("~")[0] || "", known = VV.byId[lid], note = x.note || "";
   return { id: x.id, lid, comp: known ? known.n : (note.split(",")[0] || "Otras competiciones"), slug: known ? known.s : null,
-    ronda: note.includes(",") ? note.split(",").slice(1).join(",").trim() : "", date: x.date, state: x.state, detail: x.detail || "", clock: x.clock, period: x.period, h: esNat({ ...x.h }), a: esNat({ ...x.a }) };
+    ronda: note.includes(",") ? note.split(",").slice(1).join(",").trim() : "", date: x.date, state: x.state, detail: x.detail || "", clock: x.clock, period: x.period, h: esNat({ ...x.h }), a: esNat({ ...x.a }), o: x.o || null };
 }
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("tiempo")), ms))]);
 function vDayLocal(key) { const c = lsGet("bt_dia", null); return c && c.k === key ? c : null; }
