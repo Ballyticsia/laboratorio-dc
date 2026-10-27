@@ -103,6 +103,12 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - La ficha de jugador (`#/ficha/<id>`) lee directo de ESPN; la curva de probabilidad en vivo se calcula en el navegador con el marcador, el minuto y las rojas.
 - `pipeline/copas.py` simula la fase de liga de las copas UEFA y las llaves de ida y vuelta de CONMEBOL.
 
+## Árbitros (API-Football)
+- `pipeline/arbitros.py`: cada 12 horas baja la temporada de cada liga (`/fixtures?league&season`, con el árbitro) y cada 2 horas los partidos de ayer a pasado mañana de todas las competiciones (`site/data/arbitros.json`).
+- Cruza cada partido de ESPN con API-Football (fecha y nombres) y une las variantes del nombre del árbitro ("M. Vergara" = "Manuel Vergara").
+- Calcula, con resultados reales de la temporada: tarjetas y penales por partido y % de victorias del local con cada árbitro contra el promedio de la liga, y el historial de cada equipo con él. Si ESPN no publica tarjetas o penales de una liga (Uruguay, Paraguay), esos números no se muestran.
+- Se ve en el partido (panel Árbitro), en la liga (pestaña Árbitros), en el centro del partido (Información) y la IA lo conoce. Las tarjetas ajustadas por árbitro se muestran, pero todavía no cambian el modelo.
+
 ## CLV (¿el modelo se adelanta al mercado?)
 - Desde el 27-10-2026, `data/registro.csv` guarda para cada partido la cuota de ESPN sin margen la primera vez que aparece (`eH`, `eD`, `eA`, con el modelo propio de ese momento en `oH`, `oD`, `oA` y la hora en `et`) y la última antes del inicio (`kH`, `kD`, `kA`, `kt`).
 - `clv_summary` en `pipeline/generar.py` toma el resultado donde el modelo veía al menos 2 puntos más que la primera cuota y mide cuánto se movió el mercado hacia ese lado hasta el cierre. Se muestra en Resultados del modelo, con el detalle por liga.

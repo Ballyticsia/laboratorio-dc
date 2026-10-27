@@ -1671,25 +1671,27 @@ function bajasPanel(L, p) {
 function arbPanel(L, p) {
   const a = p.arbitro; if (!a || !a.n) return "";
   const lg = L.arbitros_liga || {}, pocos = (a.pj || 0) < 8;
-  const cmp = (v, base, fmt, mayorMal) => v == null ? "—" : `${fmt(v)}${base != null ? ` <small class="${Math.abs(v - base) / (base || 1) > .15 ? (v > base === mayorMal ? "bad" : "good") : "faint"}">liga ${fmt(base)}</small>` : ""}`;
+  // flechas neutras (más / menos que la liga): son estadísticas, no juicios
+  const cmp = (v, base, fmt) => v == null ? "—" : `${fmt(v)}${base != null ? ` <small class="faint">${Math.abs(v - base) / (base || 1) > .15 ? (v > base ? "▲ " : "▼ ") : ""}liga ${fmt(base)}</small>` : ""}`;
   const fila = (lado, t) => { const e = (a.eq || {})[lado] || { pj: 0 };
     if (!e.pj) return `<tr><td class="team">${badge(L, t)}${esc(corto(L, t))}</td><td class="n" colspan="4"><span class="faint">No lo ha dirigido esta temporada</span></td></tr>`;
     return `<tr><td class="team">${badge(L, t)}${esc(corto(L, t))}</td><td class="n">${e.pj}</td><td class="n">${e.g}-${e.e}-${e.p}</td>
       <td class="n">${dec(e.tpp, 1)}${e.tpp_todos != null ? ` <small class="faint">(${dec(e.tpp_todos, 1)} con todos)</small>` : ""}</td><td class="n">${lg.penpp != null ? `${e.pf} / ${e.pc}` : "—"}</td></tr>`; };
   return `<div class="panel stack arbp"><div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px"><h3>Árbitro ${help("Árbitro designado según API-Football. Los números son de esta temporada en esta liga: tarjetas y penales por partido y cuánto gana el local cuando dirige él, comparados con el promedio de la liga. Con pocos partidos las diferencias son casi siempre azar.")}</h3><b class="arb-n">${esc(a.n)}</b></div>
-    ${a.pj ? `<div class="kpis">${kpi("m", "Partidos esta temporada", a.pj, L.nombre)}${kpi("", "Tarjetas por partido", cmp(a.tpp, lg.tpp, v => dec(v, 1), true), "")}${kpi("", "Penales por partido", cmp(a.penpp, lg.penpp, v => dec(v, 2), true), "")}${kpi("", "Gana el local", cmp(a.local, lg.local, v => pct(v, 0), true), "")}</div>
+    ${a.pj ? `<div class="kpis">${kpi("m", "Partidos esta temporada", a.pj, L.nombre)}${kpi("", "Tarjetas por partido", cmp(a.tpp, lg.tpp, v => dec(v, 1)), "")}${kpi("", "Penales por partido", cmp(a.penpp, lg.penpp, v => dec(v, 2)), "")}${kpi("", "Gana el local", cmp(a.local, lg.local, v => pct(v, 0)), "")}</div>
     <div class="scroll"><table class="t compact"><thead><tr><th>Con este árbitro</th><th class="n">PJ</th><th class="n">G-E-P</th><th class="n">Tarjetas recibidas</th><th class="n">Penales a favor / en contra</th></tr></thead><tbody>${fila("h", p.home)}${fila("a", p.away)}</tbody></table></div>
     ${a.tarjetas_aj != null && p.th != null ? `<p class="note">Tarjetas esperadas del modelo: <b>${dec(p.th + p.ta, 1)}</b>. Ajustadas por lo estricto que es este árbitro: <b>${dec(a.tarjetas_aj, 1)}</b>. ${help("El ajuste mezcla su promedio con el de la liga según cuántos partidos haya dirigido, para no exagerar con pocos partidos. Se medirá en el registro si mejora la predicción antes de usarlo en el modelo.")}</p>` : ""}
     ${lg.tpp == null ? `<p class="note">ESPN no publica las tarjetas de esta liga, así que solo se muestran resultados${lg.penpp != null ? " y penales" : ""}.</p>` : ""}
     ${pocos ? `<p class="note">Con ${a.pj} partidos dirigidos los promedios todavía cambian mucho por azar.</p>` : ""}` : `<p class="note">Todavía no dirige partidos de ${esc(L.nombre)} esta temporada.</p>`}</div>`;
 }
 function lArbitros(L) {
-  const A = L.arbitros || [], lg = L.arbitros_liga || {};
-  if (!A.length) return `<div class="panel empty">Sin árbitros registrados para esta liga todavía.</div>`;
+  const todos = L.arbitros || [], lg = L.arbitros_liga || {}, A = todos.filter(a => a.pj >= 3), resto = todos.length - A.length;
+  if (!todos.length) return `<div class="panel empty">Sin árbitros registrados para esta liga todavía.</div>`;
+  const fl = (v, b) => v == null || b == null || Math.abs(v - b) / (b || 1) <= .15 ? "" : `<small class="faint"> ${v > b ? "▲" : "▼"}</small>`;
   return `<div class="panel flush scroll"><div class="ph"><h3>Árbitros de la temporada</h3><span class="note">Promedio de la liga: ${lg.tpp != null ? `${dec(lg.tpp, 1)} tarjetas · ` : ""}${lg.penpp != null ? `${dec(lg.penpp, 2)} penales · ` : ""}local gana ${pct(lg.local, 0)}${lg.tpp == null ? " · ESPN no publica las tarjetas de esta liga" : ""}</span></div>
     <table class="t"><thead><tr><th>Árbitro</th><th class="n">Partidos</th><th class="n">Tarjetas/PJ</th><th class="n">Penales/PJ</th><th class="n">Gana el local</th></tr></thead><tbody>${A.map(a => `<tr><td><b>${esc(a.n)}</b></td><td class="n">${a.pj}</td>
-      <td class="n ${a.pj >= 5 && a.tpp > lg.tpp * 1.15 ? "bad" : a.pj >= 5 && a.tpp < lg.tpp * .85 ? "good" : ""}">${dec(a.tpp, 1)}</td><td class="n">${dec(a.penpp, 2)}</td><td class="n">${pct(a.local, 0)}</td></tr>`).join("")}</tbody></table>
-    <p class="note" style="padding:0 16px 14px">Datos de API-Football cruzados con los resultados de ESPN. En rojo, los que sacan bastante más tarjetas que el promedio; en verde, bastante menos (con al menos 5 partidos). Son estadísticas, no juicios sobre los árbitros.</p></div>`;
+      <td class="n">${dec(a.tpp, 1)}${fl(a.tpp, lg.tpp)}</td><td class="n">${dec(a.penpp, 2)}${fl(a.penpp, lg.penpp)}</td><td class="n">${pct(a.local, 0)}</td></tr>`).join("")}</tbody></table>
+    <p class="note" style="padding:0 16px 14px">Árbitros con 3 partidos o más esta temporada${resto ? ` (otros ${resto} dirigieron menos)` : ""}. ▲ / ▼: más de 15 % sobre o bajo el promedio de la liga. Datos de API-Football cruzados con los resultados de ESPN: son estadísticas, no juicios sobre los árbitros, y con pocos partidos cambian mucho por azar.</p></div>`;
 }
 
 /* ---------------- previa automática ---------------- */

@@ -47,6 +47,13 @@ def limpiar(n):
     return n.split(",")[0].strip() or None   # "Mathias Riquelme, Chile" → "Mathias Riquelme"
 
 
+def clave(n):
+    """Mismo árbitro escrito distinto ("M. Vergara" y "Manuel Vergara"): inicial del nombre + primer apellido."""
+    w = [x for x in fotos.norm(str(n or "").replace(".", " ")) if x]
+    ap = next((x for x in w[1:] if len(x) > 2), w[-1] if w else "")
+    return f"{w[0][0]} {ap}" if w else ""
+
+
 def _viejo(path, horas):
     try:
         with open(path, encoding="utf-8") as f:
@@ -164,10 +171,18 @@ def actualizar_ligas(ligas):
         fx = _fixtures_liga(L, hoy)
         if not fx:
             continue
+        # un solo nombre por árbitro (el más completo de sus variantes)
+        largo = {}
+        for f in fx:
+            if f[3]:
+                k = clave(f[3])
+                if len(f[3]) > len(largo.get(k, "")):
+                    largo[k] = f[3]
+        uno = lambda n: largo.get(clave(n), n) if n else None
         for x in out.get("resultados", []):
-            x["arbitro"] = _cruzar(fx, x["kickoff"], x["home"], x["away"])
+            x["arbitro"] = uno(_cruzar(fx, x["kickoff"], x["home"], x["away"]))
         for p in out.get("partidos", []):
-            p["arbitro_n"] = _cruzar(fx, p["kickoff"], p["home"], p["away"])
+            p["arbitro_n"] = uno(_cruzar(fx, p["kickoff"], p["home"], p["away"]))
         liga, arb, ctx = _stats_liga(out)
         for x in out.get("resultados", []):
             if not x.get("arbitro"):
