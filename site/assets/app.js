@@ -68,7 +68,7 @@ function face(L, t, jid, name, size = "", alt = "") {
   const api = typeof alt === "string" && /^https:\/\/media\.api-sports\.io\//.test(alt) ? alt : "";
   // si ya sabemos su foto de API-Football se usa primero (ESPN casi no tiene fotos de fútbol)
   const src = api || espn, alt2 = api && espn ? espn : "";
-  const img = src ? `<span class="ph"><img src="${esc(src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${alt2 ? ` data-alt="${esc(alt2)}"` : ""} onerror="if(this.dataset.alt){this.src=this.dataset.alt;this.dataset.alt=''}else this.parentNode.remove()"></span>` : "";
+  const img = src ? `<span class="ph"><img class="${api ? "sq" : "wide"}" src="${esc(src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${alt2 ? ` data-alt="${esc(alt2)}"` : ""} onload="this.parentNode.classList.add('ok')" onerror="if(this.dataset.alt){this.className='wide';this.src=this.dataset.alt;this.dataset.alt=''}else this.parentNode.remove()"></span>` : "";
   const crest = size !== "sm" && t ? `<span class="fb">${badge(L, t, "xs")}</span>` : "";
   return `<span class="pface ${size}" style="--fc:${bg};--ff:${fg}" aria-hidden="true"><i>${esc(ini)}</i>${img}${crest}</span>`;
 }
