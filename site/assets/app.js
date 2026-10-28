@@ -2973,9 +2973,10 @@ const PSO_LUGAR = { "top left": [.2, .26], "top right": [.8, .26], "bottom left"
 const PSO_ES = { "top left": "arriba a la izquierda", "top right": "arriba a la derecha", "bottom left": "abajo a la izquierda", "bottom right": "abajo a la derecha", "top centre": "arriba al centro", "high centre": "arriba al centro",
   "bottom centre": "abajo al centro", "centre left": "a media altura a la izquierda", "centre right": "a media altura a la derecha", "centre": "al centro", "left": "a la izquierda", "right": "a la derecha" };
 function psoRelato(c) {
-  // del relato de ESPN (Opta): qué pasó y dónde fue cada penal de la tanda
-  const t = String(c.text || ""), low = t.toLowerCase();
-  const tipo = /penalty saved|saved in|is saved/.test(low) ? "atajado" : /hits the (left |right )?post|hits the bar|crossbar/.test(low) ? "palo" : /penalty missed|misses|too high|wide|over the bar/.test(low) ? "afuera" : /goal!|converts/.test(low) ? "gol" : null;
+  // del relato de ESPN (Opta): qué pasó y dónde fue cada penal de la tanda. En ligas con relato corto ("Penalty - Missed at 122'") solo se sabe si entró
+  const t = String(c.text || ""), low = t.toLowerCase(), ty = String((((c.play || {}).type) || {}).text || "").toLowerCase();
+  let tipo = /penalty saved|saved in|is saved/.test(low) ? "atajado" : /hits the (left |right )?post|hits the bar|crossbar/.test(low) ? "palo" : /penalty missed|misses|too high|wide|over the bar/.test(low) ? "afuera" : /goal!|converts/.test(low) ? "gol" : null;
+  if (!tipo || /penalty - (scored|missed|saved) at/.test(low)) tipo = /saved/.test(ty + low) ? "atajado" : /scored/.test(ty + low) ? "gol" : /missed/.test(ty + low) ? "fallo" : tipo;
   const pie = /left footed/.test(low) ? "zurda" : /right footed/.test(low) ? "derecha" : /header/.test(low) ? "cabeza" : null;
   let lugar = null;
   const m = low.match(/(top|bottom|high|centre)?\s*(left|right|centre)?\s*(?:corner|of the goal)/);
@@ -2991,11 +2992,12 @@ function psoDatos(j, H) {
   const tiros = [...th.shots.map(x => ({ ...x, lado: "h" })), ...ta.shots.map(x => ({ ...x, lado: "a" }))]
     .sort((a, b) => (+a.id || 0) - (+b.id || 0) || a.shotNumber - b.shotNumber || (a.lado === "h" ? -1 : 1));
   // relato de la tanda en orden; se empareja por orden y se confirma con el resultado (y si no calza, por apellido)
-  const rel = (j.commentary || []).filter(c => ((c.play || {}).period || {}).number === 5 && /penalt/i.test(((c.play || {}).type || {}).text || "") + " " + (c.text || ""))
-    .map(c => ({ c, r: psoRelato(c) })).filter(x => x.r.tipo);
+  // los penales de la tanda son los últimos penales del relato (antes puede haber penales en el partido)
+  const pens = (j.commentary || []).filter(c => /penalty - (scored|missed|saved)|penalty (saved|missed)|converts the penalty/i.test((((c.play || {}).type || {}).text || "") + " " + (c.text || "")));
+  const rel = pens.slice(-tiros.length).map(c => ({ c, r: psoRelato(c) })).filter(x => x.r.tipo);
   const ape = n => String(n || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().split(/\s+/).pop();
   const usados = new Set();
-  tiros.forEach((x, i) => { let k = rel[i] && ((rel[i].r.tipo === "gol") === !!x.didScore) && !usados.has(i) ? i : -1;
+  tiros.forEach((x, i) => { let k = rel[i] && ((rel[i].r.tipo === "gol") === !!x.didScore) && !usados.has(i) && String(rel[i].c.text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(ape(x.player)) ? i : -1;
     if (k < 0) k = rel.findIndex((y, n) => !usados.has(n) && (y.r.tipo === "gol") === !!x.didScore && String(y.c.text || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(ape(x.player)));
     if (k >= 0) { usados.add(k); x.rel = rel[k].r; } });
   // marcador acumulado, ronda y penal decisivo
@@ -3039,7 +3041,7 @@ function vShootout(j, H) {
       return x ? `<span class="pso-d ${x.didScore ? "ok" : "ko"}${tiros.find(y => y.id === x.id && y.decisivo) ? " dec" : ""}" title="${esc(x.player)}: ${x.didScore ? "gol" : "falló"}">${x.didScore ? "✓" : "✕"}</span>` : `<span class="pso-d${sigue ? " next" : ""}"></span>`; }).join("")}</span><b class="pso-t num${gan === l ? " win" : ""}">${esc(so[l])}</b></div>`;
   const nuevos = new Set(tiros.filter(x => !VV.psoVisto.has(String(x.id))).map(x => String(x.id))); tiros.forEach(x => VV.psoVisto.add(String(x.id)));
   const primera = VV.psoVisto.size === nuevos.size;   // al abrir la página no se anima todo
-  const qEs = x => !x.rel ? (x.didScore ? "Gol" : "Falló") : x.didScore ? "Gol" : x.rel.tipo === "atajado" ? "Atajado" : x.rel.tipo === "palo" ? (x.rel.fuera === "travesaño" ? "Al travesaño" : "Al palo") : "Afuera";
+  const qEs = x => !x.rel || x.rel.tipo === "fallo" ? (x.didScore ? "Gol" : "Falló") : x.didScore ? "Gol" : x.rel.tipo === "atajado" ? "Atajado" : x.rel.tipo === "palo" ? (x.rel.fuera === "travesaño" ? "Al travesaño" : "Al palo") : "Afuera";
   const kick = x => { const t = tm[x.lado], r = x.rel || {};
     return `<li class="pso-kick ${x.lado} ${x.didScore ? "ok" : "ko"}${x.decisivo ? " dec" : ""}${nuevos.has(String(x.id)) && !primera ? " nuevo" : ""}">
       <span class="pso-who">${face(null, null, x.playerId, x.player, "sm")}<span><b>${esc(x.player)}</b><small>${esc(t.short)}${r.pie ? ` · ${r.pie === "cabeza" ? "de cabeza" : r.pie}` : ""}${r.lugar && x.didScore ? ` · ${PSO_ES[r.lugar]}` : ""}</small></span></span>
