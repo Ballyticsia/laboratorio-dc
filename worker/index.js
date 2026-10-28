@@ -570,6 +570,29 @@ async function preguntarIA(env, b, ctx, req) {
   return json(out);
 }
 
+// xG y estadísticas en vivo de API-Football (el id del partido viene en site/data/arbitros.json)
+const XG_TOPE_DIA = 1000, XG_MIN_RESTANTES = 2000;
+async function xgVivo(env, ctx, f) {
+  if (!/^\d{4,10}$/.test(f || "")) return json({ ok: false, error: "partido" }, 400);
+  if (!env.API_FOOTBALL_KEY) return json({ ok: false, error: "sin clave" }, 503);
+  const cache = caches.default, ck = new Request("https://xg.ballytics/" + f);
+  const hit = await cache.match(ck); if (hit) return json({ ...(await hit.json()), cache: true });
+  // topes: consultas del día para esto y lo que le queda al plan (lo usa también el robot de datos)
+  const key = `afxg:${ymdUTC()}`, st = (await env.SUBS.get(key, "json")) || { n: 0, rem: null };
+  if (st.n >= XG_TOPE_DIA || (st.rem != null && st.rem < XG_MIN_RESTANTES)) return json({ ok: false, error: "tope" }, 429);
+  const r = await fetch(`https://v3.football.api-sports.io/fixtures/statistics?fixture=${f}`, { headers: { "x-apisports-key": env.API_FOOTBALL_KEY } });
+  st.n++; const rem = +r.headers.get("x-ratelimit-requests-remaining"); if (!isNaN(rem) && r.headers.get("x-ratelimit-requests-remaining") != null) st.rem = rem;
+  ctx.waitUntil(env.SUBS.put(key, JSON.stringify(st), { expirationTtl: 2 * 86400 }));
+  if (!r.ok) return json({ ok: false, error: "api " + r.status }, 502);
+  const j = await r.json();
+  const val = (s, t) => { const x = (s || []).find(y => y.type === t); return x ? x.value : null; };
+  const eq = (j.response || []).map(x => ({ team: (x.team || {}).name, xg: val(x.statistics, "expected_goals"), tiros: val(x.statistics, "Total Shots"), arco: val(x.statistics, "Shots on Goal"),
+    area: val(x.statistics, "Shots insidebox"), posesion: val(x.statistics, "Ball Possession"), ataj: val(x.statistics, "Goalkeeper Saves") }));
+  const out = { ok: true, eq, t: new Date().toISOString() };
+  ctx.waitUntil(cache.put(ck, json(out, 200, { "cache-control": "public, max-age=90" })));
+  return json(out);
+}
+
 // 👍/👎 de las respuestas de la IA: pregunta, respuesta y voto se guardan 60 días para mejorarla
 async function iaVoto(env, b) {
   const rid = String(b.rid || ""), v = +b.v, uid = String(b.uid || "");
@@ -605,6 +628,7 @@ export default {
       else if (p.startsWith("/jugador/")) res = await jugador(env, p.split("/")[2], ctx, req);
       else if (p === "/dia") res = await dia(ctx, (u.searchParams.get("d") || "").split(","));
       else if (p === "/jugadores") res = await jugadoresPartido(env, u.searchParams);
+      else if (p === "/xg") res = await xgVivo(env, ctx, u.searchParams.get("f"));
       else if (p === "/ia/resumen") res = json({ ok: true, ...((await env.SUBS.get("iavres", "json")) || { d: {}, m: {}, tipo: {} }) });
       else if (p === "/ia/votos") res = await iaVotos(env, req);
       else if (p === "/afestado") res = json({ ok: true, ...((await env.SUBS.get("afrem", "json")) || {}), pedidos: Object.keys((await env.SUBS.get("afped", "json")) || {}).length });

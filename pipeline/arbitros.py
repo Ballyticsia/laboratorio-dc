@@ -242,8 +242,9 @@ def actualizar_dias():
             continue
         try:
             r = _af(f"/fixtures?date={d}")
-            sal[d] = [[f["fixture"]["date"], f["teams"]["home"]["name"], f["teams"]["away"]["name"], limpiar(f["fixture"]["referee"])]
-                      for f in r if limpiar(f["fixture"].get("referee"))]
+            # [fecha, local, visita, árbitro, id de API-Football]: el id sirve para el xG en vivo del centro del partido
+            sal[d] = [[f["fixture"]["date"], f["teams"]["home"]["name"], f["teams"]["away"]["name"], limpiar(f["fixture"].get("referee")) or "", f["fixture"]["id"]]
+                      for f in r]
             est[d] = datetime.now(timezone.utc).isoformat(timespec="minutes")
         except Exception as e:
             print(f"  ✗ árbitros del {d}: {e}")

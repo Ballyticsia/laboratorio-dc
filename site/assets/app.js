@@ -2907,11 +2907,38 @@ async function vFillMatch(force) {
     const lives = H.state === "in" ? [{ hId: H.h.id, aId: H.a.id, hs: +H.h.score || 0, as: +H.a.score || 0 }] : [];
     body.innerHTML = !g.length ? `<div class="panel empty">Sin tabla para esta competición.</div>` : lives.length ? liveTableHtml(g, lives, H.slug, [H.h.id, H.a.id]) : stTable(g, [H.h.id, H.a.id], H.slug); }
   if (tab === "minuto") body.innerHTML = vComments(j);
+  if (tab === "resumen" || tab === "estadisticas") xgCargar(id, H);
 }
 const ARB_STOP = new Set(["fc", "cf", "sc", "ac", "afc", "cd", "club", "de", "del", "la", "el", "al", "the", "fk", "sk", "ca", "cr", "u", "sad", "deportivo", "atletico", "sporting", "real", "united", "city", "y"]);
 const arbTok = n => String(n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length > 2 && !ARB_STOP.has(w));
 const arbIgual = (a, b) => { const A = arbTok(a), B = arbTok(b); return A.some(w => B.some(x => x === w || (w.length > 3 && (x.startsWith(w) || w.startsWith(x))))); };
 async function arbDia() { if (VV.arbDia) return VV.arbDia; try { VV.arbDia = await vget("data/arbitros.json?t=" + Math.floor(Date.now() / 6e5)); } catch (e) { VV.arbDia = {}; } return VV.arbDia; }
+// xG en vivo (API-Football vía el servidor de avisos): el id del partido sale de data/arbitros.json
+function afIdDeEvento(H) {
+  const t = new Date(H.date).getTime(), dias = [-1, 0, 1].map(k => new Date(t + k * DAYMS).toISOString().slice(0, 10));
+  for (const d of dias) for (const x of (VV.arbDia || {})[d] || []) if (x[4] && Math.abs(new Date(x[0]).getTime() - t) < 12 * 3600e3 && arbIgual(x[1], H.h.name || H.h.short) && arbIgual(x[2], H.a.name || H.a.short)) return x[4];
+  return null;
+}
+VV.xg = VV.xg || {};
+function xgRow(id) {
+  const x = VV.xg[id]; if (!x || !x.eq) return "";
+  const n = v => v == null || v === "" ? null : parseFloat(String(v).replace("%", ""));
+  const rows = [["xg", "xG (goles esperados)", 2], ["area", "Remates dentro del área", 0]].map(([k, lab, d]) => { const a = n(x.eq[0][k]), b = n(x.eq[1][k]); if (a == null || b == null) return "";
+    const t = (a + b) || 1; return `<div class="vst xgst"><span class="num ${a > b ? "hi h" : ""}">${dec(a, d)}</span><span class="vsl">${lab}</span><span class="num ${b > a ? "hi a" : ""}">${dec(b, d)}</span>
+      <span class="vbars"><span class="vb l"><i style="width:${100 * a / t}%"></i></span><span class="vb r"><i style="width:${100 * b / t}%"></i></span></span></div>`; }).join("");
+  return rows ? rows + `<p class="note xgsrc">xG: calidad de las ocasiones según API-Football ${help("Goles esperados (xG): la suma de la probabilidad de gol de cada remate según dónde y cómo fue. Un equipo con más xG creó mejores ocasiones, aunque vaya perdiendo.")}</p>` : "";
+}
+async function xgCargar(id, H) {
+  if (H.state === "pre") return;
+  const c = VV.xg[id]; if (c && Date.now() - c.at < (H.state === "in" ? 90e3 : 36e5)) return;
+  const f = afIdDeEvento(H), url = f && await pushCfg(); if (!f || !url) return;
+  try { const r = await (await fetch(`${url}/xg?f=${f}`)).json(); if (!r.ok || !(r.eq || []).length || r.eq.length < 2) { VV.xg[id] = { at: Date.now() }; return; }
+    // el orden de API-Football no siempre es local-visita
+    const eq = arbIgual(r.eq[0].team, H.a.name || H.a.short) && !arbIgual(r.eq[0].team, H.h.name || H.h.short) ? [r.eq[1], r.eq[0]] : r.eq;
+    VV.xg[id] = { at: Date.now(), eq };
+  } catch (e) { VV.xg[id] = { at: Date.now() }; return; }
+  if (R.v === "envivo" && R.id === id) document.querySelectorAll(`[data-xg="${CSS.escape(String(id))}"]`).forEach(el => el.innerHTML = xgRow(id));
+}
 function arbDeEvento(H) {
   const t = new Date(H.date).getTime(), dias = [-1, 0, 1].map(k => new Date(t + k * DAYMS).toISOString().slice(0, 10));
   for (const d of dias) for (const [f, h, a, r] of (VV.arbDia || {})[d] || []) if (Math.abs(new Date(f).getTime() - t) < 12 * 3600e3 && arbIgual(h, H.h.name || H.h.short) && arbIgual(a, H.a.name || H.a.short)) return r;
@@ -2960,7 +2987,7 @@ function vStatRows(j, H, only) {
       <span class="vbars"><span class="vb l"><i style="width:${100 * va / t}%"></i></span><span class="vb r"><i style="width:${100 * vb / t}%"></i></span></span></div>`;
   }).join("");
 }
-function vKeyStats(j, H) { const r = vStatRows(j, H, KEY); return r ? `<div class="panel stack"><h3>Estadísticas importantes</h3>${r}<button class="link" data-go="envivo" data-id="${esc(R.id)}" data-tab="estadisticas" data-keep>Todas las estadísticas →</button></div>` : ""; }
+function vKeyStats(j, H) { const r = vStatRows(j, H, KEY); return r ? `<div class="panel stack"><h3>Estadísticas importantes</h3><div data-xg="${esc(R.id)}">${xgRow(R.id)}</div>${r}<button class="link" data-go="envivo" data-id="${esc(R.id)}" data-tab="estadisticas" data-keep>Todas las estadísticas →</button></div>` : ""; }
 function seasonCmp(L, home, away) {
   const s1 = statOf(L, home), s2 = statOf(L, away);
   return [["Goles por partido", "gf", 2], ["Goles recibidos", "gc", 2], ["Tiros al arco", "tiros_arco", 1], ["Córners", "corners", 1], ["Posesión (%)", "posesion", 0], ["Tarjetas", "tarjetas", 1], ["Ambos marcan", "ambos", -1], ["Más de 2,5 goles", "over25", -1]]
@@ -2986,7 +3013,7 @@ function vPreStats(j, H, m) {
   if (f1 || f2) out += `<div class="panel stack"><h3>Últimos 5 partidos</h3>${f1}${f2}</div>`;
   return out || `<div class="panel stack"><h3>Estadísticas</h3><p class="note">Las estadísticas aparecen cuando empieza el partido.</p></div>`;
 }
-function vStats(j, H, m) { const r = vStatRows(j, H); if (!r && H.state === "pre") return vPreStats(j, H, m); return `<div class="panel stack"><h3>Estadísticas</h3>${r || `<p class="note">Todavía no hay estadísticas de este partido.</p>`}</div>`; }
+function vStats(j, H, m) { const r = vStatRows(j, H); if (!r && H.state === "pre") return vPreStats(j, H, m); return `<div class="panel stack"><h3>Estadísticas</h3><div data-xg="${esc(R.id)}">${xgRow(R.id)}</div>${r || `<p class="note">Todavía no hay estadísticas de este partido.</p>`}</div>`; }
 function vTimeline(evs, H) {
   if (!evs.length) return `<div class="panel stack"><h3>Incidencias</h3><p class="note">${H.state === "pre" ? "El partido aún no empieza." : "Sin goles ni tarjetas por ahora."}</p></div>`;
   return `<div class="panel stack"><h3>Incidencias</h3><div class="vtl">${evs.slice().reverse().map(e => `<div class="vev ${e.lado}"><span class="vem num">${esc(e.min)}</span><span class="vei ${e.kind}">${ICON[e.kind]}</span><span class="vew"><b>${esc(e.who[0] || "")}</b>${e.kind === "sub" && e.who[1] ? `<small>sale ${esc(e.who[1])}</small>` : e.kind === "goal" && e.who[1] ? `<small>asistencia ${esc(e.who[1])}</small>` : e.kind === "og" ? "<small>en contra</small>" : ""}</span></div>`).join("")}</div></div>`;

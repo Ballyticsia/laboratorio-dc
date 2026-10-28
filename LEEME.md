@@ -110,6 +110,11 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - Se ve en el partido (panel Árbitro), en la liga (pestaña Árbitros), en el centro del partido (Información) y la IA lo conoce. Las tarjetas ajustadas por árbitro se muestran, pero todavía no cambian el modelo.
 - Medición antes de usarlo: el registro guarda desde el 28-10-2026 las tarjetas ajustadas por árbitro (`tA`) junto a las del modelo (`tE`) y las reales (`tR`), y `arbitros.backtest` compara con toda la temporada usando el factor de cada árbitro calculado con sus otros partidos. Se ve en Resultados del modelo ("¿Sirve ajustar las tarjetas por el árbitro?"). Primer resultado: con 3.024 partidos la señal existe pero es chica (error 1,77 → 1,76 tarjetas), y sobre el modelo (152 partidos) todavía no mejora.
 
+## xG en vivo (API-Football)
+- `site/data/arbitros.json` guarda, para cada partido de ayer a pasado mañana, el id de API-Football (`[fecha, local, visita, árbitro, id]`).
+- En el centro del partido (Resumen y Estadísticas), si el partido está en juego o terminó, la página pide `GET /xg?f=<id>` al servidor de avisos, que consulta `/fixtures/statistics` y muestra xG y remates dentro del área. El robot de avisos copia el secreto `API_FOOTBALL_KEY` al servidor.
+- Cuida el plan: cada partido se pide como mucho cada 90 segundos (caché compartida), hasta 1.000 consultas al día (`XG_TOPE_DIA`) y nunca si al plan le quedan menos de 2.000 en el día (`XG_MIN_RESTANTES`).
+
 ## CLV (¿el modelo se adelanta al mercado?)
 - Desde el 27-10-2026, `data/registro.csv` guarda para cada partido la cuota de ESPN sin margen la primera vez que aparece (`eH`, `eD`, `eA`, con el modelo propio de ese momento en `oH`, `oD`, `oA` y la hora en `et`) y la última antes del inicio (`kH`, `kD`, `kA`, `kt`).
 - `clv_summary` en `pipeline/generar.py` toma el resultado donde el modelo veía al menos 2 puntos más que la primera cuota y mide cuánto se movió el mercado hacia ese lado hasta el cierre. Se muestra en Resultados del modelo, con el detalle por liga.

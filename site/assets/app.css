@@ -1384,3 +1384,5 @@ body.ia-open #iafab{display:none}
 .vhub::-webkit-scrollbar{display:none}
 .vhub button{flex:none;white-space:nowrap}
 .sr{left:0}
+.xgst .vsl{color:var(--ink);font-weight:700}
+.xgsrc{margin:2px 0 8px}

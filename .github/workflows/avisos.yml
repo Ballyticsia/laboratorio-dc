@@ -88,6 +88,15 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           if [ -n "$GEMINI_API_KEY" ]; then printf '%s' "$GEMINI_API_KEY" | npx --yes wrangler@4 secret put GEMINI_API_KEY; else echo "Sin GEMINI_API_KEY: la IA usa solo Cloudflare."; fi
+      - name: Clave de API-Football para el xG en vivo (si existe el secreto)
+        if: steps.s.outputs.ok == 'si'
+        working-directory: worker
+        env:
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$API_FOOTBALL_KEY" ]; then printf '%s' "$API_FOOTBALL_KEY" | npx --yes wrangler@4 secret put API_FOOTBALL_KEY; else echo "Sin API_FOOTBALL_KEY: el centro del partido no muestra xG en vivo."; fi
       - name: Probar y guardar la dirección para el sitio
         if: steps.s.outputs.ok == 'si'
         run: |
