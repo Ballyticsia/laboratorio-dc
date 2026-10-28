@@ -12,8 +12,9 @@ permissions:
   contents: write
   actions: write
 
+# grupo propio: si compartiera el de "Actualizar datos", dos cambios seguidos cancelarían la instalación pendiente
 concurrency:
-  group: actualizar
+  group: avisos
   cancel-in-progress: false
 
 jobs:
