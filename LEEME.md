@@ -128,6 +128,11 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - La lista del día D se fija a las 18:00 (hora de Chile) del día D-1 o en la primera actualización después, solo con partidos que no han empezado, y no cambia más. Cuota real de DraftKings (ESPN) del momento en que se fijó; 1 unidad por pick; ganado suma cuota − 1, perdido resta 1, sin resultado 4 días después queda nulo. También se guarda la cuota de cierre.
 - Se ve en la sección Picks (`#/picks`), en una tarjeta del inicio y la IA los conoce. Si se cambia una regla, anotar la fecha en `REGLAS["cambios"]`.
 
+## Páginas para Google y para compartir
+- `pipeline/seo.py` corre antes de publicar (no se guarda en el repositorio) y escribe en `site/` una página propia por partido (`partido/<liga>/<id>-<local>-vs-<visita>/`: los de los próximos 14 días y los ya calificados del registro), por liga (`liga/<liga>/`) y para Picks, Modelo, Cómo funciona y las páginas legales, más `sitemap.xml`, `robots.txt` y `404.html`.
+- Cada página es la misma app con su título, descripción, vista previa (`assets/og.png`), datos estructurados y el texto principal ya escrito; `app.js` lee la dirección y abre esa pantalla. El botón "Compartir enlace" del partido usa esa dirección, que en WhatsApp se ve con título y descripción.
+- Para que Google la encuentre antes: en Google Search Console agrega la propiedad con prefijo de URL `https://ballyticsia.github.io/laboratorio-dc/` y envía `sitemap.xml`. Con dominio propio, cambia `SITIO_URL` en `pipeline/seo.py` (o como variable de entorno) y las direcciones de `site/index.html`.
+
 ## Cambiar cosas
 - **Horario:** la línea `cron` del workflow (está en hora UTC; Chile es UTC-3).
 - **Ligas:** la lista `LIGAS` en `pipeline/generar.py` (códigos de ESPN como `eng.1`, `esp.1`, `por.1`, `ned.1`, `arg.1`, `chi.1`).

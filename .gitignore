@@ -3,3 +3,16 @@ __pycache__/
 data/espn_ejemplo.json
 .DS_Store
 node_modules/
+# páginas para Google: se generan al publicar (pipeline/seo.py)
+site/partido/
+site/liga/
+site/picks/
+site/modelo/
+site/metodo/
+site/terminos/
+site/privacidad/
+site/responsable/
+site/sobre/
+site/sitemap.xml
+site/robots.txt
+site/404.html

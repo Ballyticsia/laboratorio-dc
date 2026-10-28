@@ -2,7 +2,7 @@
    - Lo del propio sitio se pide primero a la red y se guarda una copia para abrir sin conexión.
    - Lo de ESPN y otros sitios va directo (no pasa por aquí).
    - Los avisos llegan como "push" sin contenido; aquí se piden los mensajes al servidor de avisos. */
-const CACHE = "bt-v17";   // cambiar al publicar cambios grandes del caparazón
+const CACHE = "bt-v18";   // cambiar al publicar cambios grandes del caparazón
 const SHELL = ["./", "index.html", "assets/app.css", "assets/app.js", "assets/competiciones.json", "assets/selecciones.json", "assets/icon-192.png"];
 
 self.addEventListener("install", e => {
@@ -21,7 +21,8 @@ self.addEventListener("fetch", e => {
     return r;
   }).catch(() => caches.match(e.request, { ignoreSearch: true }).then(r => r
     // index.html solo como respaldo de una página; a un pedido de datos nunca se le devuelve HTML
-    || (nav ? caches.match("index.html") : new Response(JSON.stringify({ error: "sin conexión" }), { status: 503, headers: { "content-type": "application/json" } })))));
+    // sin conexión, una página con dirección propia (partido/…, liga/…) se abre en la app principal
+    || (nav ? (new URL("./", self.registration.scope).pathname === u.pathname || u.pathname.endsWith("/index.html") ? caches.match("index.html") : Response.redirect(new URL("./", self.registration.scope).href, 302)) : new Response(JSON.stringify({ error: "sin conexión" }), { status: 503, headers: { "content-type": "application/json" } })))));
 });
 
 self.addEventListener("push", e => {

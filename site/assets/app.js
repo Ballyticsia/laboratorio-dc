@@ -133,7 +133,7 @@ async function load() {
   [D.indice, D.fotos] = await Promise.all([getJSON("data/indice.json"), getJSON("data/fotos.json").catch(() => ({}))]);
   D.meta = {}; D.indice.ligas.forEach(l => D.meta[l.id] = l);
   // primero lo que se ve en pantalla; el resto se carga en segundo plano
-  const h = (location.hash || "#/").slice(2).split("/");
+  const h = curHash().slice(2).split("/");
   const prio = new Set((D.indice.portada && D.indice.portada.partidos || []).map(x => x.liga));
   (D.indice.portada && D.indice.portada.jugadores || []).slice(0, 2).forEach(x => prio.add(x.liga));
   prio.add(D.indice.ligas[0].id);
@@ -219,6 +219,29 @@ function buildMenu() {
 }
 
 /* ---------------- rutas ---------------- */
+// Las páginas para Google tienen dirección propia (partido/premier/123-chelsea-vs-…/); el resto del sitio usa "#/…"
+const BASE = new URL(".", document.baseURI).pathname, BASE_URL = new URL(".", document.baseURI).href;
+const slugify = s => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+function pathHash() {
+  const rest = decodeURIComponent(location.pathname.startsWith(BASE) ? location.pathname.slice(BASE.length) : "").replace(/index\.html$/, "").replace(/\/+$/, "");
+  if (!rest) return null;
+  const s = rest.split("/");
+  if (s[0] === "partido" && s[1] && s[2]) return `#/partido/${s[1]}/${s[2].split("-")[0]}`;
+  if (s[0] === "liga" && s[1]) return `#/liga/${s[1]}/resumen`;
+  if (s[0] === "modelo") return "#/registro";
+  if (["picks", "metodo", "terminos", "privacidad", "responsable", "sobre", "ia", "vivo", "prode", "seguimiento", "competiciones"].includes(s[0])) return "#/" + s[0];
+  return "#/nf";
+}
+const curHash = () => (location.hash && location.hash !== "#" ? location.hash : pathHash() || "#/");
+// dirección para compartir: la página propia del partido (con su vista previa en WhatsApp) cuando existe
+function cleanUrl(r) {
+  if (r.v === "partido" && /^\d+$/.test(String(r.id))) { const p = findMatch(r.liga, r.id) || (D.registro && (D.registro.filas || []).find(f => String(f.id) === String(r.id)));
+    if (p) return `${BASE_URL}partido/${r.liga}/${r.id}-${slugify(p.home)}-vs-${slugify(p.away)}/`; }
+  if (r.v === "liga" && (!r.tab || r.tab === "resumen")) return `${BASE_URL}liga/${r.liga}/`;
+  if (r.v === "picks") return `${BASE_URL}picks/`;
+  if (r.v === "registro" && !r.tab) return `${BASE_URL}modelo/`;
+  return BASE_URL + toHash(r);
+}
 function toHash(r) {
   if (r.v === "liga") return `#/liga/${r.liga}/${r.tab || "resumen"}`;
   if (r.v === "partido") return `#/partido/${r.liga}/${encodeURIComponent(r.id)}${r.tab && r.tab !== "resumen" ? "/" + r.tab : ""}`;
@@ -236,7 +259,7 @@ function toHash(r) {
   return `#/${r.v}`;
 }
 function fromHash() {
-  const p = (location.hash || "#/").slice(2).split("/").map(decodeURIComponent);
+  const p = curHash().slice(2).split("/").map(decodeURIComponent);
   const first = ligasIds()[0];
   switch (p[0]) {
     case "liga": return (D.ligas[p[1]] || (D.meta && D.meta[p[1]])) ? { v: "liga", liga: p[1], tab: p[2] || "resumen" } : p[1] ? { v: "nf", what: "liga" } : { v: "liga", liga: first, tab: "resumen" };
@@ -268,14 +291,20 @@ function fromHash() {
     default: return { v: "nf" };
   }
 }
-let skipHash = false;
+let skipHash = false, lastUrl = location.href;
 function go(r, push = true) {
   const keep = r.keepScroll;
   R = r; render();
-  if (push) { const h = toHash(r); if (location.hash !== h) { skipHash = true; try { location.hash = h; } catch (e) {} } }
+  if (push) { const h = toHash(r);
+    // desde una página con dirección propia se vuelve a la dirección principal con "#", sin recargar
+    if (location.pathname !== BASE && !location.pathname.endsWith(BASE + "index.html")) { try { history.pushState(null, "", BASE + h); } catch (e) {} }
+    else if (location.hash !== h) { skipHash = true; try { location.hash = h; } catch (e) {} }
+    lastUrl = location.href; }
   if (!keep) window.scrollTo({ top: 0 });
 }
-window.addEventListener("hashchange", () => { if (skipHash) { skipHash = false; return; } R = fromHash(); render(); });
+function syncRoute() { if (skipHash) { skipHash = false; lastUrl = location.href; return; } if (location.href === lastUrl) return; lastUrl = location.href; R = fromHash(); render(); }
+window.addEventListener("hashchange", syncRoute);
+window.addEventListener("popstate", syncRoute);
 document.addEventListener("click", e => {
   const el = e.target.closest("[data-go]"); if (!el) return;
   const v = el.dataset.go;
@@ -301,6 +330,7 @@ function render() {
     sobre: vSobre, responsable: vResponsable, jugador: vJugador, comparar: vComparar, combinada: vCombinada, seguimiento: vSeguimiento,
     vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias, selecciones: vSelecciones, ficha: vFicha, prode: vProde, privacidad: vPrivacidad, nf: vNoEncontrado, ia: vIA, picks: vPicks, terminos: vTerminos }[R.v] || vInicio;
   $app.innerHTML = staleBanner() + f();
+  try { document.title = routeTitle(); } catch (e) {}
   if (R.v === "partido") { bindOdds(); if (R.tab === "alineaciones" || document.getElementById("xi-adj")) loadSummary(); }
   if (R.v === "comparar") bindCompare();
   if (R.v === "combinada") bindCombinada();
@@ -313,6 +343,18 @@ function render() {
   const hs = document.querySelector('.hsort [aria-pressed="true"]'); if (hs && hs.offsetLeft > hs.parentNode.clientWidth - 40) hs.parentNode.scrollLeft = hs.offsetLeft - 60;
 }
 
+// para las pruebas automáticas (tests/): ruta actual, enlace limpio y datos cargados
+window.__bt = { route: () => R, cleanUrl: () => cleanUrl(R), data: () => D };
+function routeTitle() {
+  const L = D.ligas[R.liga], T = " | Ballytics";
+  if (R.v === "partido") { const p = findMatch(R.liga, R.id) || (D.registro && (D.registro.filas || []).find(f => String(f.id) === String(R.id))); if (p) return `${p.home} vs ${p.away}: probabilidades y pronóstico${T}`; }
+  if ((R.v === "liga" || R.v === "inicio" && R.liga && R.liga !== "todas") && L) return `${L.nombre}: probabilidades y pronósticos${T}`;
+  if (R.v === "equipo" && R.team) return `${R.team}: partidos y probabilidades${T}`;
+  if (R.v === "jugador" && L) { const g = (L.goleadores || []).find(x => String(x.jid) === String(R.id)); if (g) return g.jugador + T; }
+  const fijo = { picks: "Picks públicos", registro: "Resultados del modelo", metodo: "Cómo funciona", vivo: "Partidos en vivo", prode: "Prode", seguimiento: "Mis pronósticos", terminos: "Términos de uso", privacidad: "Privacidad",
+    responsable: "Juego responsable", sobre: "Sobre Ballytics", competiciones: "Todas las competiciones", combinada: "Combinada", ia: "Ballytics IA", noticias: "Noticias", selecciones: "Selecciones" }[R.v];
+  return fijo ? fijo + T : "Ballytics: probabilidades de fútbol";
+}
 /* ---------------- componentes ---------------- */
 const formHtml = f => `<span class="form">${(f || []).map(x => `<i class="${x}">${x}</i>`).join("")}</span>`;
 const kpi = (cls, l, v, s) => `<div class="kpi ${cls}"><span class="lbl">${l}</span><span class="v num">${v}</span>${s ? `<span class="s">${s}</span>` : ""}</div>`;
@@ -785,6 +827,13 @@ function vNoEncontrado(msg) {
     <p class="muted">Puede que el enlace esté mal escrito o que el partido ya se haya jugado y salido del calendario. Busca un equipo, jugador o competición:</p>
     <div class="row nf-act"><button class="btn" data-focus-q>Buscar</button><button class="btn ghost" data-go="inicio" data-liga="todas">Ir al inicio</button><button class="btn ghost" data-go="vivo">Partidos de hoy</button><button class="btn ghost" data-go="registro">Resultados del modelo</button></div></div></section>`;
 }
+// enlace a la página propia del partido o la liga: en WhatsApp se ve con título y descripción
+document.addEventListener("click", async e => {
+  if (!e.target.closest("[data-sharelink]")) return;
+  const url = cleanUrl(R), title = document.title;
+  try { if (navigator.share && /Mobi|iPad|iPhone|Android/.test(navigator.userAgent)) { await navigator.share({ title, url }); return; } await navigator.clipboard.writeText(url); toast("Enlace copiado."); }
+  catch (x) { if (x && x.name === "AbortError") return; try { await navigator.clipboard.writeText(url); toast("Enlace copiado."); } catch (y) { toast(url); } }
+});
 document.addEventListener("click", e => { if (e.target.closest("[data-focus-q]")) { const q = document.getElementById("q"); if (q) { window.scrollTo({ top: 0 }); q.focus(); } } });
 
 /* ---------------- INICIO ---------------- */
@@ -1192,7 +1241,7 @@ function vPartido() {
     <div class="panel match">
       <div class="livebox" data-live-box="${esc(p.id)}" hidden></div>
       <div class="meta">${leagueMark(L, "sm")}<span>${esc(L.nombre)}</span><span>·</span><span>${new Date(p.kickoff).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })} ${hhmm(p.kickoff)}</span><span class="cdown" data-cd="${esc(p.kickoff)}"></span></div>
-      <div class="mact"><button class="btn ghost sm" data-share data-liga="${L.id}" data-mid="${esc(p.id)}">Compartir imagen</button><button class="btn ghost sm" data-share data-fmt="story" data-liga="${L.id}" data-mid="${esc(p.id)}" title="Formato vertical 9:16 para historias de Instagram o WhatsApp">Imagen para historias</button><button class="btn ghost sm" data-ics="match" data-liga="${L.id}" data-mid="${esc(p.id)}">Agregar al calendario</button></div>
+      <div class="mact"><button class="btn ghost sm" data-sharelink>Compartir enlace</button><button class="btn ghost sm" data-share data-liga="${L.id}" data-mid="${esc(p.id)}">Compartir imagen</button><button class="btn ghost sm" data-share data-fmt="story" data-liga="${L.id}" data-mid="${esc(p.id)}" title="Formato vertical 9:16 para historias de Instagram o WhatsApp">Imagen para historias</button><button class="btn ghost sm" data-ics="match" data-liga="${L.id}" data-mid="${esc(p.id)}">Agregar al calendario</button></div>
       <div class="face">${side(sh, p.home, "l")}<span class="vs">VS</span>${side(sa, p.away, "r")}</div>
       <div class="probs">
         <div class="pt h"><span class="lbl">${esc(H)}</span><span class="v">${pct(k.H, 1)}</span><div class="tr"><i style="width:${100 * k.H}%"></i></div></div>
@@ -2247,12 +2296,12 @@ async function shareImage(L, p, fmt) {
   x.restore();
   x.fillStyle = "#5d677a"; x.font = `500 24px ${D2}`; x.textAlign = "center";
   x.fillText("Probabilidades de un modelo estadístico. No son consejos de apuesta. +18", W / 2, H - 95);
-  x.fillStyle = "#8792a6"; x.font = `600 26px ${D3}`; x.fillText(location.host + location.pathname.replace(/\/$/, ""), W / 2, H - 55);
+  x.fillStyle = "#8792a6"; x.font = `600 26px ${D3}`; x.fillText(new URL(BASE_URL).host + BASE.replace(/\/$/, ""), W / 2, H - 55);
   const blob = await new Promise(r => c.toBlob(r, "image/png"));
   const fname = `ballytics-${corto(L, p.home)}-${corto(L, p.away)}${story ? "-historia" : ""}.png`.replace(/\s+/g, "_");
   const file = new File([blob], fname, { type: "image/png" });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: `${corto(L, p.home)} vs ${corto(L, p.away)}`, text: "Probabilidades en Ballytics", url: location.href }); return; } catch (e) { if (e.name === "AbortError") return; }
+    try { await navigator.share({ files: [file], title: `${corto(L, p.home)} vs ${corto(L, p.away)}`, text: "Probabilidades en Ballytics", url: cleanUrl(R) }); return; } catch (e) { if (e.name === "AbortError") return; }
   }
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = fname; document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
@@ -3246,7 +3295,7 @@ async function vFillProde(code) {
   if (R.v !== "prode" || (R.id || "").toUpperCase() !== code) return;
   if (!g.ok) { box.innerHTML = `<div class="panel empty">${esc(g.error || "No existe ese prode.")}</div>`; return; }
   saveProde(code, g.nombre);
-  const link = `${location.origin}${location.pathname}#/prode/${code}`;
+  const link = `${BASE_URL}#/prode/${code}`;
   if (!g.miembro) { box.innerHTML = `<div class="panel prode-hero"><div><span class="lbl">Te invitaron a</span><h2>${esc(g.nombre)}</h2><p class="muted">${g.tabla.length} participantes.</p></div></div>
     <form class="panel stack" id="pr-join2" data-code="${esc(code)}" data-nombre="${esc(g.nombre)}"><h3>Unirme</h3><label class="f"><span class="lbl">Tu apodo</span><input name="alias" maxlength="24" value="${esc(lsGet("bt_alias", ""))}" required></label><button class="btn">Unirme al prode</button></form>`; return; }
   const tab = ["pronosticar", "ranking", "resultados"].includes(R.tab) ? R.tab : "pronosticar";
