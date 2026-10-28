@@ -3,7 +3,7 @@
  "creditos_usados": 0,
  "restantes": 334,
  "consultas": {
-  "soccer_epl": "error",
+  "soccer_epl": "sin partidos cerca",
   "soccer_spain_la_liga": "sin partidos cerca",
   "soccer_italy_serie_a": "copia",
   "soccer_germany_bundesliga": "sin partidos cerca",
@@ -25,10 +25,8 @@
   "soccer_spl": "copia",
   "soccer_belgium_first_div": "sin partidos cerca"
  },
- "errores": [
-  "soccer_epl events: HTTP Error 502: Bad Gateway"
- ],
+ "errores": [],
  "ligas": {},
- "partidos_con_cuota": 60,
- "actualizado": "2026-10-28T19:04+00:00"
+ "partidos_con_cuota": 58,
+ "actualizado": "2026-10-28T20:57+00:00"
 }
