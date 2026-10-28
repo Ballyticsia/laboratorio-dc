@@ -1778,7 +1778,12 @@ function lineupAdj(L, p, ros) {
     });
     share[lado] = Math.min(share[lado], 0.6);
   });
-  if (!out.h.length && !out.a.length) return `<div class="xi ok"><h3>Con las alineaciones confirmadas</h3><p class="note">Los goleadores principales de ambos equipos son titulares: las probabilidades no cambian.</p></div>`;
+  // amonestados más probables que no son titulares: un suplente juega poco (se deja un 25 %); sin citar, 0
+  const cards = (p.tarjetas_jug || []).slice(0, 8).filter(c => /^\d+$/.test(String(c.jid)) && !titular[String(c.jid)]).map(c => ({ c, banca: citado[String(c.jid)] === c.lado }));
+  const cardRows = cards.map(({ c, banca }) => { const t = c.lado === "h" ? p.home : p.away;
+    return `<div class="bj-row"><span class="bt ${banca ? "dud" : "out"}">${banca ? "Suplente" : "No citado"}</span>${face(L, t, c.jid, c.jugador, "sm")}<span class="bj-n"><b>${esc(c.jugador)}</b><small>${esc(corto(L, t))} · ${c.amarillas} amarillas · recibir amarilla: ${pct(c.p)} → ${pct(banca ? c.p * 0.25 : 0)}</small></span></div>`; }).join("");
+  const cardBlock = cardRows ? `<p class="lbl" style="margin-top:8px">Tarjetas</p>${cardRows}` : "";
+  if (!out.h.length && !out.a.length) return `<div class="xi ok"><h3>Con las alineaciones confirmadas</h3><p class="note">Los goleadores principales de ambos equipos son titulares: el resultado y los goles no cambian.</p>${cardBlock}</div>`;
   const lh = p.lh * (1 - 0.4 * share.h), la = p.la * (1 - 0.4 * share.a);
   const k0 = markets(pmatrix(L, p).m), k1 = markets(matrixLam(lh, la, L.modelo.rho).m);
   const rows = ["h", "a"].flatMap(lado => out[lado].map(x => { const t = lado === "h" ? p.home : p.away;
@@ -1786,7 +1791,7 @@ function lineupAdj(L, p, ros) {
     return `<div class="bj-row"><span class="bt ${x.banca ? "dud" : "out"}">${x.banca ? "Suplente" : "No citado"}</span>${face(L, t, x.g.jid, x.g.jugador, "sm")}<span class="bj-n"><b>${esc(x.g.jugador)}</b><small>${esc(corto(L, t))} · ${x.g.goles} goles en la temporada${x.p0 != null ? ` · marcar: ${pct(x.p0)} → ${pct(p1)}` : ""}</small></span></div>`; })).join("");
   return `<div class="xi"><h3>Con las alineaciones confirmadas ${help("Si un goleador importante empieza en la banca o no está citado, se descuenta parte de sus goles a los goles esperados de su equipo (un suplente puede entrar, así que cuenta menos). Es un ajuste estimado, hecho en tu navegador.")}</h3>
     <div class="mktrow adj"><span class="lbl">Con las alineaciones</span><span class="num">${pct(k1.H)} · ${pct(k1.D)} · ${pct(k1.A)}</span><span class="lbl">Antes</span><span class="num">${pct(k0.H)} · ${pct(k0.D)} · ${pct(k0.A)}</span></div>
-    ${rows}<p class="note">Goles esperados con las alineaciones: ${dec(lh, 2)} – ${dec(la, 2)} (antes ${dec(p.lh, 2)} – ${dec(p.la, 2)}).</p></div>`;
+    ${rows}<p class="note">Goles esperados con las alineaciones: ${dec(lh, 2)} – ${dec(la, 2)} (antes ${dec(p.lh, 2)} – ${dec(p.la, 2)}).</p>${cardBlock}</div>`;
 }
 
 /* ---------------- BAJAS (API-Football) ---------------- */
