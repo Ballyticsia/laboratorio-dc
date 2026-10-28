@@ -436,7 +436,9 @@ def ledger_update(pred_rows, jugados, now_iso, votos=None):
     cols = ["id", "liga", "kickoff", "home", "away", "lh", "la", "pH", "pD", "pA", "pO25", "pBTTS", "top", "predicho", "hg", "ag", "mH", "mD", "mA",
             "fH", "fD", "fA", "fO25", "fBTTS", "ftop", "jH", "jD", "jA", "jO25", "vH", "vD", "vA", "vN", "cE", "tE", "cR", "tR",
             # CLV: cuota de ESPN (sin margen) la primera vez que aparece (e*) con el modelo propio de ese momento (o*), y la última antes del inicio (k*)
-            "eH", "eD", "eA", "oH", "oD", "oA", "et", "kH", "kD", "kA", "kt"]
+            "eH", "eD", "eA", "oH", "oD", "oA", "et", "kH", "kD", "kA", "kt",
+            # tarjetas esperadas ajustadas por el árbitro designado (se mide antes de usarlo en el modelo)
+            "tA"]
     reg = pd.read_csv(REGISTRO, dtype={"id": str}) if os.path.exists(REGISTRO) else pd.DataFrame(columns=cols)
     reg = reg.reindex(columns=cols).set_index("id", drop=False)
     for c_ in ("et", "kt", "predicho", "top", "ftop"):   # columnas de texto (fechas y marcadores)
@@ -464,6 +466,8 @@ def ledger_update(pred_rows, jugados, now_iso, votos=None):
             reg.loc[p["id"], ["kH", "kD", "kA", "kt"]] = [*qd.round(4), now_iso]
         reg.loc[p["id"], ["cE", "tE"]] = [r(p["ch"] + p["ca"], 2) if p.get("ch") is not None and p.get("ca") is not None else np.nan,
                                           r(p["th"] + p["ta"], 2) if p.get("th") is not None and p.get("ta") is not None else np.nan]
+        ta = (p.get("arbitro") or {}).get("tarjetas_aj")
+        reg.loc[p["id"], "tA"] = r(ta, 2) if isinstance(ta, (int, float)) else np.nan
         pj = REGJ.setdefault(str(p["id"]), {})
         if "rg" not in pj:   # mientras no se juegue, se guarda la última predicción antes del partido
             pj["g"] = [[s_["jid"], s_.get("jugador", ""), s_["p"]] for s_ in sorted(p.get("goleadores", []), key=lambda z: -z["p"])[:8]]
@@ -609,6 +613,14 @@ def ledger_summary(reg, base):
                 lam = gc[e_].astype(float).values
                 mk[key] = dict(binario([pois_over(line, l) for l in lam], gc[r_].astype(float).values > line), linea=line,
                                esperado=r(lam.mean(), 2), promedio_real=r(gc[r_].astype(float).mean(), 2))
+        # ¿el árbitro mejora la predicción de tarjetas? mismos partidos, con y sin el ajuste
+        ga = g.dropna(subset=["tE", "tA", "tR"])
+        if len(ga):
+            sin, con, real = ga.tE.astype(float).values, ga.tA.astype(float).values, ga.tR.astype(float).values
+            yv = real > 4.5
+            mk["arbitro"] = dict(n=int(len(ga)), linea=4.5, real=r(real.mean(), 2), esperado_sin=r(sin.mean(), 2), esperado_con=r(con.mean(), 2),
+                                 error_sin=r(np.abs(sin - real).mean(), 3), error_con=r(np.abs(con - real).mean(), 3),
+                                 sin=binario([pois_over(4.5, l) for l in sin], yv), con=binario([pois_over(4.5, l) for l in con], yv))
         for key, cp, cr in (("goleadores", "g", "rg"), ("amarillas", "y", "ry")):
             pr = props(cp, cr)
             if pr:
@@ -955,8 +967,13 @@ def main():
     # registro público (después de las bajas, para guardar también el modelo con bajas)
     jug_df = pd.concat(jugados_all, ignore_index=True) if jugados_all else pd.DataFrame(columns=["id", "hg", "ag"])
     reg = ledger_update(preds_reg, jug_df, now.isoformat(timespec="minutes"), votos_gente([str(p["id"]) for p in preds_reg]))
+    resumen_reg = ledger_summary(reg, base)
+    try:   # backtest del árbitro con la temporada (sin mirar el partido que se predice)
+        resumen_reg["arbitro_bt"] = arbitros.backtest([(L, out) for L, out, _ in pendientes], reg)
+    except Exception as e:
+        print("  (backtest del árbitro no calculado:", e, ")")
     with open(os.path.join(SALIDA, "registro.json"), "w", encoding="utf-8") as f:
-        json.dump(ledger_summary(reg, base), f, ensure_ascii=False, separators=(",", ":"))
+        json.dump(resumen_reg, f, ensure_ascii=False, separators=(",", ":"))
     try:   # picks públicos: nunca deben impedir publicar
         pp = picks_publicos.actualizar([(L["id"], p) for L, out, _ in pendientes for p in out["partidos"]], jug_df, now)
         with open(os.path.join(SALIDA, "picks_publicos.json"), "w", encoding="utf-8") as f:

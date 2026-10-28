@@ -13,6 +13,7 @@
   → site/data/arbitros.json con el árbitro designado de cada partido del día.
 """
 import json
+import math
 import os
 import re
 from collections import defaultdict
@@ -250,3 +251,58 @@ def actualizar_dias():
     sal["_t"] = {k: v for k, v in est.items() if k in dias}
     with open(SALIDA_DIA, "w", encoding="utf-8") as f:
         json.dump(sal, f, ensure_ascii=False, separators=(",", ":"))
+
+
+def _pois_over(line, lam):
+    k = int(math.floor(line))
+    term = cdf = math.exp(-lam)
+    for i in range(1, k + 1):
+        term *= lam / i
+        cdf += term
+    return 1 - cdf
+
+
+def _medir(filas, linea=4.5):
+    """filas: (esperado sin árbitro, esperado con árbitro, real). Error medio y log-loss de "más de 4,5"."""
+    if not filas:
+        return None
+    n = len(filas)
+    def ll(i):
+        s = 0.0
+        for f in filas:
+            p = min(max(_pois_over(linea, f[i]), 1e-6), 1 - 1e-6)
+            s -= math.log(p) if f[2] > linea else math.log(1 - p)
+        return round(s / n, 4)
+    return {"n": n, "error_sin": round(sum(abs(f[0] - f[2]) for f in filas) / n, 3), "error_con": round(sum(abs(f[1] - f[2]) for f in filas) / n, 3),
+            "logloss_sin": ll(0), "logloss_con": ll(1), "real": round(sum(f[2] for f in filas) / n, 2)}
+
+
+def backtest(ligas, reg=None):
+    """¿El árbitro ayuda a predecir las tarjetas? Para cada partido jugado de la temporada con árbitro y tarjetas,
+    el factor del árbitro se calcula con sus OTROS partidos (sin mirar el resultado de ese partido).
+    - "promedio": predicción = promedio de la liga (sin ese partido), con y sin el factor del árbitro.
+    - "modelo": partidos del registro con las tarjetas que esperaba el modelo antes del inicio, con y sin el factor."""
+    prom, mod = [], []
+    tE = {}
+    if reg is not None and len(reg):
+        for x in reg.dropna(subset=["tE", "tR"]).itertuples():
+            tE[str(x.id)] = (float(x.tE), float(x.tR))
+    for L, out in ligas:
+        con = [x for x in out.get("resultados", []) if x.get("arbitro") and x.get("hg") is not None]
+        res = [x for x in con if isinstance(x.get("t"), list) and len(x["t"]) == 2 and None not in x["t"] and sum(x["t"]) > 0]
+        if len(res) < 30 or len(res) < 0.7 * len(con):   # liga sin tarjetas confiables (como en _stats_liga)
+            continue
+        T, N = sum(sum(x["t"]) for x in res), len(res)
+        suma, cuenta = defaultdict(float), defaultdict(int)
+        for x in res:
+            suma[x["arbitro"]] += sum(x["t"]); cuenta[x["arbitro"]] += 1
+        for x in res:
+            t = sum(x["t"]); liga = (T - t) / (N - 1)
+            s, k = suma[x["arbitro"]] - t, cuenta[x["arbitro"]] - 1
+            fac = ((s + liga * K_PRIOR) / (k + K_PRIOR)) / liga
+            prom.append((liga, liga * fac, t))
+            if str(x.get("id")) in tE:
+                e, real = tE[str(x["id"])]
+                mod.append((e, e * fac, real))
+    out = {"promedio": _medir(prom), "modelo": _medir(mod), "k_prior": K_PRIOR}
+    return out if out["promedio"] else None

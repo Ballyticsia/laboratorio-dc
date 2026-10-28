@@ -108,6 +108,7 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - Cruza cada partido de ESPN con API-Football (fecha y nombres) y une las variantes del nombre del árbitro ("M. Vergara" = "Manuel Vergara").
 - Calcula, con resultados reales de la temporada: tarjetas y penales por partido y % de victorias del local con cada árbitro contra el promedio de la liga, y el historial de cada equipo con él. Si ESPN no publica tarjetas o penales de una liga (Uruguay, Paraguay), esos números no se muestran.
 - Se ve en el partido (panel Árbitro), en la liga (pestaña Árbitros), en el centro del partido (Información) y la IA lo conoce. Las tarjetas ajustadas por árbitro se muestran, pero todavía no cambian el modelo.
+- Medición antes de usarlo: el registro guarda desde el 28-10-2026 las tarjetas ajustadas por árbitro (`tA`) junto a las del modelo (`tE`) y las reales (`tR`), y `arbitros.backtest` compara con toda la temporada usando el factor de cada árbitro calculado con sus otros partidos. Se ve en Resultados del modelo ("¿Sirve ajustar las tarjetas por el árbitro?"). Primer resultado: con 3.024 partidos la señal existe pero es chica (error 1,77 → 1,76 tarjetas), y sobre el modelo (152 partidos) todavía no mejora.
 
 ## CLV (¿el modelo se adelanta al mercado?)
 - Desde el 27-10-2026, `data/registro.csv` guarda para cada partido la cuota de ESPN sin margen la primera vez que aparece (`eH`, `eD`, `eA`, con el modelo propio de ese momento en `oH`, `oD`, `oA` y la hora en `et`) y la última antes del inicio (`kH`, `kD`, `kA`, `kt`).
