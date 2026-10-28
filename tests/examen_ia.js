@@ -49,7 +49,10 @@ function revisar(P, res, ctx, dias, equipo, extra = {}) {
   const palabras = r.split(/\s+/).filter(Boolean).length;
   if (palabras > 300) f.push(`muy larga (${palabras} palabras)`);
   if (!/\b(el|la|los|las|de|que|y|en)\b/i.test(r)) f.push("no parece estar en español");
-  if (/\bpaga\s+\d/i.test(r)) f.push('dice "paga" para una cuota justa');
+  {   // "paga X" solo con cuotas reales de una casa (vienen escritas en los datos), nunca con una cuota justa calculada
+    const reales = [...JSON.stringify(ctx).matchAll(/(?<![\d,])(\d{1,2}[,.]\d{1,3})(?![\d%])/g)].map(m => num(m[1])).concat(P.usuario || []);
+    for (const m of r.matchAll(/\bpaga(?:n)?\s+(?:a\s+)?(\d{1,2}[,.]\d{1,2})/gi)) if (!reales.some(c => Math.abs(c - num(m[1])) < 0.006)) f.push(`dice "paga ${m[1]}" y esa cuota no es de una casa`);
+  }
   if (P.dias && res.refs && res.refs.length) {
     const nota = /mañana/i.test(JSON.stringify(ctx.nota_alcance || ""));
     const ok = new Set([...P.dias, ...(nota ? ["MAÑANA"] : [])]);
