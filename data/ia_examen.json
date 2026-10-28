@@ -1,10 +1,10 @@
 {
- "fecha": "2026-10-28T03:48Z",
+ "fecha": "2026-10-28T03:53Z",
  "puntaje": 0,
  "aprobadas": 0,
  "total": 20,
  "modelos": [],
- "ms_promedio": 101,
+ "ms_promedio": 78,
  "votos_gente": {
   "por_modelo": {},
   "por_tipo": {}
@@ -22,7 +22,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 347,
+   "ms": 309,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -35,7 +35,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 89,
+   "ms": 65,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -48,7 +48,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 75,
+   "ms": 62,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -61,7 +61,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 121,
+   "ms": 77,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -74,7 +74,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 89,
+   "ms": 62,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -87,7 +87,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 96,
+   "ms": 77,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -100,7 +100,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 97,
+   "ms": 78,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -113,7 +113,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 58,
+   "ms": 69,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -126,7 +126,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 94,
+   "ms": 83,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -139,7 +139,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 81,
+   "ms": 74,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -152,7 +152,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 70,
+   "ms": 65,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -165,7 +165,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 67,
+   "ms": 83,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -178,7 +178,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 81,
+   "ms": 65,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -191,7 +191,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 73,
+   "ms": 63,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -204,7 +204,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 54,
+   "ms": 66,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -217,7 +217,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 47,
+   "ms": 64,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -230,7 +230,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 42,
+   "ms": 71,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -243,7 +243,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 92,
+   "ms": 42,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -256,7 +256,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 49,
+   "ms": 44,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -269,7 +269,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 291,
+   "ms": 46,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
