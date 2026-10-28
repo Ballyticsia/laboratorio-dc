@@ -691,7 +691,7 @@ function iaCtxPicks() {
   const P = D.picksPub; if (!P) return undefined;
   const hoyK = isoDay(new Date()), Rs = P.resumen || {};
   const lst = (P.dias || []).filter(d => d.dia >= hoyK).sort((a, b) => a.dia.localeCompare(b.dia)).slice(0, 2).map(d => ({ dia: iaDia(d.dia + "T12:00"),
-    picks: d.picks.map(f => { const L = D.ligas[f.liga] || { equipos: {} }; return `${PP_EST[f.est].n}: ${f.home} vs ${f.away} → ${f.lado === "D" ? "Empate" : "Gana " + corto(L, f.lado === "H" ? f.home : f.away)} · cuota ${dec(f.cuota)} · prob ${pct(f.prob)}${f.res ? ` · ${f.res === "G" ? "GANADO" : f.res === "P" ? "PERDIDO" : "NULO"}` : ""}`; }) }));
+    picks: d.picks.map(f => { const L = D.ligas[f.liga] || { equipos: {} }; return `${PP_EST[f.est].n}: ${f.home} vs ${f.away} → ${f.lado === "D" ? "Empate" : "Gana " + corto(L, f.lado === "H" ? f.home : f.away)} · cuota real ${dec(f.cuota)} · ${f.est === "valor" ? `modelo propio ${pct(f.prob)} contra mercado sin margen ${pct(f.mercado)}` : `probabilidad Ballytics ${pct(f.prob)}`}${f.res ? ` · ${f.res === "G" ? "GANADO" : f.res === "P" ? "PERDIDO" : "NULO"}` : ""}`; }) }));
   const rec = k => { const x = Rs[k]; return x && x.n ? `${x.n} calificados, ${x.ganados} ganados, ${ppU(x.unidades)} (ROI ${pct(x.roi, 1)})` : "sin picks calificados aún"; };
   return { reglas: P.reglas ? `Seguros: ${P.reglas.seguro} Valor: ${P.reglas.valor} ${P.reglas.fijado}` : undefined, listas: lst, record_seguros: rec("seguro"), record_valor: rec("valor"), desde: (P.reglas || {}).desde };
 }
