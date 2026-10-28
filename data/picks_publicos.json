@@ -101,6 +101,108 @@
      "ev": 0.1524
     }
    ]
+  },
+  "2026-10-29": {
+   "fijado": "2026-10-28T21:03Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401900881",
+     "liga": "arabia",
+     "kickoff": "2026-10-29T18:00Z",
+     "home": "Al Nassr",
+     "away": "Al Kholood",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.7753,
+     "cuota": 1.211,
+     "cierre": 1.211,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401886150",
+     "liga": "peru",
+     "kickoff": "2026-10-30T00:30Z",
+     "home": "Melgar",
+     "away": "Comerciantes Unidos",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.7314,
+     "cuota": 1.235,
+     "cierre": 1.235,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401900880",
+     "liga": "arabia",
+     "kickoff": "2026-10-29T18:00Z",
+     "home": "Al Riyadh",
+     "away": "Al Qadsiah",
+     "est": "seguro",
+     "lado": "A",
+     "prob": 0.7213,
+     "cuota": 1.303,
+     "cierre": 1.303,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401874969",
+     "liga": "seriea",
+     "kickoff": "2026-10-29T19:45Z",
+     "home": "Fiorentina",
+     "away": "Atalanta",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.4508,
+     "cuota": 2.95,
+     "cierre": 2.95,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.3021,
+     "ev": 0.3299
+    },
+    {
+     "id": "401886155",
+     "liga": "peru",
+     "kickoff": "2026-10-29T18:00Z",
+     "home": "Los Chankas",
+     "away": "Cusco FC",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.3878,
+     "cuota": 3.1,
+     "cierre": 3.1,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2909,
+     "ev": 0.2022
+    },
+    {
+     "id": "401876986",
+     "liga": "ligamx",
+     "kickoff": "2026-10-29T03:00Z",
+     "home": "América",
+     "away": "Tijuana",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.1994,
+     "cuota": 6.0,
+     "cierre": 6.0,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1342,
+     "ev": 0.1964
+    }
+   ]
   }
  },
  "reglas": {
@@ -111,5 +213,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-10-28T20:53Z"
+ "actualizado": "2026-10-28T21:03Z"
 }
