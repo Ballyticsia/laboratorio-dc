@@ -8,7 +8,7 @@ const { chromium } = require("playwright");
 
 const SITIO = (process.env.SITIO_URL || "https://ballyticsia.github.io/laboratorio-dc/").replace(/\/?$/, "/");
 const SALIDA = path.join(__dirname, "..", "data", "ia_examen.json");
-const hoy = new Date().toISOString().slice(0, 10);
+const RUN = process.env.GITHUB_RUN_ID || String(Date.now());   // cada examen con su propio identificador (tope de 20 preguntas)
 
 // p: tipo "dia" (todos los partidos) o "partido" (uno); dias: qué días pueden tener los partidos nombrados
 const PREGUNTAS = [
@@ -101,7 +101,7 @@ function revisar(P, res, ctx, dias, equipo, extra = {}) {
     let res;
     try {
       res = await (await fetch(W + "/ia", { method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ q, uid: `examen-ia-${hoy}-${i < 10 ? "a" : "b"}`, tipo, ctx, hist: [] }) })).json();
+        body: JSON.stringify({ q, uid: `examen-ia-${RUN}-${i < 10 ? "a" : "b"}`, tipo, ctx, hist: [] }) })).json();
     } catch (e) { res = { ok: false, error: String(e.message || e) }; }
     const fallas = revisar(P, res, ctx, dias, port && (P.tipo === "partido" || P.contieneEquipo) ? port.home : null, extra);
     out.push({ q, tipo, ok: !fallas.length, fallas, ms: Date.now() - t0, modelo: res.modelo || null, cache: !!res.cache, r: (res.r || res.error || "").slice(0, 1800),
@@ -118,6 +118,9 @@ function revisar(P, res, ctx, dias, equipo, extra = {}) {
     try { const v = await (await fetch(W + "/ia/votos", { headers: { authorization: "Bearer " + tok } })).json();
       if (v.ok) detalle = { total: v.votos.length, positivos: v.votos.filter(x => x.v > 0).length, negativos: v.votos.filter(x => x.v < 0).length }; } catch (e) {}
   }
+  // si la IA estaba en su tope del día, el examen no dice nada de la calidad: no se guarda
+  const topes = out.filter(x => /límite|Llegaste a las|tope/i.test(x.r) && x.fallas.some(f => /sin respuesta/.test(f))).length;
+  if (topes > out.length / 3) { console.log(`\n${topes} preguntas chocaron con el tope diario de la IA: no guardo este examen.`); if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Examen no guardado: ${topes} preguntas chocaron con el tope diario de la IA.\n`); return; }
   const ok = out.filter(x => x.ok).length;
   const rep = { fecha: new Date().toISOString().slice(0, 16) + "Z", puntaje: out.length ? +(ok / out.length).toFixed(3) : null, aprobadas: ok, total: out.length,
     modelos: [...new Set(out.map(x => x.modelo).filter(Boolean))], ms_promedio: out.length ? Math.round(out.reduce((s, x) => s + x.ms, 0) / out.length) : null,

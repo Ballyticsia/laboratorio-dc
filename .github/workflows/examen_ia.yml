@@ -2,13 +2,13 @@ name: Examen de la IA
 
 # Hace 20 preguntas fijas a Ballytics IA en la página publicada y revisa las respuestas
 # (día correcto, sin cuotas inventadas, juego responsable, listas completas, fuera de tema…).
-# Guarda el resultado en data/ia_examen.json. Corre cada lunes, después de cada cambio de código
-# publicado y con el botón "Run workflow".
+# Guarda el resultado en data/ia_examen.json. Corre cada lunes, después de cada instalación del
+# servidor de la IA (cambios en worker/) y con el botón "Run workflow".
 on:
   schedule:
     - cron: "41 15 * * 1"
   workflow_run:
-    workflows: ["Actualizar datos y publicar"]
+    workflows: ["Servidor de avisos (Cloudflare)"]
     types: [completed]
   workflow_dispatch: {}
 
@@ -17,8 +17,8 @@ permissions:
 
 jobs:
   examen:
-    # después de publicar, solo si la publicación vino de un cambio de código (no de la actualización cada 2 horas)
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    # después de instalar el servidor de la IA, solo si la instalación salió bien
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     # a nivel del trabajo: las ejecuciones que se saltan no cancelan un examen en curso
     concurrency:
       group: examen-ia
@@ -38,8 +38,8 @@ jobs:
           key: playwright-${{ hashFiles('tests/package-lock.json') }}
       - name: Instalar navegador
         run: cd tests && npm ci --no-audit --no-fund && npx playwright install --with-deps chromium >/dev/null
-      - name: Esperar a que la página publicada tenga esta versión
-        run: sleep 60
+      - name: Esperar a que la página publicada tenga la versión nueva
+        run: sleep 240
       - name: Examen
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
