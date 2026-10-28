@@ -586,7 +586,8 @@ function iaArb3(L, p) {
     + (e.pf != null ? `, goles de penal a favor ${e.pf} y en contra ${e.pc}` : "");
   return { historial_3_temporadas: { partidos: H3.pj, perfil, tarjetas_por_partido: H3.tpp != null ? `${dec(H3.tpp, 1)} (liga ${dec(B.tpp, 1)})` : null,
     faltas_por_partido: H3.fpp != null ? `${dec(H3.fpp, 1)} (liga ${dec(B.fpp, 1)}; menos = deja jugar)` : null, rojas_por_partido: H3.rpp != null ? `${dec(H3.rpp, 2)} (liga ${dec(B.rpp, 2)})` : null,
-    gana_local: `${pct(H3.local, 0)} (liga ${pct(B.local, 0)})`, con_local: eq((a.eq3 || {}).h, p.home), con_visita: eq((a.eq3 || {}).a, p.away) } };
+    gana_local: `${pct(H3.local, 0)} (liga ${pct(B.local, 0)})`, con_local: eq((a.eq3 || {}).h, p.home), con_visita: eq((a.eq3 || {}).a, p.away),
+    es_azar: H3.azar && H3.azar.p ? `En ${H3.azar.p.pares} pares árbitro-equipo de la liga, ${H3.azar.p.llamativos} diferencias de resultados son llamativas tras corregir por comparaciones múltiples; el ${pct(H3.azar.p.sobre2, 0)} se aleja mucho de lo normal cuando el azar daría 5 %: en resultados, lo que se ve es casi todo suerte.` : undefined } };
 }
 // ---- qué días pide el usuario
 const DOW = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"], DOW_ES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
@@ -1856,7 +1857,15 @@ function bajasPanel(L, p) {
 const ARB_PERFIL = { muchas: ["Saca muchas tarjetas", "warn"], pocas: ["Saca pocas tarjetas", "calm"], normal: ["Tarjetas normales", ""], deja: ["Deja jugar", "calm"],
   cobra: ["Cobra muchas faltas", "warn"], faltas_normal: ["Faltas normales", ""], rojas: ["Expulsa seguido", "warn"] };
 const ARB_TIP = "Árbitro designado según API-Football, cruzado con los partidos de ESPN de las últimas 3 temporadas de esta liga. El perfil compara sus tarjetas y faltas por partido con el promedio de la liga, mezclado con ese promedio según cuántos partidos dirigió para no exagerar con pocos.";
-const ARB_NOTA = "“Lo normal” es lo que hace ese equipo con los demás árbitros, de local o de visita según corresponda. “Llamativo” significa que una diferencia así sería poco probable solo por azar; aun así no prueba que el árbitro favorezca o perjudique a nadie: también influyen el rival, la importancia del partido y el momento del equipo, y entre cientos de combinaciones de árbitro y equipo algunas salen llamativas por pura suerte.";
+const ARB_NOTA = "“Lo normal” es lo que hace ese equipo con los demás árbitros, de local o de visita según corresponda. Una diferencia se marca “llamativa” solo si sigue siendo improbable por azar después de tener en cuenta que en la liga se comparan cientos de pares de árbitro y equipo (corrección de Benjamini-Hochberg). Aun así no prueba que el árbitro favorezca o perjudique a nadie: también influyen el rival, la importancia del partido y el estilo del equipo.";
+// ¿se parece al azar? lo que muestran todos los pares árbitro-equipo de la liga
+function arbAzar(az, liga) {
+  if (!az || !az.p) return "";
+  const p = az.p, t = az.t, f = x => pct(x, 0);
+  const txtP = `En <b>resultados</b>, ${p.llamativos ? `${p.llamativos} ${p.llamativos === 1 ? "par sale llamativo" : "pares salen llamativos"}` : "ningún árbitro muestra una diferencia que no pueda explicar la suerte"}: el ${f(p.sobre2)} de los pares se aleja mucho de lo normal, y el puro azar daría cerca del 5 %.`;
+  const txtT = t ? ` En <b>tarjetas</b>, ${t.llamativos ? `${t.llamativos} ${t.llamativos === 1 ? "par sale llamativo" : "pares salen llamativos"}` : "ningún par sale llamativo"} (${f(t.sobre2)} se aleja mucho; el azar daría 5 %).` : "";
+  return `<div class="arb-azar"><b>¿Es azar?</b> Comparando ${p.pares} pares de árbitro y equipo de ${esc(liga)} con 4 partidos o más. ${txtP}${txtT}</div>`;
+}
 const arbChips = pf => { pf = (pf || []).filter(k => ARB_PERFIL[k]); if (pf.length && pf.every(k => /normal/.test(k))) return `<span class="arb-chip">Perfil promedio: ${pf.length > 1 ? "tarjetas y faltas" : pf[0] === "normal" ? "tarjetas" : "faltas"} como la liga</span>`;
   return pf.filter(k => !/normal/.test(k)).map(k => `<span class="arb-chip ${ARB_PERFIL[k][1]}">${ARB_PERFIL[k][0]}</span>`).join(""); };
 const arbCmp = (v, base, fmt, umbral = .12) => v == null ? "—" : `${fmt(v)}${base != null ? ` <small class="faint">${Math.abs(v - base) / (base || 1) > umbral ? (v > base ? "▲ " : "▼ ") : ""}liga ${fmt(base)}</small>` : ""}`;
@@ -1899,6 +1908,7 @@ function arbPanel(L, p) {
     <div class="kpis">${ks.join("")}</div>
     <h4 class="arb-sub">Con estos equipos</h4>
     <div class="arb-eqs">${arbEquipo(L, (a.eq3 || {}).h, p.home, dt)}${arbEquipo(L, (a.eq3 || {}).a, p.away, dt)}</div>
+    ${arbAzar(H3.azar, L.nombre)}
     ${a.tarjetas_aj != null && p.th != null ? `<p class="note">Tarjetas esperadas del modelo: <b>${dec(p.th + p.ta, 1)}</b>. Ajustadas por este árbitro: <b>${dec(a.tarjetas_aj, 1)}</b>. ${help("El ajuste usa sus tarjetas de esta temporada mezcladas con el promedio de la liga. Se mide en el registro antes de usarlo en el modelo.")}</p>` : ""}
     <p class="note">${ARB_NOTA}</p>
     ${a.slug ? `<button class="btn ghost sm" data-go="arbitro" data-liga="${L.id}" data-id="${esc(a.slug)}">Ficha completa de ${esc(a.n)}</button>` : ""}</div>`;
@@ -1927,11 +1937,11 @@ function vArbitro() {
   if (dt.penales) ks.push(kpi("", "Goles de penal por partido", arbCmp(r.penpp, B.penpp, v => dec(v, 2), .25), ""));
   ks.push(kpi("", "Gana el local", arbCmp(r.local, B.local, v => pct(v, 0), .1), `empate ${pct(r.empate, 0)}`));
   const llam = r.equipos.filter(e => /mejor|peor|mas|menos/.test((e.v_p || "") + (e.v_t || "")));
-  const tabla = `<table class="t"><thead><tr><th>Equipo</th><th class="n">PJ</th><th class="n">G-E-P</th><th class="n">Pts/PJ</th><th class="n">Lo normal</th>${dt.tarjetas ? `<th class="n">Tarjetas</th><th class="n hide-m">Lo normal</th>` : ""}${dt.penales ? `<th class="n hide-m">Penal +/−</th>` : ""}</tr></thead><tbody>${r.equipos.map(e => {
+  const tabla = `<table class="t arb-t"><thead><tr><th>Equipo</th><th class="n">PJ</th><th class="n hide-m">G-E-P</th><th class="n">Pts/PJ</th>${dt.tarjetas ? `<th class="n">Tarj./PJ</th>` : ""}${dt.penales ? `<th class="n hide-m">Penal +/−</th>` : ""}</tr></thead><tbody>${r.equipos.map(e => {
     const cls = v => v === "mejor" || v === "menos" ? "good" : v === "peor" || v === "mas" ? "bad" : "";
-    return `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(e.t)}"><td class="team">${badge(L, e.t)}${esc(corto(L, e.t))}</td><td class="n">${e.pj}</td><td class="n">${e.g}-${e.e}-${e.p}</td>
-      <td class="n ${cls(e.v_p)}">${dec(e.ppg, 2)}${/mejor|peor/.test(e.v_p) ? (e.v_p === "mejor" ? " ▲" : " ▼") : ""}</td><td class="n faint">${dec(e.ppg_esp, 2)}</td>
-      ${dt.tarjetas ? `<td class="n ${cls(e.v_t)}">${dec(e.tr, 1)}${/mas|menos/.test(e.v_t) ? (e.v_t === "mas" ? " ▲" : " ▼") : ""}</td><td class="n faint hide-m">${dec(e.tr_esp, 1)}</td>` : ""}${dt.penales ? `<td class="n hide-m">${e.pf} / ${e.pc}</td>` : ""}</tr>`; }).join("")}</tbody></table>`;
+    const celda = (v, esp, ver, d, mas, menos) => `<td class="n ${cls(ver)}"><b>${dec(v, d)}${ver === mas ? " ▲" : ver === menos ? " ▼" : ""}</b><small class="faint">normal ${dec(esp, d)}</small></td>`;
+    return `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(e.t)}"><td class="team">${badge(L, e.t)}${esc(corto(L, e.t))}</td><td class="n">${e.pj}</td><td class="n hide-m">${e.g}-${e.e}-${e.p}</td>
+      ${celda(e.ppg, e.ppg_esp, e.v_p, 2, "mejor", "peor")}${dt.tarjetas ? (e.tr != null ? celda(e.tr, e.tr_esp, e.v_t, 1, "mas", "menos") : `<td class="n">—</td>`) : ""}${dt.penales ? `<td class="n hide-m">${e.pf} / ${e.pc}</td>` : ""}</tr>`; }).join("")}</tbody></table>`;
   const lim = VV.arbLim || 15;
   const ult = r.partidos.slice(0, lim).map(([d, h, a, hg, ag, th, ta, rh, ra, fh, fa]) => `<div class="arb-pm"><span class="faint num">${esc(fecha(d + "T12:00"))}</span><span class="arb-pt">${badge(L, h)}<span>${esc(corto(L, h))}</span><b class="num">${hg}–${ag}</b><span>${esc(corto(L, a))}</span>${badge(L, a)}</span><span class="faint num">${th != null ? `🟨 ${th}–${ta}${rh || ra ? ` 🟥 ${rh}–${ra}` : ""}` : ""}${fh != null ? ` · ${fh + fa} faltas` : ""}</span></div>`).join("");
   return `<section class="view" aria-labelledby="h-arb">
@@ -1940,8 +1950,9 @@ function vArbitro() {
       ${(r.perfil || []).length ? `<div class="arb-chips">${arbChips(r.perfil)}</div>` : `<p class="note">Con ${r.pj} partidos todavía no alcanza para un perfil confiable.</p>`}
       <div class="kpis">${ks.join("")}</div>
       <p class="note">${Object.keys(etq).length > 1 ? `Últimas ${Object.keys(etq).length} temporadas de ${esc(L.nombre)} (${Object.values(etq).join(", ")})` : `Temporada ${Object.values(etq).join("")} de ${esc(L.nombre)}`}. Promedio de la liga en el mismo período: ${dt.tarjetas ? `${dec(B.tpp, 1)} tarjetas, ` : ""}${dt.faltas ? `${dec(B.fpp, 1)} faltas, ` : ""}local gana ${pct(B.local, 0)}.${!dt.tarjetas ? " ESPN no publica las tarjetas de esta liga." : ""}</p></div>
+    ${H.azar && H.azar.p ? `<div class="panel stack">${arbAzar(H.azar, L.nombre)}</div>` : ""}
     <div class="panel flush scroll"><div class="ph"><h3>Con cada equipo ${help(ARB_NOTA)}</h3><span class="note">${llam.length ? `${llam.length} ${llam.length === 1 ? "diferencia llamativa" : "diferencias llamativas"} (▲ ▼)` : "Ninguna diferencia llamativa"}</span></div>${tabla}
-      <p class="note" style="padding:0 16px 14px">Lo normal: lo que hace el equipo con los demás árbitros, de local o de visita según corresponda. ▲ ▼ marca solo las diferencias poco probables por azar con al menos 4 partidos. No prueba que el árbitro favorezca o perjudique a nadie.</p></div>
+      <p class="note" style="padding:0 16px 14px">Lo normal: lo que hace el equipo con los demás árbitros, de local o de visita según corresponda. ▲ ▼ marca solo las diferencias que siguen siendo improbables por azar después de corregir por comparar cientos de pares (con al menos 4 partidos). No prueba que el árbitro favorezca o perjudique a nadie.</p></div>
     <div class="panel flush"><div class="ph"><h3>Sus partidos</h3><span class="note">${r.partidos.length} en total</span></div>${ult}
       ${r.partidos.length > lim ? `<button class="vmore" id="arb-more">Ver más partidos (${r.partidos.length - lim} restantes)</button>` : ""}</div>
     <p class="note">Árbitro según API-Football; resultados, tarjetas, faltas y goles de penal según ESPN. Actualizado ${esc(fecha(H.actualizado))}.</p>

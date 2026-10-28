@@ -1417,3 +1417,9 @@ body.ia-open #iafab{display:none}
 .arb-pt span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:560px){.arb-pm{grid-template-columns:44px minmax(0,1fr);}.arb-pm>span:last-child{grid-column:2;font-size:12px}}
 .arbp h1{font-size:clamp(24px,4vw,34px)}
+.arb-azar{font-size:13.5px;line-height:1.55;color:var(--muted);border-left:3px solid var(--pitch);padding:8px 12px;background:var(--pitch-soft);border-radius:0 10px 10px 0}
+.arb-azar b{color:var(--ink)}
+.arb-t td.n b{display:block;font-weight:600}
+.arb-t td.n small{display:block;font-size:11px}
+.arb-t td.n.good b{color:var(--good)}.arb-t td.n.bad b{color:var(--bad)}
+@media (max-width:560px){.arb-t th,.arb-t td{padding-left:6px;padding-right:6px}.arb-t td.team{max-width:128px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.arb-t td.n small{font-size:10px}}

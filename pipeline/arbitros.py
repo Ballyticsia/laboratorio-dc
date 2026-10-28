@@ -315,7 +315,8 @@ def backtest(ligas, reg=None):
 # de API-Football. Las temporadas pasadas se piden una vez (no cambian) y se guardan en data/api_football/fixtures/.
 SALIDA_HIST = os.path.join(RAIZ, "site", "data", "arbitros")
 HIST_TEMP = int(os.environ.get("ARB_TEMPORADAS", "3"))
-Z_LLAMATIVO = 2.0     # diferencia "llamativa": poco probable por azar (con cientos de pares, algunas igual salen por azar)
+FDR = 0.10           # "llamativo": sigue siendo improbable por azar después de corregir por comparar cientos de pares (Benjamini-Hochberg)
+MIN_PAR = 4          # partidos mínimos de un árbitro con un equipo para compararlos
 MIN_PERFIL = 8        # partidos con el dato para dar un perfil (tarjetas, faltas)
 
 
@@ -511,7 +512,7 @@ def historial(ligas):
                 pf = sum((m["ph"] if l == "h" else m["pa"]) or 0 for m, l in mm) if hay_p else None
                 pc = sum((m["pa"] if l == "h" else m["ph"]) or 0 for m, l in mm) if hay_p else None
                 rr = sum((m["rh"] if l == "h" else m["ra"]) or 0 for m, l in mm) if hay_t else None
-                v = lambda z, mas, menos: None if z is None else ("pocos" if n < 4 else mas if z >= Z_LLAMATIVO else menos if z <= -Z_LLAMATIVO else "normal")
+                v = lambda z, mas, menos: None if z is None else ("pocos" if n < MIN_PAR else "normal")   # lo llamativo se marca después, con toda la liga
                 equipos.append({"t": team, "pj": n, "g": g, "e": e_, "p": n - g - e_, "ppg": _r(pts / n), "ppg_esp": _r(esp_p / n),
                                 "v_p": v(z_p, "mejor", "peor"), "z_p": _r(z_p), "pjt": nt,
                                 "tr": _r(tr / nt) if nt else None, "tr_esp": _r(esp_t / nt) if nt and ok_t else None,
@@ -521,11 +522,27 @@ def historial(ligas):
             r["partidos"] = [[m["k"][:10], m["h"], m["a"], m["hg"], m["ag"], None if T(m) is None else m["yh"] + m["rh"], None if T(m) is None else m["ya"] + m["ra"],
                               m["rh"], m["ra"], m["fh"], m["fa"], m["ph"], m["pa"]] for m in ms]
             refs[r["slug"]] = r
+        # ¿cuánto se parece todo esto al azar? y corrección por comparaciones múltiples (Benjamini-Hochberg)
+        azar = {}
+        for clave_z, clave_v, mas, menos in (("z_p", "v_p", "mejor", "peor"), ("z_t", "v_t", "mas", "menos")):
+            pares = [e for r in refs.values() for e in r["equipos"] if e["pj"] >= MIN_PAR and e.get(clave_z) is not None]
+            if len(pares) < 10:
+                continue
+            zs = [e[clave_z] for e in pares]
+            m = len(pares)
+            orden = sorted(pares, key=lambda e: math.erfc(abs(e[clave_z]) / math.sqrt(2)))
+            corte = 0
+            for i, e in enumerate(orden, 1):
+                if math.erfc(abs(e[clave_z]) / math.sqrt(2)) <= i / m * FDR:
+                    corte = i
+            for e in orden[:corte]:
+                e[clave_v] = mas if e[clave_z] > 0 else menos
+            azar[clave_z[2:]] = {"pares": m, "sd": _r(math.sqrt(sum(z * z for z in zs) / m), 2), "sobre2": _r(sum(1 for z in zs if abs(z) >= 2) / m, 3), "llamativos": corte}
         liga_out = {k: (_r(v, 3) if isinstance(v, float) else v) for k, v in liga.items()}
         res = {"liga": L["id"], "nombre": out.get("nombre"), "actualizado": datetime.now(timezone.utc).isoformat(timespec="minutes"),
                "temporadas": sorted(s for s, _ in temps), "base": liga_out,
                "etiquetas": {str(s): (f"{s}-{(s + 1) % 100:02d}" if L.get("inicio", 1) != 1 else str(s)) for s, _ in temps}, "datos": {"tarjetas": hay_t, "faltas": hay_f, "penales": hay_p},
-               "con_arbitro": sum(1 for m in filas if m["ref"]), "refs": refs}
+               "con_arbitro": sum(1 for m in filas if m["ref"]), "azar": azar, "refs": refs}
         with open(os.path.join(SALIDA_HIST, f"{L['id']}.json"), "w", encoding="utf-8") as f:
             json.dump(res, f, ensure_ascii=False, separators=(",", ":"))
         # resumen en cada partido próximo (para el panel del árbitro sin pedir otro archivo)
@@ -541,6 +558,7 @@ def historial(ligas):
             a["h3"]["liga"] = liga_out
             a["h3"]["datos"] = res["datos"]
             a["h3"]["etq"] = res["etiquetas"]
+            a["h3"]["azar"] = azar
             eq3 = {}
             for lado, team in (("h", p["home"]), ("a", p["away"])):
                 x = next((e for e in r["equipos"] if e["t"] == team), None)
