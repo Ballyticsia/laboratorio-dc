@@ -33,12 +33,17 @@ const leer = f => JSON.parse(fs.readFileSync(path.join(SITE, "data", f), "utf8")
   const ind = leer("indice.json"), L0 = ind.ligas[0].id;
   const port = (ind.portada && ind.portada.partidos || [])[0];
   const pagPartido = fs.existsSync(path.join(SITE, "partido")) ? (() => { for (const l of fs.readdirSync(path.join(SITE, "partido"))) { const d = fs.readdirSync(path.join(SITE, "partido", l)); if (d.length) return `partido/${l}/${d[0]}/`; } return null; })() : null;
+  // un árbitro con ficha (si el historial ya existe)
+  let arb = null;
+  try { for (const f of fs.readdirSync(path.join(SITE, "data", "arbitros"))) { const H = JSON.parse(fs.readFileSync(path.join(SITE, "data", "arbitros", f), "utf8")); const r = Object.values(H.refs || {}).sort((a, b) => b.pj - a.pj)[0]; if (r) { arb = [H.liga, r.slug]; break; } } } catch (e) {}
   const rutas = [
     ["", "Inicio"], [`#/liga/${L0}/resumen`, "Liga"], [`#/liga/${L0}/tabla`, "Tabla"], [`#/liga/${L0}/partidos`, "Partidos de la liga"],
     ...(port ? [[`#/partido/${port.liga}/${port.id}`, "Partido"], [`#/partido/${port.liga}/${port.id}/mercados`, "Mercados"]] : []),
     ["#/registro", "Resultados del modelo"], ["#/picks", "Picks públicos"], ["#/metodo", "Cómo funciona"], ["#/prode", "Prode"],
     ["#/seguimiento", "Mis pronósticos"], ["#/terminos", "Términos"], ["#/privacidad", "Privacidad"], ["#/vivo", "En vivo (sin ESPN)"],
     [`liga/${L0}/`, "Página de liga"], ...(pagPartido ? [[pagPartido, "Página de partido"]] : []), ["picks/", "Página de picks"],
+    ...(arb ? [[`#/arbitro/${arb[0]}/${arb[1]}`, "Ficha de árbitro"], [`#/liga/${arb[0]}/arbitros`, "Árbitros de la liga"]] : []),
+    ...(arb && fs.existsSync(path.join(SITE, "arbitro", arb[0], arb[1])) ? [[`arbitro/${arb[0]}/${arb[1]}/`, "Página de árbitro"]] : []),
     ["partido/nada/1-a-vs-b/", "Dirección inexistente (404)"],
   ];
   const b = await chromium.launch(), fallas = [];

@@ -137,7 +137,7 @@ async function load() {
   const prio = new Set((D.indice.portada && D.indice.portada.partidos || []).map(x => x.liga));
   (D.indice.portada && D.indice.portada.jugadores || []).slice(0, 2).forEach(x => prio.add(x.liga));
   prio.add(D.indice.ligas[0].id);
-  if (["liga", "partido", "equipo", "jugador", "comparar", "partidos"].includes(h[0]) && D.meta[h[1]]) { prio.clear(); prio.add(h[1]); }
+  if (["liga", "partido", "equipo", "jugador", "comparar", "partidos", "arbitro"].includes(h[0]) && D.meta[h[1]]) { prio.clear(); prio.add(h[1]); }
   // el resto de las ligas se baja un poco después y de a pocas, para no trabar el celular al abrir
   D.all = new Promise(r => setTimeout(r, 1200)).then(async () => {
     const ids = D.indice.ligas.map(l => l.id);
@@ -228,6 +228,7 @@ function pathHash() {
   const s = rest.split("/");
   if (s[0] === "partido" && s[1] && s[2]) return `#/partido/${s[1]}/${s[2].split("-")[0]}`;
   if (s[0] === "liga" && s[1]) return `#/liga/${s[1]}/resumen`;
+  if (s[0] === "arbitro" && s[1] && s[2]) return `#/arbitro/${s[1]}/${s[2]}`;
   if (s[0] === "modelo") return "#/registro";
   if (["picks", "metodo", "terminos", "privacidad", "responsable", "sobre", "ia", "vivo", "prode", "seguimiento", "competiciones"].includes(s[0])) return "#/" + s[0];
   return "#/nf";
@@ -239,6 +240,7 @@ function cleanUrl(r) {
     if (p) return `${BASE_URL}partido/${r.liga}/${r.id}-${slugify(p.home)}-vs-${slugify(p.away)}/`; }
   if (r.v === "liga" && (!r.tab || r.tab === "resumen")) return `${BASE_URL}liga/${r.liga}/`;
   if (r.v === "picks") return `${BASE_URL}picks/`;
+  if (r.v === "arbitro") return `${BASE_URL}arbitro/${r.liga}/${r.id}/`;
   if (r.v === "registro" && !r.tab) return `${BASE_URL}modelo/`;
   return BASE_URL + toHash(r);
 }
@@ -248,6 +250,7 @@ function toHash(r) {
   if (r.v === "equipo") return `#/equipo/${r.liga}/${encodeURIComponent(r.team)}`;
   if (r.v === "registro" && r.tab) return `#/registro/${r.tab}`;
   if (r.v === "jugador") return `#/jugador/${r.liga}/${encodeURIComponent(r.id)}`;
+  if (r.v === "arbitro") return `#/arbitro/${r.liga}/${encodeURIComponent(r.id)}`;
   if (r.v === "comparar") return `#/comparar/${r.liga}/${encodeURIComponent(r.team || "")}/${encodeURIComponent(r.id || "")}`;
   if (r.v === "inicio") return r.liga && r.liga !== "todas" ? `#/partidos/${r.liga}` : "#/";
   if (r.v === "vivo") return `#/vivo${r.tab || r.id === "envivo" ? "/" + (r.tab || "hoy") : ""}${r.id === "envivo" ? "/envivo" : ""}`;
@@ -284,6 +287,7 @@ function fromHash() {
     case "noticias": return { v: "noticias" };
     case "ia": return { v: "ia" };
     case "picks": return { v: "picks" };
+    case "arbitro": return { v: "arbitro", liga: p[1], id: p[2] };
     case "terminos": return { v: "terminos" };
     case "comp": return { v: "comp", liga: p[1], tab: p[2] || "partidos" };
     case "club": return { v: "club", liga: p[1], id: p[2], tab: p[3] || "partidos" };
@@ -315,7 +319,7 @@ document.addEventListener("click", e => {
 
 function render() {
   timers.splice(0).forEach(clearInterval);
-  const need = ["liga", "partido", "equipo", "jugador", "comparar"].includes(R.v) && R.liga && D.meta && D.meta[R.liga] && !D.ligas[R.liga] ? R.liga : null;
+  const need = ["liga", "partido", "equipo", "jugador", "comparar", "arbitro"].includes(R.v) && R.liga && D.meta && D.meta[R.liga] && !D.ligas[R.liga] ? R.liga : null;
   if (need) {
     const er = LOADERR[need];
     if (er && er.n >= 2) { $app.innerHTML = `<div class="panel empty stack"><b>No pude cargar ${esc((D.meta[need] || {}).nombre || "esta liga")}.</b><span class="muted">Puede ser la conexión o que el sitio se está actualizando.</span><button class="btn" data-retry="${esc(need)}">Reintentar</button></div>`; return; }
@@ -324,11 +328,11 @@ function render() {
     setTimeout(() => ensure(want).then(() => { if (R.liga === want) render(); }), er ? 1500 : 0);
     return;
   }
-  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", privacidad: "metodo", terminos: "metodo", combinada: "seguimiento", envivo: "vivo", competiciones: "vivo", comp: "vivo", club: "vivo", noticias: "vivo", selecciones: "vivo", ficha: "vivo", prode: "prode" }[R.v] || R.v);
+  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", privacidad: "metodo", terminos: "metodo", arbitro: "liga", combinada: "seguimiento", envivo: "vivo", competiciones: "vivo", comp: "vivo", club: "vivo", noticias: "vivo", selecciones: "vivo", ficha: "vivo", prode: "prode" }[R.v] || R.v);
   document.querySelectorAll("[data-nav]").forEach(b => b.setAttribute("aria-current", b.dataset.nav === sec ? "page" : "false"));
   const f = { inicio: vInicio, liga: vLiga, partido: vPartido, equipo: vEquipo, registro: vRegistro, metodo: vMetodo,
     sobre: vSobre, responsable: vResponsable, jugador: vJugador, comparar: vComparar, combinada: vCombinada, seguimiento: vSeguimiento,
-    vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias, selecciones: vSelecciones, ficha: vFicha, prode: vProde, privacidad: vPrivacidad, nf: vNoEncontrado, ia: vIA, picks: vPicks, terminos: vTerminos }[R.v] || vInicio;
+    vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias, selecciones: vSelecciones, ficha: vFicha, prode: vProde, privacidad: vPrivacidad, nf: vNoEncontrado, ia: vIA, picks: vPicks, terminos: vTerminos, arbitro: vArbitro }[R.v] || vInicio;
   $app.innerHTML = staleBanner() + f();
   try { document.title = routeTitle(); } catch (e) {}
   if (R.v === "partido") { bindOdds(); if (R.tab === "alineaciones" || document.getElementById("xi-adj")) loadSummary(); }
@@ -354,6 +358,7 @@ function routeTitle() {
   if (R.v === "partido") { const p = findMatch(R.liga, R.id) || (D.registro && (D.registro.filas || []).find(f => String(f.id) === String(R.id))); if (p) return `${p.home} vs ${p.away}: probabilidades y pronóstico${T}`; }
   if ((R.v === "liga" || R.v === "inicio" && R.liga && R.liga !== "todas") && L) return `${L.nombre}: probabilidades y pronósticos${T}`;
   if (R.v === "equipo" && R.team) return `${R.team}: partidos y probabilidades${T}`;
+  if (R.v === "arbitro") { const r = ((D.arbH || {})[R.liga] || {}).refs; const x = r && r[R.id]; if (x) return `${x.n}: árbitro, tarjetas e historial${T}`; }
   if (R.v === "jugador" && L) { const g = (L.goleadores || []).find(x => String(x.jid) === String(R.id)); if (g) return g.jugador + T; }
   const fijo = { picks: "Picks públicos", registro: "Resultados del modelo", metodo: "Cómo funciona", vivo: "Partidos en vivo", prode: "Prode", seguimiento: "Mis pronósticos", terminos: "Términos de uso", privacidad: "Privacidad",
     responsable: "Juego responsable", sobre: "Sobre Ballytics", competiciones: "Todas las competiciones", combinada: "Combinada", ia: "Ballytics IA", noticias: "Noticias", selecciones: "Selecciones" }[R.v];
@@ -569,7 +574,19 @@ function iaArb(L, p) {
   const a = p.arbitro, lg = L.arbitros_liga || {}, eq = e => e && e.pj ? `${e.pj} PJ, ${e.g}-${e.e}-${e.p}, ${dec(e.tpp, 1)} tarjetas/PJ (con todos los árbitros ${dec(e.tpp_todos, 1)}), penales ${e.pf} a favor y ${e.pc} en contra` : "no lo ha dirigido esta temporada";
   return { nombre: a.n, partidos_temporada: a.pj, tarjetas_por_partido: a.tpp != null ? `${dec(a.tpp, 1)} (liga ${dec(lg.tpp, 1)})` : null, penales_por_partido: a.penpp != null ? `${dec(a.penpp, 2)} (liga ${dec(lg.penpp, 2)})` : null,
     gana_local: a.local != null ? `${pct(a.local, 0)} (liga ${pct(lg.local, 0)})` : null, tarjetas_esperadas_ajustadas_por_arbitro: a.tarjetas_aj != null ? dec(a.tarjetas_aj, 1) : null,
-    con_local: eq((a.eq || {}).h), con_visita: eq((a.eq || {}).a), nota: "Con pocos partidos las diferencias son casi siempre azar: no digas que un árbitro favorece o perjudica a un equipo." };
+    con_local: eq((a.eq || {}).h), con_visita: eq((a.eq || {}).a),
+    ...(a.h3 ? iaArb3(L, p) : {}),
+    nota: "Con pocos partidos las diferencias son casi siempre azar: no digas que un árbitro favorece o perjudica a un equipo. Si una diferencia está marcada como LLAMATIVA, dila tal cual (por ejemplo: 'con él, X sumó 0,8 puntos por partido cuando lo normal para X es 1,7: llamativo') y aclara que no prueba favoritismo." };
+}
+function iaArb3(L, p) {
+  const a = p.arbitro, H3 = a.h3, B = H3.liga || {};
+  const perfil = (H3.perfil || []).map(k => (ARB_PERFIL[k] || [k])[0]).join(", ") || "pocos partidos para un perfil";
+  const eq = (e, t) => !e || !e.pj ? `${t}: no lo ha dirigido en 3 temporadas` : `${t}: ${e.pj} PJ (${e.g}-${e.e}-${e.p}), ${dec(e.ppg, 2)} puntos por partido (lo normal ${dec(e.ppg_esp, 2)}${/mejor|peor/.test(e.v_p) ? `, LLAMATIVO: le fue ${e.v_p}` : ""})`
+    + (e.tr != null ? `, ${dec(e.tr, 1)} tarjetas recibidas por partido (lo normal ${dec(e.tr_esp, 1)}${/mas|menos/.test(e.v_t) ? `, LLAMATIVO: ${e.v_t === "mas" ? "más" : "menos"} tarjetas` : ""})` : "")
+    + (e.pf != null ? `, goles de penal a favor ${e.pf} y en contra ${e.pc}` : "");
+  return { historial_3_temporadas: { partidos: H3.pj, perfil, tarjetas_por_partido: H3.tpp != null ? `${dec(H3.tpp, 1)} (liga ${dec(B.tpp, 1)})` : null,
+    faltas_por_partido: H3.fpp != null ? `${dec(H3.fpp, 1)} (liga ${dec(B.fpp, 1)}; menos = deja jugar)` : null, rojas_por_partido: H3.rpp != null ? `${dec(H3.rpp, 2)} (liga ${dec(B.rpp, 2)})` : null,
+    gana_local: `${pct(H3.local, 0)} (liga ${pct(B.local, 0)})`, con_local: eq((a.eq3 || {}).h, p.home), con_visita: eq((a.eq3 || {}).a, p.away) } };
 }
 // ---- qué días pide el usuario
 const DOW = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"], DOW_ES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
@@ -1835,31 +1852,102 @@ function bajasPanel(L, p) {
 }
 
 /* ---------------- árbitro (API-Football) ---------------- */
+/* ---------------- árbitro: perfil, historial con los equipos y ficha ---------------- */
+const ARB_PERFIL = { muchas: ["Saca muchas tarjetas", "warn"], pocas: ["Saca pocas tarjetas", "calm"], normal: ["Tarjetas normales", ""], deja: ["Deja jugar", "calm"],
+  cobra: ["Cobra muchas faltas", "warn"], faltas_normal: ["Faltas normales", ""], rojas: ["Expulsa seguido", "warn"] };
+const ARB_TIP = "Árbitro designado según API-Football, cruzado con los partidos de ESPN de las últimas 3 temporadas de esta liga. El perfil compara sus tarjetas y faltas por partido con el promedio de la liga, mezclado con ese promedio según cuántos partidos dirigió para no exagerar con pocos.";
+const ARB_NOTA = "“Lo normal” es lo que hace ese equipo con los demás árbitros, de local o de visita según corresponda. “Llamativo” significa que una diferencia así sería poco probable solo por azar; aun así no prueba que el árbitro favorezca o perjudique a nadie: también influyen el rival, la importancia del partido y el momento del equipo, y entre cientos de combinaciones de árbitro y equipo algunas salen llamativas por pura suerte.";
+const arbChips = pf => { pf = (pf || []).filter(k => ARB_PERFIL[k]); if (pf.length && pf.every(k => /normal/.test(k))) return `<span class="arb-chip">Perfil promedio: ${pf.length > 1 ? "tarjetas y faltas" : pf[0] === "normal" ? "tarjetas" : "faltas"} como la liga</span>`;
+  return pf.filter(k => !/normal/.test(k)).map(k => `<span class="arb-chip ${ARB_PERFIL[k][1]}">${ARB_PERFIL[k][0]}</span>`).join(""); };
+const arbCmp = (v, base, fmt, umbral = .12) => v == null ? "—" : `${fmt(v)}${base != null ? ` <small class="faint">${Math.abs(v - base) / (base || 1) > umbral ? (v > base ? "▲ " : "▼ ") : ""}liga ${fmt(base)}</small>` : ""}`;
+const arbTemps = (t, etq) => Object.entries(t || {}).map(([k, n]) => `${(etq || {})[k] || k}: ${n}`).join(" · ");
+function arbVer(v, tipo) {
+  const M = tipo === "p" ? { mejor: ["▲ Llamativo: le fue mejor", "up"], peor: ["▼ Llamativo: le fue peor", "dn"] } : { mas: ["▲ Llamativo: más tarjetas", "dn"], menos: ["▼ Llamativo: menos tarjetas", "up"] };
+  if (M[v]) return `<span class="arb-v ${M[v][1]}">${M[v][0]}</span>`;
+  return v === "pocos" ? `<span class="arb-v">Pocos partidos para comparar</span>` : v === "normal" ? `<span class="arb-v">Dentro de lo normal</span>` : "";
+}
+function arbUlt(L, rows, team) {
+  if (!(rows || []).length) return "";
+  return `<details class="arb-ult"><summary>${rows.length === 1 ? "El partido" : `Los últimos ${rows.length} partidos`} con este árbitro</summary><ul>${rows.map(r => { const [d, h, a, hg, ag, th, ta, rh, ra] = r, res = team ? (team === h ? (hg > ag ? "G" : hg === ag ? "E" : "P") : (ag > hg ? "G" : ag === hg ? "E" : "P")) : "";
+    return `<li>${res ? `<i class="arb-r ${res}">${res}</i>` : ""}<span class="faint num">${esc(fecha(d + "T12:00"))}</span> <span>${esc(corto(L, h))} <b class="num">${hg}–${ag}</b> ${esc(corto(L, a))}</span>${th != null ? `<span class="faint num">🟨 ${th}–${ta}${(rh || ra) ? ` · 🟥 ${rh}–${ra}` : ""}</span>` : ""}</li>`; }).join("")}</ul></details>`;
+}
+function arbEquipo(L, e, team, datos) {
+  if (!e || !e.pj) return `<div class="arb-eq"><div class="arb-eqh">${badge(L, team)}<b>${esc(corto(L, team))}</b><span class="faint">No lo ha dirigido en estas temporadas</span></div></div>`;
+  const fila = (lab, v, esp, ver, fmt = x => dec(x, 2)) => v == null ? "" : `<div class="arb-k"><span class="lbl">${lab}</span><b class="num">${fmt(v)}</b>${esp != null ? `<small class="faint">lo normal ${fmt(esp)}</small>` : ""}${ver || ""}</div>`;
+  return `<div class="arb-eq"><div class="arb-eqh">${badge(L, team)}<b>${esc(corto(L, team))}</b><span class="num">${e.pj} PJ · ${e.g}-${e.e}-${e.p}</span></div>
+    <div class="arb-ks">${fila("Puntos por partido", e.ppg, e.ppg_esp, arbVer(e.v_p, "p"))}${datos.tarjetas ? fila("Tarjetas recibidas", e.tr, e.tr_esp, arbVer(e.v_t, "t"), x => dec(x, 1)) + fila("Tarjetas al rival", e.to, e.to_esp, "", x => dec(x, 1)) : ""}
+      ${datos.penales || datos.tarjetas ? `<div class="arb-k"><span class="lbl">${datos.penales ? "Goles de penal a favor / en contra" : "Rojas recibidas"}</span><b class="num">${datos.penales ? `${e.pf} / ${e.pc}` : e.rr}</b>${datos.penales && e.rr != null ? `<small class="faint">rojas recibidas ${e.rr}</small>` : ""}</div>` : ""}</div>
+    ${arbUlt(L, e.ultimos, team)}</div>`;
+}
 function arbPanel(L, p) {
   const a = p.arbitro; if (!a || !a.n) return "";
-  const lg = L.arbitros_liga || {}, pocos = (a.pj || 0) < 8;
-  // flechas neutras (más / menos que la liga): son estadísticas, no juicios
-  const cmp = (v, base, fmt) => v == null ? "—" : `${fmt(v)}${base != null ? ` <small class="faint">${Math.abs(v - base) / (base || 1) > .15 ? (v > base ? "▲ " : "▼ ") : ""}liga ${fmt(base)}</small>` : ""}`;
-  const fila = (lado, t) => { const e = (a.eq || {})[lado] || { pj: 0 };
-    if (!e.pj) return `<tr><td class="team">${badge(L, t)}${esc(corto(L, t))}</td><td class="n" colspan="4"><span class="faint">No lo ha dirigido esta temporada</span></td></tr>`;
-    return `<tr><td class="team">${badge(L, t)}${esc(corto(L, t))}</td><td class="n">${e.pj}</td><td class="n">${e.g}-${e.e}-${e.p}</td>
-      <td class="n">${dec(e.tpp, 1)}${e.tpp_todos != null ? ` <small class="faint">(${dec(e.tpp_todos, 1)} con todos)</small>` : ""}</td><td class="n">${lg.penpp != null ? `${e.pf} / ${e.pc}` : "—"}</td></tr>`; };
-  return `<div class="panel stack arbp"><div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px"><h3>Árbitro ${help("Árbitro designado según API-Football. Los números son de esta temporada en esta liga: tarjetas y penales por partido y cuánto gana el local cuando dirige él, comparados con el promedio de la liga. Con pocos partidos las diferencias son casi siempre azar.")}</h3><b class="arb-n">${esc(a.n)}</b></div>
-    ${a.pj ? `<div class="kpis">${kpi("m", "Partidos esta temporada", a.pj, L.nombre)}${kpi("", "Tarjetas por partido", cmp(a.tpp, lg.tpp, v => dec(v, 1)), "")}${kpi("", "Penales por partido", cmp(a.penpp, lg.penpp, v => dec(v, 2)), "")}${kpi("", "Gana el local", cmp(a.local, lg.local, v => pct(v, 0)), "")}</div>
-    <div class="scroll"><table class="t compact"><thead><tr><th>Con este árbitro</th><th class="n">PJ</th><th class="n">G-E-P</th><th class="n">Tarjetas recibidas</th><th class="n">Penales a favor / en contra</th></tr></thead><tbody>${fila("h", p.home)}${fila("a", p.away)}</tbody></table></div>
-    ${a.tarjetas_aj != null && p.th != null ? `<p class="note">Tarjetas esperadas del modelo: <b>${dec(p.th + p.ta, 1)}</b>. Ajustadas por lo estricto que es este árbitro: <b>${dec(a.tarjetas_aj, 1)}</b>. ${help("El ajuste mezcla su promedio con el de la liga según cuántos partidos haya dirigido, para no exagerar con pocos partidos. Se medirá en el registro si mejora la predicción antes de usarlo en el modelo.")}</p>` : ""}
-    ${lg.tpp == null ? `<p class="note">ESPN no publica las tarjetas de esta liga, así que solo se muestran resultados${lg.penpp != null ? " y penales" : ""}.</p>` : ""}
-    ${pocos ? `<p class="note">Con ${a.pj} partidos dirigidos los promedios todavía cambian mucho por azar.</p>` : ""}` : `<p class="note">Todavía no dirige partidos de ${esc(L.nombre)} esta temporada.</p>`}</div>`;
+  const lg = L.arbitros_liga || {}, H3 = a.h3;
+  const link = a.slug ? `<button class="link arb-n" data-go="arbitro" data-liga="${L.id}" data-id="${esc(a.slug)}">${esc(a.n)} →</button>` : `<b class="arb-n">${esc(a.n)}</b>`;
+  const head = `<div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px"><h3>Árbitro ${help(ARB_TIP)}</h3>${link}</div>`;
+  if (!H3) {   // sin historial (liga sin datos de temporadas pasadas): lo de esta temporada
+    if (!a.pj) return `<div class="panel stack arbp">${head}<p class="note">Todavía no dirige partidos de ${esc(L.nombre)} en las temporadas con datos.</p></div>`;
+    return `<div class="panel stack arbp">${head}<div class="kpis">${kpi("m", "Partidos esta temporada", a.pj, L.nombre)}${kpi("", "Tarjetas por partido", arbCmp(a.tpp, lg.tpp, v => dec(v, 1)), "")}${kpi("", "Gana el local", arbCmp(a.local, lg.local, v => pct(v, 0)), "")}</div></div>`;
+  }
+  const B = H3.liga || {}, dt = H3.datos || {}, nT = Object.keys(H3.temps || {}).length;
+  const ks = [kpi("m", nT > 1 ? `Partidos en ${nT} temporadas` : "Partidos dirigidos", H3.pj, arbTemps(H3.temps, H3.etq))];
+  if (dt.tarjetas) ks.push(kpi("", "Tarjetas por partido", arbCmp(H3.tpp, B.tpp, v => dec(v, 1)), H3.rpp != null ? `rojas ${dec(H3.rpp, 2)} (liga ${dec(B.rpp, 2)})` : ""));
+  if (dt.faltas) ks.push(kpi("", "Faltas cobradas por partido", arbCmp(H3.fpp, B.fpp, v => dec(v, 1), .08), "menos faltas = deja jugar más"));
+  if (dt.penales) ks.push(kpi("", "Goles de penal por partido", arbCmp(H3.penpp, B.penpp, v => dec(v, 2), .25), ""));
+  ks.push(kpi("", "Gana el local", arbCmp(H3.local, B.local, v => pct(v, 0), .1), `empate ${pct(H3.empate, 0)}`));
+  return `<div class="panel stack arbp">${head}
+    ${(H3.perfil || []).length ? `<div class="arb-chips">${arbChips(H3.perfil)}</div>` : `<p class="note">Con ${H3.pj} partidos todavía no alcanza para un perfil confiable.</p>`}
+    <div class="kpis">${ks.join("")}</div>
+    <h4 class="arb-sub">Con estos equipos</h4>
+    <div class="arb-eqs">${arbEquipo(L, (a.eq3 || {}).h, p.home, dt)}${arbEquipo(L, (a.eq3 || {}).a, p.away, dt)}</div>
+    ${a.tarjetas_aj != null && p.th != null ? `<p class="note">Tarjetas esperadas del modelo: <b>${dec(p.th + p.ta, 1)}</b>. Ajustadas por este árbitro: <b>${dec(a.tarjetas_aj, 1)}</b>. ${help("El ajuste usa sus tarjetas de esta temporada mezcladas con el promedio de la liga. Se mide en el registro antes de usarlo en el modelo.")}</p>` : ""}
+    <p class="note">${ARB_NOTA}</p>
+    ${a.slug ? `<button class="btn ghost sm" data-go="arbitro" data-liga="${L.id}" data-id="${esc(a.slug)}">Ficha completa de ${esc(a.n)}</button>` : ""}</div>`;
 }
 function lArbitros(L) {
   const todos = L.arbitros || [], lg = L.arbitros_liga || {}, A = todos.filter(a => a.pj >= 3), resto = todos.length - A.length;
   if (!todos.length) return `<div class="panel empty">Sin árbitros registrados para esta liga todavía.</div>`;
   const fl = (v, b) => v == null || b == null || Math.abs(v - b) / (b || 1) <= .15 ? "" : `<small class="faint"> ${v > b ? "▲" : "▼"}</small>`;
-  return `<div class="panel flush scroll"><div class="ph"><h3>Árbitros de la temporada</h3><span class="note">Promedio de la liga: ${lg.tpp != null ? `${dec(lg.tpp, 1)} tarjetas · ` : ""}${lg.penpp != null ? `${dec(lg.penpp, 2)} penales · ` : ""}local gana ${pct(lg.local, 0)}${lg.tpp == null ? " · ESPN no publica las tarjetas de esta liga" : ""}</span></div>
-    <table class="t"><thead><tr><th>Árbitro</th><th class="n">Partidos</th><th class="n">Tarjetas/PJ</th><th class="n">Penales/PJ</th><th class="n">Gana el local</th></tr></thead><tbody>${A.map(a => `<tr><td><b>${esc(a.n)}</b></td><td class="n">${a.pj}</td>
-      <td class="n">${dec(a.tpp, 1)}${fl(a.tpp, lg.tpp)}</td><td class="n">${dec(a.penpp, 2)}${fl(a.penpp, lg.penpp)}</td><td class="n">${pct(a.local, 0)}</td></tr>`).join("")}</tbody></table>
-    <p class="note" style="padding:0 16px 14px">Árbitros con 3 partidos o más esta temporada${resto ? ` (otros ${resto} dirigieron menos)` : ""}. ▲ / ▼: más de 15 % sobre o bajo el promedio de la liga. Datos de API-Football cruzados con los resultados de ESPN: son estadísticas, no juicios sobre los árbitros, y con pocos partidos cambian mucho por azar.</p></div>`;
+  return `<div class="panel flush scroll"><div class="ph"><h3>Árbitros de la temporada</h3><span class="note">Promedio de la liga: ${lg.tpp != null ? `${dec(lg.tpp, 1)} tarjetas · ` : ""}${lg.penpp != null ? `${dec(lg.penpp, 2)} goles de penal · ` : ""}local gana ${pct(lg.local, 0)}${lg.tpp == null ? " · ESPN no publica las tarjetas de esta liga" : ""}</span></div>
+    <table class="t"><thead><tr><th>Árbitro</th><th class="n">Partidos</th><th class="n">Tarjetas/PJ</th><th class="n hide-m">Penales/PJ</th><th class="n hide-m">Gana el local</th></tr></thead><tbody>${A.map(a => `<tr${a.slug ? ` class="click" data-go="arbitro" data-liga="${L.id}" data-id="${esc(a.slug)}"` : ""}><td><b>${esc(a.n)}</b>${(a.perfil || []).filter(k => !/normal/.test(k)).length ? `<div class="arb-chips sm">${arbChips(a.perfil.filter(k => !/normal/.test(k)))}</div>` : ""}</td><td class="n">${a.pj}${a.pj3 && a.pj3 > a.pj ? `<small class="faint" style="display:block">${a.pj3} en 3 temp.</small>` : ""}</td>
+      <td class="n">${dec(a.tpp, 1)}${fl(a.tpp, lg.tpp)}</td><td class="n hide-m">${dec(a.penpp, 2)}${fl(a.penpp, lg.penpp)}</td><td class="n hide-m">${pct(a.local, 0)}</td></tr>`).join("")}</tbody></table>
+    <p class="note" style="padding:0 16px 14px">Árbitros con 3 partidos o más esta temporada${resto ? ` (otros ${resto} dirigieron menos)` : ""}. Toca uno para ver su ficha: perfil, historial con cada equipo y sus últimos partidos. ▲ / ▼: más de 15 % sobre o bajo el promedio de la liga. Son estadísticas, no juicios sobre los árbitros.</p></div>`;
 }
+// ficha del árbitro: #/arbitro/<liga>/<slug>
+D.arbH = D.arbH || {};
+function vArbitro() {
+  const L = D.ligas[R.liga], H = D.arbH[R.liga];
+  if (!L) return vNoEncontrado("Esta liga no está en Ballytics");
+  if (H === undefined) { D.arbH[R.liga] = null; getJSON(`data/arbitros/${R.liga}.json`).then(x => { D.arbH[R.liga] = x; }).catch(() => { D.arbH[R.liga] = false; }).then(() => { if (R.v === "arbitro") render(); }); }
+  if (!H) return H === false ? vNoEncontrado("No hay historial de árbitros para esta liga") : `<section class="view">${skeleton()}</section>`;
+  const r = (H.refs || {})[R.id]; if (!r) return vNoEncontrado("No encontramos a este árbitro");
+  const B = H.base || {}, dt = H.datos || {}, etq = H.etiquetas || {};
+  const ks = [kpi("m", "Partidos dirigidos", r.pj, arbTemps(r.temps, etq))];
+  if (dt.tarjetas) ks.push(kpi("", "Tarjetas por partido", arbCmp(r.tpp, B.tpp, v => dec(v, 1)), `amarillas ${dec(r.ypp, 1)} · rojas ${dec(r.rpp, 2)} (liga ${dec(B.rpp, 2)})`));
+  if (dt.faltas) ks.push(kpi("", "Faltas cobradas por partido", arbCmp(r.fpp, B.fpp, v => dec(v, 1), .08), "menos faltas = deja jugar más"));
+  if (dt.penales) ks.push(kpi("", "Goles de penal por partido", arbCmp(r.penpp, B.penpp, v => dec(v, 2), .25), ""));
+  ks.push(kpi("", "Gana el local", arbCmp(r.local, B.local, v => pct(v, 0), .1), `empate ${pct(r.empate, 0)}`));
+  const llam = r.equipos.filter(e => /mejor|peor|mas|menos/.test((e.v_p || "") + (e.v_t || "")));
+  const tabla = `<table class="t"><thead><tr><th>Equipo</th><th class="n">PJ</th><th class="n">G-E-P</th><th class="n">Pts/PJ</th><th class="n">Lo normal</th>${dt.tarjetas ? `<th class="n">Tarjetas</th><th class="n hide-m">Lo normal</th>` : ""}${dt.penales ? `<th class="n hide-m">Penal +/−</th>` : ""}</tr></thead><tbody>${r.equipos.map(e => {
+    const cls = v => v === "mejor" || v === "menos" ? "good" : v === "peor" || v === "mas" ? "bad" : "";
+    return `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(e.t)}"><td class="team">${badge(L, e.t)}${esc(corto(L, e.t))}</td><td class="n">${e.pj}</td><td class="n">${e.g}-${e.e}-${e.p}</td>
+      <td class="n ${cls(e.v_p)}">${dec(e.ppg, 2)}${/mejor|peor/.test(e.v_p) ? (e.v_p === "mejor" ? " ▲" : " ▼") : ""}</td><td class="n faint">${dec(e.ppg_esp, 2)}</td>
+      ${dt.tarjetas ? `<td class="n ${cls(e.v_t)}">${dec(e.tr, 1)}${/mas|menos/.test(e.v_t) ? (e.v_t === "mas" ? " ▲" : " ▼") : ""}</td><td class="n faint hide-m">${dec(e.tr_esp, 1)}</td>` : ""}${dt.penales ? `<td class="n hide-m">${e.pf} / ${e.pc}</td>` : ""}</tr>`; }).join("")}</tbody></table>`;
+  const lim = VV.arbLim || 15;
+  const ult = r.partidos.slice(0, lim).map(([d, h, a, hg, ag, th, ta, rh, ra, fh, fa]) => `<div class="arb-pm"><span class="faint num">${esc(fecha(d + "T12:00"))}</span><span class="arb-pt">${badge(L, h)}<span>${esc(corto(L, h))}</span><b class="num">${hg}–${ag}</b><span>${esc(corto(L, a))}</span>${badge(L, a)}</span><span class="faint num">${th != null ? `🟨 ${th}–${ta}${rh || ra ? ` 🟥 ${rh}–${ra}` : ""}` : ""}${fh != null ? ` · ${fh + fa} faltas` : ""}</span></div>`).join("");
+  return `<section class="view" aria-labelledby="h-arb">
+    <button class="back" data-go="liga" data-liga="${L.id}" data-tab="arbitros">← Árbitros de ${esc(L.nombre)}</button>
+    <div class="panel stack arbp"><span class="lbl">Árbitro · ${esc(L.nombre)}</span><h1 id="h-arb">${esc(r.n)}</h1>
+      ${(r.perfil || []).length ? `<div class="arb-chips">${arbChips(r.perfil)}</div>` : `<p class="note">Con ${r.pj} partidos todavía no alcanza para un perfil confiable.</p>`}
+      <div class="kpis">${ks.join("")}</div>
+      <p class="note">${Object.keys(etq).length > 1 ? `Últimas ${Object.keys(etq).length} temporadas de ${esc(L.nombre)} (${Object.values(etq).join(", ")})` : `Temporada ${Object.values(etq).join("")} de ${esc(L.nombre)}`}. Promedio de la liga en el mismo período: ${dt.tarjetas ? `${dec(B.tpp, 1)} tarjetas, ` : ""}${dt.faltas ? `${dec(B.fpp, 1)} faltas, ` : ""}local gana ${pct(B.local, 0)}.${!dt.tarjetas ? " ESPN no publica las tarjetas de esta liga." : ""}</p></div>
+    <div class="panel flush scroll"><div class="ph"><h3>Con cada equipo ${help(ARB_NOTA)}</h3><span class="note">${llam.length ? `${llam.length} ${llam.length === 1 ? "diferencia llamativa" : "diferencias llamativas"} (▲ ▼)` : "Ninguna diferencia llamativa"}</span></div>${tabla}
+      <p class="note" style="padding:0 16px 14px">Lo normal: lo que hace el equipo con los demás árbitros, de local o de visita según corresponda. ▲ ▼ marca solo las diferencias poco probables por azar con al menos 4 partidos. No prueba que el árbitro favorezca o perjudique a nadie.</p></div>
+    <div class="panel flush"><div class="ph"><h3>Sus partidos</h3><span class="note">${r.partidos.length} en total</span></div>${ult}
+      ${r.partidos.length > lim ? `<button class="vmore" id="arb-more">Ver más partidos (${r.partidos.length - lim} restantes)</button>` : ""}</div>
+    <p class="note">Árbitro según API-Football; resultados, tarjetas, faltas y goles de penal según ESPN. Actualizado ${esc(fecha(H.actualizado))}.</p>
+  </section>`;
+}
+document.addEventListener("click", e => { if (e.target.id === "arb-more") { VV.arbLim = (VV.arbLim || 15) + 30; go({ v: "arbitro", liga: R.liga, id: R.id, keepScroll: true }); } });
 
 /* ---------------- previa automática ---------------- */
 function previa(L, p, k, ct, tt) {

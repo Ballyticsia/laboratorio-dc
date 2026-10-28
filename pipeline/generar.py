@@ -912,7 +912,13 @@ def main():
                    modelo=mj, modelo_corners=mc.to_json() if mc else None, modelo_tarjetas=mt.to_json() if mt else None,
                    slug=L["s1"], grupos=grupos, equipos=info, tabla=tabla, stats=stats_eq, rachas=rachas, goleadores=goleadores, amonestados=amonestados,
                    partidos=partidos, resultados=resultados, copa=copa)
-        pendientes.append((L, out, dict(model=model, goles=goles_cnt, team_goals=team_goals, name_of=name_of)))
+        # partidos jugados de la liga en las últimas temporadas, para el historial de los árbitros
+        hist_arb = []
+        for x in p1.itertuples():
+            fh_, fa_ = stat(x, "h", "foulsCommitted"), stat(x, "a", "foulsCommitted")
+            hist_arb.append(dict(kickoff=x.kickoff, home=x.home, away=x.away, hg=x.hg, ag=x.ag, ev=getattr(x, "eventos", None),
+                                 fh=int(fh_) if fh_ == fh_ else None, fa=int(fa_) if fa_ == fa_ else None))
+        pendientes.append((L, out, dict(model=model, goles=goles_cnt, team_goals=team_goals, name_of=name_of, hist_arb=hist_arb)))
         indice.append(dict(id=L["id"], slug=L["s1"], nombre=L["nombre"], pais=L["pais"], region=L["region"], logo=meta.get("logo"),
                            datos_hasta=out["datos_hasta"], proximos=len(partidos)))
         print(f"  {len(jug)} jugados · {len(partidos)} por jugar · datos hasta {out['datos_hasta']} · "
@@ -970,6 +976,7 @@ def main():
     try:   # árbitros (API-Football): nunca deben impedir publicar
         arbitros.actualizar_ligas([(L, out) for L, out, _ in pendientes])
         arbitros.actualizar_dias()
+        arbitros.historial([(L, out, c["hist_arb"]) for L, out, c in pendientes])
     except Exception as e:
         print("  ✗ árbitros:", e)
     # registro público (después de las bajas, para guardar también el modelo con bajas)

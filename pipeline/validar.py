@@ -107,6 +107,12 @@ def main():
                     err(f"{donde}: cuota inválida ({f.get('cuota')})")
                 if f.get("res") not in (None, "G", "P", "N"):
                     err(f"{donde}: resultado inválido ({f.get('res')})")
+    for f in glob.glob(os.path.join(DATA, "arbitros", "*.json")):
+        h = leer(f) or {}
+        for r in (h.get("refs") or {}).values():
+            if not isinstance(r.get("pj"), int) or r["pj"] < 1 or not r.get("slug"):
+                err(f"arbitros/{os.path.basename(f)}: árbitro inválido ({r.get('n')})")
+                break
     for extra in ("metodologia.json", "fotos.json", "arbitros.json"):
         p = os.path.join(DATA, extra)
         if os.path.exists(p):

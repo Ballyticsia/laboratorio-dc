@@ -6,6 +6,7 @@ node_modules/
 # páginas para Google: se generan al publicar (pipeline/seo.py)
 site/partido/
 site/liga/
+site/arbitro/
 site/picks/
 site/modelo/
 site/metodo/

@@ -25,7 +25,7 @@ URL = os.environ.get("SITIO_URL", "https://ballyticsia.github.io/laboratorio-dc/
 BASE_ABS = "/" + URL.split("://", 1)[1].split("/", 1)[1] if URL.count("/") > 3 else "/"
 TZ = ZoneInfo("America/Santiago")
 DIAS_PROX = int(os.environ.get("SEO_DIAS", "14"))
-GENERADAS = ["partido", "liga", "picks", "modelo", "metodo", "terminos", "privacidad", "responsable", "sobre"]
+GENERADAS = ["partido", "liga", "arbitro", "picks", "modelo", "metodo", "terminos", "privacidad", "responsable", "sobre"]
 DIAS_SEM = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
 MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 e = html.escape
@@ -192,6 +192,30 @@ def partido_jugado(tpl, L, fl):
     return ruta, pagina(tpl, ruta, titulo, desc, cuerpo, [ev, migas(("Ballytics", ""), (nom, f"liga/{L['id']}/"), (f"{H} vs {A}", ruta))], "article")
 
 
+PERFIL = {"muchas": "saca muchas tarjetas", "pocas": "saca pocas tarjetas", "deja": "deja jugar (cobra pocas faltas)", "cobra": "cobra muchas faltas", "rojas": "expulsa seguido"}
+
+
+def arbitro(tpl, L, H, r):
+    nom, B, dt, etq = L["nombre"], H.get("base") or {}, H.get("datos") or {}, H.get("etiquetas") or {}
+    perfil = [PERFIL[k] for k in r.get("perfil") or [] if k in PERFIL]
+    temps = ", ".join(etq.get(k, k) for k in (r.get("temps") or {}))
+    titulo = f"{r['n']}: árbitro, tarjetas e historial con cada equipo | Ballytics"
+    desc = (f"{r['n']}, árbitro de {nom}: {r['pj']} partidos ({temps})"
+            + (f", {dc(r.get('tpp'))} tarjetas por partido (liga {dc(B.get('tpp'))})" if dt.get("tarjetas") and r.get("tpp") is not None else "")
+            + (f", {dc(r.get('fpp'))} faltas (liga {dc(B.get('fpp'))})" if dt.get("faltas") and r.get("fpp") is not None else "")
+            + f". Cómo le fue a cada equipo con él" + (f"; perfil: {', '.join(perfil)}" if perfil else "") + ".")
+    filas = "".join(f'<tr><td>{e(x["t"])}</td><td class="n">{x["pj"]}</td><td class="n">{x["g"]}-{x["e"]}-{x["p"]}</td><td class="n">{dc(x.get("ppg"), 2)}</td>'
+                    f'<td class="n">{dc(x.get("ppg_esp"), 2)}</td></tr>' for x in (r.get("equipos") or [])[:20])
+    cuerpo = (f'<section class="view seo-pre" aria-labelledby="h-seo"><p class="muted">Árbitro · {e(nom)}</p><h1 id="h-seo">{e(r["n"])}</h1><p>{e(desc)}</p>'
+              f'<div class="panel flush scroll"><table class="t"><thead><tr><th>Equipo</th><th class="n">PJ</th><th class="n">G-E-P</th><th class="n">Pts/PJ</th>'
+              f'<th class="n">Lo normal</th></tr></thead><tbody>{filas}</tbody></table></div>'
+              f'<p class="note">Lo normal: lo que hace el equipo con los demás árbitros. Son estadísticas, no juicios sobre el árbitro.</p>'
+              f'<p class="note"><a class="link" href="liga/{e(L["id"])}/">{e(nom)}</a> · <a class="link" href="picks/">Picks públicos</a></p></section>')
+    ruta = f"arbitro/{L['id']}/{r['slug']}/"
+    ld = {"@context": "https://schema.org", "@type": "Person", "name": r["n"], "jobTitle": "Árbitro de fútbol", "description": desc, "url": URL + ruta}
+    return ruta, pagina(tpl, ruta, titulo, desc, cuerpo, [ld, migas(("Ballytics", ""), (nom, f"liga/{L['id']}/"), (r["n"], ruta))], "profile")
+
+
 def liga(tpl, L, proximos):
     nom = L["nombre"]
     titulo = f"{nom}: probabilidades, tabla y pronósticos | Ballytics"
@@ -259,6 +283,15 @@ def main():
         ruta, h = liga(tpl, L, prox)
         escribir(ruta, h)
         mapa.append((URL + ruta, ahora, "daily", "0.8"))
+    n_arb = 0
+    for lid, L in ligas.items():   # fichas de árbitros con 5 partidos o más
+        H = leer(os.path.join(DATA, "arbitros", f"{lid}.json"))
+        for r in ((H or {}).get("refs") or {}).values():
+            if r.get("pj", 0) >= 5 and r.get("slug"):
+                ruta, h = arbitro(tpl, L, H, r)
+                escribir(ruta, h)
+                mapa.append((URL + ruta, ahora, "weekly", "0.5"))
+                n_arb += 1
     hechos = {m[0] for m in mapa}
     reg = leer(os.path.join(DATA, "registro.json"), {}) or {}
     for fl in reg.get("filas", []):
@@ -288,7 +321,7 @@ def main():
         f.write("\n".join(xml) + "\n")
     with open(os.path.join(SITE, "robots.txt"), "w", encoding="utf-8") as f:
         f.write(f"User-agent: *\nAllow: /\nSitemap: {URL}sitemap.xml\n")
-    print(f"Páginas para Google: {n_prox} partidos próximos, {n_jug} jugados, {len(ligas)} ligas · sitemap con {len(mapa)} direcciones")
+    print(f"Páginas para Google: {n_prox} partidos próximos, {n_jug} jugados, {len(ligas)} ligas, {n_arb} árbitros · sitemap con {len(mapa)} direcciones")
 
 
 if __name__ == "__main__":
