@@ -1,0 +1,8 @@
+{
+  "name": "ballytics-pruebas",
+  "private": true,
+  "description": "Pruebas automáticas del sitio (humo.js) y examen de la IA (examen_ia.js)",
+  "dependencies": {
+    "playwright": "1.56.0"
+  }
+}

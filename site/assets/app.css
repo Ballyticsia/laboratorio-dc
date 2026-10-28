@@ -1379,3 +1379,8 @@ body.ia-open #iafab{display:none}
 .ia-fb{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:12.5px}
 .ia-fb button{background:none;border:1px solid var(--line);border-radius:999px;padding:2px 10px;cursor:pointer;font-size:14px;line-height:1.4}
 .ia-fb button:hover{border-color:var(--pitch);background:var(--pitch-soft)}
+/* v26: nada se sale por el costado en el teléfono */
+.vhub{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.vhub::-webkit-scrollbar{display:none}
+.vhub button{flex:none;white-space:nowrap}
+.sr{left:0}

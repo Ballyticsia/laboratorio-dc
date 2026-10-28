@@ -133,6 +133,10 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - Cada página es la misma app con su título, descripción, vista previa (`assets/og.png`), datos estructurados y el texto principal ya escrito; `app.js` lee la dirección y abre esa pantalla. El botón "Compartir enlace" del partido usa esa dirección, que en WhatsApp se ve con título y descripción.
 - Para que Google la encuentre antes: en Google Search Console agrega la propiedad con prefijo de URL `https://ballyticsia.github.io/laboratorio-dc/` y envía `sitemap.xml`. Con dominio propio, cambia `SITIO_URL` en `pipeline/seo.py` (o como variable de entorno) y las direcciones de `site/index.html`.
 
+## Pruebas automáticas
+- `tests/humo.js`: antes de publicar, el robot abre 18 pantallas (inicio, liga, partido, mercados, registro, picks, prode, en vivo, páginas para Google y una dirección inexistente) en un navegador real, en teléfono y computador. Si hay un error de JavaScript, una pantalla que no carga o algo que se sale por el costado en el teléfono, **no publica** y abre un issue; el sitio sigue con la última versión buena. Para probar en tu computador: `cd tests && npm ci && npx playwright install chromium && node humo.js` (después de `python pipeline/generar.py` y `python pipeline/seo.py`).
+- `tests/examen_ia.js` (workflow "Examen de la IA"): 20 preguntas fijas a la IA en la página publicada, cada lunes y después de cada cambio de código. Revisa que nombre partidos del día pedido, que no invente cuotas, que no diga "paga" para una cuota justa, que las listas no sean cortas, que no llame "claro" a un favorito de menos de 60 %, que diga "Juega con responsabilidad" al hablar de apuestas y que no responda cosas que no son de fútbol. El resultado queda en `data/ia_examen.json` y en el resumen de la ejecución, con los totales de 👍/👎 de la gente.
+
 ## Cambiar cosas
 - **Horario:** la línea `cron` del workflow (está en hora UTC; Chile es UTC-3).
 - **Ligas:** la lista `LIGAS` en `pipeline/generar.py` (códigos de ESPN como `eng.1`, `esp.1`, `por.1`, `ned.1`, `arg.1`, `chi.1`).

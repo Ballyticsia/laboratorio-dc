@@ -344,7 +344,9 @@ function render() {
 }
 
 // para las pruebas automáticas (tests/): ruta actual, enlace limpio y datos cargados
-window.__bt = { route: () => R, cleanUrl: () => cleanUrl(R), data: () => D };
+window.__bt = { route: () => R, cleanUrl: () => cleanUrl(R), data: () => D,
+  ia: { dia: async q => { const { ctx, idmap } = await iaCtxDia(q); return { ctx, dias: Object.fromEntries(Object.entries(idmap).map(([k, c]) => [k, iaDia(new Date(c.t).toISOString())])) }; },
+    partido: (liga, id) => { const L = D.ligas[liga], p = findMatch(liga, id); return L && p ? iaCtxPartido(L, p) : null; } } };
 function routeTitle() {
   const L = D.ligas[R.liga], T = " | Ballytics";
   if (R.v === "partido") { const p = findMatch(R.liga, R.id) || (D.registro && (D.registro.filas || []).find(f => String(f.id) === String(R.id))); if (p) return `${p.home} vs ${p.away}: probabilidades y pronóstico${T}`; }
