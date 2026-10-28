@@ -15,14 +15,14 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: examen-ia
-  cancel-in-progress: true
-
 jobs:
   examen:
     # después de publicar, solo si la publicación vino de un cambio de código (no de la actualización cada 2 horas)
     if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    # a nivel del trabajo: las ejecuciones que se saltan no cancelan un examen en curso
+    concurrency:
+      group: examen-ia
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
