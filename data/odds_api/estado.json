@@ -1,11 +1,11 @@
 {
  "activa": true,
- "creditos_usados": 2,
+ "creditos_usados": 0,
  "restantes": 344,
  "consultas": {
   "soccer_epl": "sin partidos cerca",
   "soccer_spain_la_liga": "sin partidos cerca",
-  "soccer_italy_serie_a": "actualizada",
+  "soccer_italy_serie_a": "copia",
   "soccer_germany_bundesliga": "sin partidos cerca",
   "soccer_france_ligue_one": "sin partidos cerca",
   "soccer_efl_champ": "sin partidos cerca",
@@ -28,5 +28,5 @@
  "errores": [],
  "ligas": {},
  "partidos_con_cuota": 43,
- "actualizado": "2026-10-28T01:14+00:00"
+ "actualizado": "2026-10-28T03:02+00:00"
 }
