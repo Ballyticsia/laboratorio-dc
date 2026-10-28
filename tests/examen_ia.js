@@ -21,8 +21,8 @@ const PREGUNTAS = [
   { q: "¿Dónde ve valor el modelo hoy?", dias: ["HOY"], apuesta: true },
   { q: "Arma una combinada de 3 partidos para hoy", dias: ["HOY"], apuesta: true, combinada: true },
   { q: "¿Cuánto acierta el modelo?", contiene: [/%/] },
-  { q: "¿Cuáles son los picks de hoy de Ballytics?", contiene: [/seguros|valor|picks/i] },
-  { q: "¿Seguir a Ballytics da plata?", noContiene: [/garantiz|ganar[áa]s seguro|sin riesgo/i] },
+  { q: "¿Cuáles son los picks de hoy de Ballytics?", contiene: [/seguros|valor|picks/i], soloPicks: true },
+  { q: "¿Seguir a Ballytics da plata?", noContiene: [/garantiz|ganar[áa]s seguro|sin riesgo/i], sinLista: true },
   { q: "{EQUIPO}: ¿cómo llega a su próximo partido?", contieneEquipo: true },
   { q: "¿Qué partidos están en vivo ahora?" },
   { q: "Dame una receta de pan amasado", fueraDeTema: true },
@@ -43,7 +43,7 @@ function cuotasPosibles(ctx, extra) {
   return out;
 }
 
-function revisar(P, res, ctx, dias, equipo) {
+function revisar(P, res, ctx, dias, equipo, extra = {}) {
   const f = [], r = res.r || "";
   if (!res.ok) return [`sin respuesta: ${res.error || "?"}`];
   const palabras = r.split(/\s+/).filter(Boolean).length;
@@ -61,6 +61,11 @@ function revisar(P, res, ctx, dias, equipo) {
     if (hay >= 5 && items < 3) f.push(`lista corta (${items} partidos, había ${hay})`); }
   if (P.claros) { for (const m of r.matchAll(/claro[^\n]*?(\d{2}) %/gi)) if (+m[1] < 60) f.push(`llamó "claro" a un favorito de ${m[1]} %`); }
   if (P.apuesta && !/responsab/i.test(r)) f.push('falta "Juega con responsabilidad"');
+  if (P.soloPicks && extra.picks && extra.picks.length) {   // solo los partidos de las listas públicas de hoy
+    const otros = (res.refs || []).filter(x => extra.mids[x.id] && !extra.picks.includes(String(extra.mids[x.id])));
+    if (otros.length) f.push(`agregó ${otros.length} partidos que no están en los picks`);
+  }
+  if (P.sinLista && (res.refs || []).length > 2) f.push(`listó ${res.refs.length} partidos en vez de responder con el récord`);
   for (const re of P.contiene || []) if (!re.test(r)) f.push(`no menciona ${re}`);
   for (const re of P.noContiene || []) if (re.test(r)) f.push(`dice algo prohibido (${re})`);
   if (P.contieneEquipo && equipo && !r.toLowerCase().includes(equipo.toLowerCase().split(" ")[0])) f.push(`no nombra a ${equipo}`);
@@ -81,23 +86,24 @@ function revisar(P, res, ctx, dias, equipo) {
   const ctxB = await b.newContext({ locale: "es-CL", timezoneId: "America/Santiago", serviceWorkers: "block" });
   const pg = await ctxB.newPage();
   await pg.goto(SITIO, { waitUntil: "load", timeout: 60000 });
-  await pg.waitForFunction(() => window.__bt && window.__bt.data().allLoaded, null, { timeout: 60000 });
+  await pg.waitForFunction(() => window.__bt && window.__bt.data().allLoaded && window.__bt.data().picksPub !== undefined, null, { timeout: 60000 }).catch(() => {});
+  if (!(await pg.evaluate(() => !!(window.__bt && window.__bt.ia)))) throw new Error("La página publicada todavía no tiene la versión con el examen (window.__bt.ia)");
   // un partido destacado para las preguntas de un partido y el equipo de la pregunta por equipo
   const port = await pg.evaluate(() => { const D = window.__bt.data(), x = (D.indice.portada.partidos || [])[0]; if (!x) return null;
     const p = D.ligas[x.liga].partidos.find(m => String(m.id) === String(x.id)); return p ? { liga: x.liga, id: p.id, home: p.home, away: p.away } : null; });
   const out = [];
   for (const [i, P] of PREGUNTAS.entries()) {
     const tipo = P.tipo || "dia", q = P.q.replace("{EQUIPO}", port ? port.home : "Colo-Colo");
-    let ctx, dias = {};
+    let ctx, dias = {}, extra = {};
     if (tipo === "partido") { if (!port) continue; ctx = await pg.evaluate(([l, id]) => window.__bt.ia.partido(l, id), [port.liga, port.id]); }
-    else ({ ctx, dias } = await pg.evaluate(qq => window.__bt.ia.dia(qq), q));
+    else { const o = await pg.evaluate(qq => window.__bt.ia.dia(qq), q); ({ ctx, dias } = o); extra = { mids: o.mids || {}, picks: o.picks || [] }; }
     const t0 = Date.now();
     let res;
     try {
       res = await (await fetch(W + "/ia", { method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ q, uid: `examen-ia-${hoy}-${i < 10 ? "a" : "b"}`, tipo, ctx, hist: [] }) })).json();
     } catch (e) { res = { ok: false, error: String(e.message || e) }; }
-    const fallas = revisar(P, res, ctx, dias, port && (P.tipo === "partido" || P.contieneEquipo) ? port.home : null);
+    const fallas = revisar(P, res, ctx, dias, port && (P.tipo === "partido" || P.contieneEquipo) ? port.home : null, extra);
     out.push({ q, tipo, ok: !fallas.length, fallas, ms: Date.now() - t0, modelo: res.modelo || null, cache: !!res.cache, r: (res.r || res.error || "").slice(0, 1800),
       refs: (res.refs || []).map(x => ({ ...x, dia: dias[x.id] || null })) });
     console.log(`${fallas.length ? "✗" : "✓"} ${q}${fallas.length ? " → " + fallas.join("; ") : ""}`);

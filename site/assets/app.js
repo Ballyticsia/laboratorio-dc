@@ -345,7 +345,9 @@ function render() {
 
 // para las pruebas automáticas (tests/): ruta actual, enlace limpio y datos cargados
 window.__bt = { route: () => R, cleanUrl: () => cleanUrl(R), data: () => D,
-  ia: { dia: async q => { const { ctx, idmap } = await iaCtxDia(q); return { ctx, dias: Object.fromEntries(Object.entries(idmap).map(([k, c]) => [k, iaDia(new Date(c.t).toISOString())])) }; },
+  ia: { dia: async q => { const { ctx, idmap } = await iaCtxDia(q); return { ctx, dias: Object.fromEntries(Object.entries(idmap).map(([k, c]) => [k, iaDia(new Date(c.t).toISOString())])),
+      mids: Object.fromEntries(Object.entries(idmap).map(([k, c]) => [k, iaEvId(c)])),
+      picks: ((D.picksPub || {}).dias || []).filter(d => d.dia === isoDay(new Date())).flatMap(d => d.picks.map(f => String(f.id))) }; },
     partido: (liga, id) => { const L = D.ligas[liga], p = findMatch(liga, id); return L && p ? iaCtxPartido(L, p) : null; } } };
 function routeTitle() {
   const L = D.ligas[R.liga], T = " | Ballytics";
