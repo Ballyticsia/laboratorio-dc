@@ -2599,7 +2599,7 @@ function vRow(e) {
   const m = vModel(e.id), f = followed()[e.id];
   const so = e.h.so != null && e.a.so != null && (e.h.so || e.a.so || enPenales(e)) ? `<small class="vpen">pen. ${esc(e.h.so)}-${esc(e.a.so)}</small>` : "";
   const sc = e.state === "pre" ? `<span class="vtime">${hhmm(e.date)}</span>` : `<span class="vsc num">${esc(e.h.score ?? "")}<i>-</i>${esc(e.a.score ?? "")}${so}</span>`;
-  const st = isLive(e) ? `<span class="vmin live">${esc(vClock(e))}</span>` : e.state === "post" ? `<span class="vmin">${/pen|AET|ET/i.test(e.detail) && e.detail !== "FT" ? esc(e.detail) : "Final"}</span>` : /postp|cancel|susp|delay/i.test(e.detail) ? `<span class="vmin warn">${esc(e.detail)}</span>` : `<span class="vmin">&nbsp;</span>`;
+  const st = isLive(e) ? `<span class="vmin live">${esc(vClock(e))}</span>` : e.state === "post" ? `<span class="vmin">${esc(/pen/i.test(e.detail) ? "Penales" : /AET|ET/i.test(e.detail) && e.detail !== "FT" ? "Alargue" : "Final")}</span>` : /postp|cancel|susp|delay/i.test(e.detail) ? `<span class="vmin warn">${esc(e.detail)}</span>` : `<span class="vmin">&nbsp;</span>`;
   return `<div class="vrow ${e.state}" data-go="envivo" data-id="${esc(e.id)}" role="link" tabindex="0">
     ${st}<span class="vmid">${vTeam(e, "h", "l")}${sc}${vTeam(e, "a", "r")}</span>
     <span class="vside">${m && e.state !== "post" ? `<span class="vmodel" title="Probabilidad Ballytics">${pct(m.p.pH)} · ${pct(m.p.pD)} · ${pct(m.p.pA)}</span>` : ""}${e.state !== "post" ? `<button class="vbell${f ? " on" : ""}" data-follow="${esc(e.id)}" title="${f ? "Dejar de seguir" : "Avisarme de goles"}" aria-label="Avisarme de goles">${f ? "🔔" : "🔕"}</button>` : ""}</span></div>`;
@@ -2953,6 +2953,8 @@ function vHeader(j) {
   return { state: t.state, detail: t.shortDetail || t.detail || "", clock: st.displayClock, period: st.period, date: c.date, h: side("home"), a: side("away"),
     league: lg.name || "", slug: lg.slug || "", lid: String(lg.id || ""), note: (c.notes || [])[0] ? c.notes[0].headline : "" };
 }
+// "FT-Pens", "AET", "FT"… en español
+const finalEs = d => { d = String(d || ""); return /pen/i.test(d) ? "Final · penales" : /aet|extra/i.test(d) ? "Final · alargue" : /postp/i.test(d) ? "Aplazado" : /canc|abd|abandon/i.test(d) ? "Suspendido" : !d || /^(ft|final|full ?time)$/i.test(d) ? "Final" : d; };
 const minOf = H => { if (H.state === "post") return 90; if (H.state !== "in") return 0; const m = parseInt(String(H.clock || "0"), 10) || 0; return /half|HT|Entretiempo/i.test(H.detail) ? 45 : Math.min(m, 90); };
 function vEvents(j, H) {
   // los penales de la tanda no son goles del partido: van en su propio panel
@@ -2965,17 +2967,101 @@ function vEvents(j, H) {
     return { min: (e.clock || {}).displayValue || "", lado, kind, who, text: e.text || "", pen: /penalty/.test(ty) };
   });
 }
-/* tanda de penales, lanzamiento por lanzamiento (ESPN: summary.shootout) */
+/* tanda de penales: marcador, lanzamiento por lanzamiento con foto, dónde patearon y arqueros (ESPN: summary.shootout + relato) */
+const PSO_LUGAR = { "top left": [.2, .26], "top right": [.8, .26], "bottom left": [.2, .78], "bottom right": [.8, .78], "top centre": [.5, .26], "high centre": [.5, .26],
+  "bottom centre": [.5, .8], "centre left": [.2, .52], "centre right": [.8, .52], "centre": [.5, .52], "left": [.2, .55], "right": [.8, .55] };
+const PSO_ES = { "top left": "arriba a la izquierda", "top right": "arriba a la derecha", "bottom left": "abajo a la izquierda", "bottom right": "abajo a la derecha", "top centre": "arriba al centro", "high centre": "arriba al centro",
+  "bottom centre": "abajo al centro", "centre left": "a media altura a la izquierda", "centre right": "a media altura a la derecha", "centre": "al centro", "left": "a la izquierda", "right": "a la derecha" };
+function psoRelato(c) {
+  // del relato de ESPN (Opta): qué pasó y dónde fue cada penal de la tanda
+  const t = String(c.text || ""), low = t.toLowerCase();
+  const tipo = /penalty saved|saved in|is saved/.test(low) ? "atajado" : /hits the (left |right )?post|hits the bar|crossbar/.test(low) ? "palo" : /penalty missed|misses|too high|wide|over the bar/.test(low) ? "afuera" : /goal!|converts/.test(low) ? "gol" : null;
+  const pie = /left footed/.test(low) ? "zurda" : /right footed/.test(low) ? "derecha" : /header/.test(low) ? "cabeza" : null;
+  let lugar = null;
+  const m = low.match(/(top|bottom|high|centre)?\s*(left|right|centre)?\s*(?:corner|of the goal)/);
+  if (m) { const k = [m[1] === "high" ? "high" : m[1], m[2]].filter(Boolean).join(" ") || "centre"; lugar = PSO_LUGAR[k] ? k : m[2] && PSO_LUGAR[m[2]] ? m[2] : "centre"; }
+  let fuera = null;
+  if (tipo === "afuera") fuera = /high and wide to the left/.test(low) ? "alto-izq" : /high and wide to the right/.test(low) ? "alto-der" : /wide to the left|misses (to the )?left/.test(low) ? "izq" : /wide to the right|misses (to the )?right/.test(low) ? "der" : "alto";
+  if (tipo === "palo") fuera = /left post/.test(low) ? "palo-izq" : /right post/.test(low) ? "palo-der" : "travesaño";
+  return { tipo, pie, lugar, fuera };
+}
+function psoDatos(j, H) {
+  const T = j.shootout || [], de = id => T.find(t => String(t.id) === String(id)) || { shots: [] };
+  const th = de(H.h.id), ta = de(H.a.id);
+  const tiros = [...th.shots.map(x => ({ ...x, lado: "h" })), ...ta.shots.map(x => ({ ...x, lado: "a" }))]
+    .sort((a, b) => (+a.id || 0) - (+b.id || 0) || a.shotNumber - b.shotNumber || (a.lado === "h" ? -1 : 1));
+  // relato de la tanda en orden; se empareja por orden y se confirma con el resultado (y si no calza, por apellido)
+  const rel = (j.commentary || []).filter(c => ((c.play || {}).period || {}).number === 5 && /penalt/i.test(((c.play || {}).type || {}).text || "") + " " + (c.text || ""))
+    .map(c => ({ c, r: psoRelato(c) })).filter(x => x.r.tipo);
+  const ape = n => String(n || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().split(/\s+/).pop();
+  const usados = new Set();
+  tiros.forEach((x, i) => { let k = rel[i] && ((rel[i].r.tipo === "gol") === !!x.didScore) && !usados.has(i) ? i : -1;
+    if (k < 0) k = rel.findIndex((y, n) => !usados.has(n) && (y.r.tipo === "gol") === !!x.didScore && String(y.c.text || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(ape(x.player)));
+    if (k >= 0) { usados.add(k); x.rel = rel[k].r; } });
+  // marcador acumulado, ronda y penal decisivo
+  let sh = 0, sa = 0; const ronda = { h: 0, a: 0 };
+  tiros.forEach(x => { ronda[x.lado]++; x.ronda = ronda[x.lado]; if (x.didScore) x.lado === "h" ? sh++ : sa++; x.marca = [sh, sa]; });
+  const fin = H.state === "post", gan = fin && H.h.so != null && H.a.so != null && +H.h.so !== +H.a.so ? (+H.h.so > +H.a.so ? "h" : "a") : null;
+  if (gan && tiros.length) tiros[tiros.length - 1].decisivo = true;
+  // arqueros: el último que estuvo en la cancha de cada equipo
+  const arq = lado => { const t = (j.rosters || []).find(r => r.homeAway === (lado === "h" ? "home" : "away")); if (!t) return null;
+    const gk = (t.roster || []).filter(x => /^G/i.test(((x.position || {}).abbreviation || "")) && (x.starter || x.subbedIn));
+    const x = gk.find(y => y.subbedIn) || gk[0]; return x ? { n: (x.athlete || {}).displayName, id: (x.athlete || {}).id } : null; };
+  return { th, ta, tiros, gan, fin, arq: { h: arq("h"), a: arq("a") } };
+}
+function psoArco(tiros, lado, t) {
+  // la portería de cada equipo con sus penales (según el relato de ESPN)
+  const W = 300, Hh = 150, x0 = 46, x1 = 254, y0 = 34, y1 = 132, gx = f => x0 + f * (x1 - x0), gy = f => y0 + f * (y1 - y0);
+  const ts = tiros.filter(x => x.lado === lado && x.rel && (x.rel.lugar || x.rel.fuera));
+  let net = ""; for (let x = x0 + 13; x < x1; x += 13) net += `<line x1="${x}" y1="${y0}" x2="${x}" y2="${y1}"/>`; for (let y = y0 + 13; y < y1; y += 13) net += `<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}"/>`;
+  const dots = ts.map((x, i) => { const r = x.rel; let px, py;
+    if (r.fuera) { const F = { "alto": [.5, -.22], "alto-izq": [-.12, -.18], "alto-der": [1.12, -.18], "izq": [-.15, .5], "der": [1.15, .5], "palo-izq": [0, .45], "palo-der": [1, .45], "travesaño": [.5, 0] }[r.fuera] || [.5, -.2]; px = gx(F[0]); py = gy(F[1]); }
+    else { const P = PSO_LUGAR[r.lugar] || [.5, .5]; px = gx(P[0]); py = gy(P[1]); }
+    const dup = ts.slice(0, i).filter(y => y.rel.lugar === r.lugar && y.rel.fuera === r.fuera).length; px += dup * 24 * (px > W / 2 ? -1 : 1);
+    const cls = x.didScore ? "ok" : r.tipo === "atajado" ? "sv" : "ko";
+    return `<g class="pso-dot ${cls}"><circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="13"/><text x="${px.toFixed(1)}" y="${(py + 4.5).toFixed(1)}" text-anchor="middle">${x.ronda}</text><title>${esc(x.player)}: ${x.didScore ? "gol" : r.tipo === "atajado" ? "atajado" : r.tipo === "palo" ? "al palo" : "afuera"}${r.lugar ? " · " + PSO_ES[r.lugar] : ""}</title></g>`; }).join("");
+  return `<figure class="pso-arco"><figcaption>${vLogo(t)}<b>${esc(t.short)}</b></figcaption><svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Dónde patearon los penales de ${esc(t.short)}">
+    <g class="net">${net}</g><path class="frame" d="M${x0} ${y1 + 8} V${y0} H${x1} V${y1 + 8}"/><line class="grass" x1="8" y1="${y1 + 8}" x2="${W - 8}" y2="${y1 + 8}"/>${dots}</svg></figure>`;
+}
+VV.psoVisto = VV.psoVisto || new Set();
 function vShootout(j, H) {
-  const T = j.shootout || []; if (!T.length) return "";
-  const de = id => T.find(t => String(t.id) === String(id)) || { shots: [] };
-  const th = de(H.h.id), ta = de(H.a.id), n = Math.max(5, th.shots.length, ta.shots.length);
-  const fila = (t, eq, so) => `<div class="pso-row">${vLogo(t)}<b class="pso-n">${esc(t.short)}</b><span class="pso-k">${Array.from({ length: n }, (_, i) => { const x = eq.shots[i];
-      return x ? `<span class="pso-d ${x.didScore ? "ok" : "ko"}" title="${esc(x.player)}: ${x.didScore ? "convirtió" : "falló"}">${x.didScore ? "✓" : "✕"}</span>` : `<span class="pso-d"></span>`; }).join("")}</span><b class="pso-t num">${esc(so ?? eq.shots.filter(x => x.didScore).length)}</b></div>`;
-  const orden = [...th.shots.map(x => ({ ...x, t: H.h })), ...ta.shots.map(x => ({ ...x, t: H.a }))].sort((a, b) => a.shotNumber - b.shotNumber || (a.t === H.h ? -1 : 1));
-  return `<div class="panel stack pso"><div class="row" style="justify-content:space-between;align-items:baseline"><h3>Tanda de penales</h3>${H.state === "in" ? `<span class="vmin live">En curso</span>` : `<span class="note">Final</span>`}</div>
-    ${fila(H.h, th, H.h.so)}${fila(H.a, ta, H.a.so)}
-    <div class="pso-list">${orden.map(x => `<span class="${x.didScore ? "ok" : "ko"}">${x.didScore ? "✓" : "✕"} ${esc(x.player)} <small class="faint">${esc(x.t.short)}</small></span>`).join("")}</div></div>`;
+  if (!(j.shootout || []).length) return "";
+  const P = psoDatos(j, H), { th, ta, tiros, gan, fin } = P;
+  const so = { h: H.h.so ?? th.shots.filter(x => x.didScore).length, a: H.a.so ?? ta.shots.filter(x => x.didScore).length };
+  const tm = { h: H.h, a: H.a }, otro = l => l === "h" ? "a" : "h";
+  const rondas = Math.max(5, th.shots.length, ta.shots.length), muerte = Math.max(th.shots.length, ta.shots.length) > 5;
+  const sig = !fin && tiros.length ? otro(tiros[tiros.length - 1].lado) : !fin ? "h" : null;
+  const sub = gan ? `<b>${esc(tm[gan].short)}</b> gana ${Math.max(so.h, so.a)}–${Math.min(so.h, so.a)} en penales${muerte ? " (muerte súbita)" : ""}`
+    : sig ? `Le toca a <b>${esc(tm[sig].short)}</b> · ${(sig === "h" ? th : ta).shots.length >= 5 ? "muerte súbita" : `ronda ${(sig === "h" ? th : ta).shots.length + 1}`}` : "";
+  // fila de rondas con los resultados de cada equipo
+  const fila = l => `<div class="pso-fila"><span class="pso-ft">${vLogo(tm[l])}<b>${esc(tm[l].short)}</b></span><span class="pso-k">${Array.from({ length: rondas }, (_, i) => { const x = (l === "h" ? th : ta).shots[i];
+      const sigue = !fin && sig === l && i === (l === "h" ? th : ta).shots.length;
+      return x ? `<span class="pso-d ${x.didScore ? "ok" : "ko"}${tiros.find(y => y.id === x.id && y.decisivo) ? " dec" : ""}" title="${esc(x.player)}: ${x.didScore ? "gol" : "falló"}">${x.didScore ? "✓" : "✕"}</span>` : `<span class="pso-d${sigue ? " next" : ""}"></span>`; }).join("")}</span><b class="pso-t num${gan === l ? " win" : ""}">${esc(so[l])}</b></div>`;
+  const nuevos = new Set(tiros.filter(x => !VV.psoVisto.has(String(x.id))).map(x => String(x.id))); tiros.forEach(x => VV.psoVisto.add(String(x.id)));
+  const primera = VV.psoVisto.size === nuevos.size;   // al abrir la página no se anima todo
+  const qEs = x => !x.rel ? (x.didScore ? "Gol" : "Falló") : x.didScore ? "Gol" : x.rel.tipo === "atajado" ? "Atajado" : x.rel.tipo === "palo" ? (x.rel.fuera === "travesaño" ? "Al travesaño" : "Al palo") : "Afuera";
+  const kick = x => { const t = tm[x.lado], r = x.rel || {};
+    return `<li class="pso-kick ${x.lado} ${x.didScore ? "ok" : "ko"}${x.decisivo ? " dec" : ""}${nuevos.has(String(x.id)) && !primera ? " nuevo" : ""}">
+      <span class="pso-who">${face(null, null, x.playerId, x.player, "sm")}<span><b>${esc(x.player)}</b><small>${esc(t.short)}${r.pie ? ` · ${r.pie === "cabeza" ? "de cabeza" : r.pie}` : ""}${r.lugar && x.didScore ? ` · ${PSO_ES[r.lugar]}` : ""}</small></span></span>
+      <span class="pso-res"><i>${x.didScore ? "✓" : "✕"}</i>${qEs(x)}${x.decisivo ? `<em>Decisivo</em>` : ""}</span>
+      <span class="pso-mk num">${x.marca[0]}–${x.marca[1]}</span></li>`; };
+  const pct_ = l => { const s = (l === "h" ? th : ta).shots; return s.length ? `${s.filter(x => x.didScore).length} de ${s.length}` : "—"; };
+  const atajadas = l => tiros.filter(x => x.lado === otro(l) && x.rel && x.rel.tipo === "atajado").length;
+  const arqs = ["h", "a"].map(l => { const g = P.arq[l], n = atajadas(l); return g && n ? `<span class="pso-gk">${face(null, null, g.id, g.n, "sm")}<span><b>${esc(g.n)}</b><small>${n === 1 ? "atajó 1 penal" : `atajó ${n} penales`}</small></span>${n >= 2 ? `<em>🧤 Figura</em>` : ""}</span>` : ""; }).join("");
+  const hayLugar = tiros.some(x => x.rel && (x.rel.lugar || x.rel.fuera));
+  return `<div class="panel pso${fin ? "" : " live"}">
+    <div class="pso-top"><h3>Tanda de penales</h3>${fin ? `<span class="pso-st">Final</span>` : `<span class="pso-st live"><i></i>En curso</span>`}</div>
+    <div class="pso-board">
+      <div class="pso-tm${gan === "h" ? " win" : gan ? " lose" : ""}">${vLogo(H.h, "xl")}<b>${esc(H.h.short)}</b>${gan === "h" ? `<span class="pso-cup">🏆 Clasifica</span>` : ""}</div>
+      <div class="pso-sc"><span class="num"><b class="${gan === "h" ? "w" : ""}">${esc(so.h)}</b><i>–</i><b class="${gan === "a" ? "w" : ""}">${esc(so.a)}</b></span><small>${sub}</small></div>
+      <div class="pso-tm${gan === "a" ? " win" : gan ? " lose" : ""}">${vLogo(H.a, "xl")}<b>${esc(H.a.short)}</b>${gan === "a" ? `<span class="pso-cup">🏆 Clasifica</span>` : ""}</div>
+    </div>
+    <div class="pso-rondas"><div class="pso-fila pso-hd"><span class="pso-ft"></span><span class="pso-k">${Array.from({ length: rondas }, (_, i) => `<span class="pso-d hd">${i + 1}</span>`).join("")}</span><b class="pso-t"></b></div>${fila("h")}${fila("a")}
+      <p class="pso-sum"><span>${esc(H.h.short)}: <b>${pct_("h")}</b></span><span>${esc(H.a.short)}: <b>${pct_("a")}</b></span>${muerte ? `<span class="pso-md">Muerte súbita</span>` : ""}</p></div>
+    <div class="pso-body${hayLugar || arqs ? "" : " una"}"><div class="pso-c1">${tiros.length ? `<h4 class="pso-h4">Lanzamiento por lanzamiento</h4><ol class="pso-kicks">${tiros.map(kick).join("")}</ol>` : ""}</div>
+    ${hayLugar || arqs ? `<div class="pso-c2">${arqs ? `<h4 class="pso-h4">Arqueros</h4><div class="pso-gks">${arqs}</div>` : ""}
+    ${hayLugar ? `<h4 class="pso-h4">Dónde patearon</h4><div class="pso-arcos">${psoArco(tiros, "h", H.h)}${psoArco(tiros, "a", H.a)}</div><p class="note pso-ley"><span class="pso-dot ok"><i></i>Gol</span><span class="pso-dot sv"><i></i>Atajado</span><span class="pso-dot ko"><i></i>Afuera o palo</span><span>El número es la ronda. Según el relato de ESPN.</span></p>` : ""}</div>` : ""}</div>
+  </div>`;
 }
 const ICON = { goal: "⚽", og: "⚽", miss: "✕", yellow: `<i class="ycard"></i>`, red: `<i class="rcard"></i>`, sub: "⇄", other: "•" };
 function vLogo(t, cls = "") { return `<span class="vlogo ${cls}">${t.logo ? `<img src="${esc(t.logo)}" alt="" referrerpolicy="no-referrer" data-n="${esc(t.short || t.name || "")}" onerror="bfb(this)">` : fbSpan(t.short || t.name, t.abr)}</span>`; }
@@ -2990,14 +3076,18 @@ async function vFillMatch(force) {
   const H = vHeader(j), evs = vEvents(j, H), c = VV.byId[H.lid], comp = c ? c.n : H.league, m = vModel(id); VV.state = H.state;
   const goals = l => evs.filter(e => (e.kind === "goal" && e.lado === l) || (e.kind === "og" && e.lado && e.lado !== l)).map(e => `${esc((e.who[0] || "").split(" ").slice(-1)[0])} ${esc(e.min)}${e.kind === "og" ? " (ec)" : e.pen ? " (p)" : ""}`).join(", ");
   const pens = H.h.so != null && H.a.so != null && (H.h.so || H.a.so || /pen/i.test(H.detail) || H.period >= 5);
-  const status = H.state === "in" && (/pen|shootout/i.test(H.detail) || H.period >= 5) ? `<span class="vmin live big">Penales</span>` : H.state === "in" ? `<span class="vmin live big">${esc(/half|HT/i.test(H.detail) ? "Entretiempo" : H.clock || H.detail)}</span>` : H.state === "post" ? `<span class="vmin big">${esc(H.detail && H.detail !== "FT" ? H.detail : "Final")}</span>` : `<span class="vmin big">${esc(new Date(H.date).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))} · ${hhmm(H.date)}</span>`;
+  const status = H.state === "in" && (/pen|shootout/i.test(H.detail) || H.period >= 5) ? `<span class="vmin live big">Penales</span>` : H.state === "in" ? `<span class="vmin live big">${esc(/half|HT/i.test(H.detail) ? "Entretiempo" : H.clock || H.detail)}</span>` : H.state === "post" ? `<span class="vmin big">${esc(finalEs(H.detail))}</span>` : `<span class="vmin big">${esc(new Date(H.date).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))} · ${hhmm(H.date)}</span>`;
   await vSel();
   const tslug = t => VV.selById[t.id] ? "sel" : H.slug;
-  const tl = (t, cls) => tslug(t) && t.id ? `<button class="vhteam tbtn" data-go="club" data-liga="${esc(tslug(t))}" data-id="${esc(t.id)}">${vLogo(t, "xl")}<b>${esc(t.short)}</b><small>${goals(cls)}</small></button>` : `<div class="vhteam">${vLogo(t, "xl")}<b>${esc(t.short)}</b><small>${goals(cls)}</small></div>`;
+  // tras una tanda de penales: el que clasifica se destaca y el otro se atenúa
+  const ganP = H.state === "post" && pens && +H.h.so !== +H.a.so ? (+H.h.so > +H.a.so ? "h" : "a") : null;
+  const ex = cls => ganP ? (ganP === cls ? " pwin" : " plose") : "";
+  const cup = cls => ganP === cls ? `<span class="vh-cup">🏆 Clasifica</span>` : "";
+  const tl = (t, cls) => tslug(t) && t.id ? `<button class="vhteam tbtn${ex(cls)}" data-go="club" data-liga="${esc(tslug(t))}" data-id="${esc(t.id)}">${vLogo(t, "xl")}<b>${esc(t.short)}</b>${cup(cls)}<small>${goals(cls)}</small></button>` : `<div class="vhteam${ex(cls)}">${vLogo(t, "xl")}<b>${esc(t.short)}</b>${cup(cls)}<small>${goals(cls)}</small></div>`;
   const f = followed()[id];
   head.innerHTML = `<div class="vhcomp">${H.slug ? `<button class="link" data-go="comp" data-liga="${esc(H.slug)}">${esc(comp)}</button>` : esc(comp)}${H.note ? ` · ${esc(H.note)}` : ""}</div>
     <div class="vhrow">${tl(H.h, "h")}
-      <div class="vhmid">${H.state === "pre" ? `<span class="vhsc num">vs</span>` : `<span class="vhsc num">${esc(H.h.score ?? 0)} – ${esc(H.a.score ?? 0)}</span>`}${pens ? `<span class="vhpen num">Penales ${esc(H.h.so)} – ${esc(H.a.so)}</span>` : ""}${status}</div>
+      <div class="vhmid">${H.state === "pre" ? `<span class="vhsc num">vs</span>` : `<span class="vhsc num">${esc(H.h.score ?? 0)} – ${esc(H.a.score ?? 0)}</span>`}${pens ? `<span class="vhpen num">Penales ${esc(H.h.so)} – ${esc(H.a.so)}</span>` : ""}${ganP ? `<span class="vhpen-w">${esc((ganP === "h" ? H.h : H.a).short)} gana en penales</span>` : ""}${status}</div>
       ${tl(H.a, "a")}</div>
     <div class="row" style="justify-content:center;margin-top:10px;gap:8px">${H.state !== "post" ? `<button class="btn ghost sm vbell2${f ? " on" : ""}" data-follow="${esc(id)}">${f ? "🔔 Siguiendo" : "🔕 Avisarme de goles"}</button>` : ""}${m ? `<button class="btn ghost sm" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">Análisis de Ballytics →</button>` : ""}</div>`;
   const tab = R.tab || "resumen";
@@ -3240,6 +3330,7 @@ function vCurvePanel(j, H, evs, m) {
   return `<div class="panel stack cpanel"><div class="row" style="justify-content:space-between;align-items:baseline"><h3>${H.state === "pre" ? "Probabilidad antes del partido" : done ? "Cómo cambió la probabilidad" : "Probabilidad en vivo"} ${help("Se parte de los goles esperados antes del partido y, minuto a minuto, se considera el marcador y el tiempo que queda: los goles que faltan se reparten según los goles esperados de cada equipo. Una tarjeta roja baja los goles esperados de ese equipo y sube los del rival.")}</h3><span class="note">Base: ${esc(L0.src)}</span></div>
     <div class="cnums"><span class="h"><b>${pct(last.H)}</b>${esc(H1)}</span><span class="d"><b>${pct(last.D)}</b>Empate</span><span class="a"><b>${pct(last.A)}</b>${esc(A1)}</span></div>
     ${H.state === "pre" ? "" : curveSvg(cd, H1, A1)}
+    ${done && H.h.so != null && H.a.so != null && +H.h.so !== +H.a.so ? `<div class="cpen">El resultado (1X2) se define en el tiempo reglamentario: <b>empate</b>. Clasificó <b>${esc(+H.h.so > +H.a.so ? H1 : A1)}</b>, que ganó ${Math.max(+H.h.so, +H.a.so)}–${Math.min(+H.h.so, +H.a.so)} en los penales.</div>` : ""}
     <p class="note">${H.state === "pre" ? "" : `Antes del partido: ${pct(pre.H)} · ${pct(pre.D)} · ${pct(pre.A)}.`} No considera el dominio ni las ocasiones; solo marcador, minutos y expulsiones.</p></div>`;
 }
 

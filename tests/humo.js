@@ -40,7 +40,7 @@ const leer = f => JSON.parse(fs.readFileSync(path.join(SITE, "data", f), "utf8")
     ["", "Inicio"], [`#/liga/${L0}/resumen`, "Liga"], [`#/liga/${L0}/tabla`, "Tabla"], [`#/liga/${L0}/partidos`, "Partidos de la liga"],
     ...(port ? [[`#/partido/${port.liga}/${port.id}`, "Partido"], [`#/partido/${port.liga}/${port.id}/mercados`, "Mercados"]] : []),
     ["#/registro", "Resultados del modelo"], ["#/picks", "Picks públicos"], ["#/metodo", "Cómo funciona"], ["#/prode", "Prode"],
-    ["#/seguimiento", "Mis pronósticos"], ["#/terminos", "Términos"], ["#/privacidad", "Privacidad"], ["#/vivo", "En vivo (sin ESPN)"],
+    ["#/seguimiento", "Mis pronósticos"], ["#/terminos", "Términos"], ["#/privacidad", "Privacidad"], ["#/vivo", "En vivo (sin ESPN)"], ["#/envivo/999", "Tanda de penales (datos de prueba)"],
     [`liga/${L0}/`, "Página de liga"], ...(pagPartido ? [[pagPartido, "Página de partido"]] : []), ["picks/", "Página de picks"],
     ...(arb ? [[`#/arbitro/${arb[0]}/${arb[1]}`, "Ficha de árbitro"], [`#/liga/${arb[0]}/arbitros`, "Árbitros de la liga"]] : []),
     ...(arb && fs.existsSync(path.join(SITE, "arbitro", arb[0], arb[1])) ? [[`arbitro/${arb[0]}/${arb[1]}/`, "Página de árbitro"]] : []),
@@ -54,7 +54,9 @@ const leer = f => JSON.parse(fs.readFileSync(path.join(SITE, "data", f), "utf8")
     pg.on("pageerror", e => fallas.push(`${nom} · ${actual}: error de JavaScript: ${e.message}`));
     pg.on("console", m => { if (m.type() === "error" && !/Failed to load resource|net::ERR/.test(m.text())) fallas.push(`${nom} · ${actual}: consola: ${m.text().slice(0, 200)}`); });
     // nada de afuera (ESPN, servidor de avisos, fuentes, escudos): la prueba no depende de otros sitios
-    await pg.route(u => !u.href.startsWith(B), r => r.abort());
+    // ESPN solo para el partido de prueba con tanda de penales (tests/datos/tanda_penales.json)
+    const TANDA = fs.readFileSync(path.join(__dirname, "datos", "tanda_penales.json"), "utf8");
+    await pg.route(u => !u.href.startsWith(B), r => /summary\?event=999\b/.test(r.request().url()) ? r.fulfill({ contentType: "application/json", body: TANDA }) : r.abort());
     for (const [r, n] of rutas) {
       actual = n;
       try {
@@ -63,6 +65,7 @@ const leer = f => JSON.parse(fs.readFileSync(path.join(SITE, "data", f), "utf8")
         await pg.waitForTimeout(400);
         const txt = await pg.$eval("#app", a => a.textContent);
         if (/No pude cargar los datos/.test(txt)) fallas.push(`${nom} · ${n}: no cargó los datos`);
+        if (/Tanda de penales/.test(n)) { await pg.waitForSelector(".pso .pso-kick", { timeout: 8000 }).catch(() => {}); if ((await pg.$$(".pso .pso-kick")).length !== 10 || !(await pg.$(".pso-arco"))) fallas.push(`${nom} · ${n}: la tanda no se dibujó completa`); }
         if (vp.width < 500) {
           const ancho = await pg.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
           if (ancho > 1) fallas.push(`${nom} · ${n}: la página se sale ${ancho} px por el costado`);

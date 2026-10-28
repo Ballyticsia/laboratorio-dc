@@ -1,0 +1,317 @@
+{
+ "header": {
+  "league": {
+   "name": "Eredivisie",
+   "slug": "ned.1",
+   "id": "725"
+  },
+  "competitions": [
+   {
+    "date": "2026-10-28T18:00:00Z",
+    "status": {
+     "displayClock": "90'",
+     "period": 5,
+     "type": {
+      "state": "post",
+      "shortDetail": "FT-Pens",
+      "detail": "FT-Pens"
+     }
+    },
+    "competitors": [
+     {
+      "homeAway": "home",
+      "score": "2",
+      "shootoutScore": 2,
+      "team": {
+       "id": "1",
+       "displayName": "Sparta Rotterdam",
+       "shortDisplayName": "Sparta"
+      }
+     },
+     {
+      "homeAway": "away",
+      "score": "2",
+      "shootoutScore": 3,
+      "team": {
+       "id": "2",
+       "displayName": "Fortuna Sittard",
+       "shortDisplayName": "Fortuna"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "shootout": [
+  {
+   "id": "1",
+   "team": "Sparta",
+   "shots": [
+    {
+     "id": "54400000",
+     "playerId": "1001",
+     "player": "Milan Zonneveld",
+     "shotNumber": 1,
+     "didScore": true
+    },
+    {
+     "id": "54400014",
+     "playerId": "1003",
+     "player": "Bas Kuipers",
+     "shotNumber": 2,
+     "didScore": true
+    },
+    {
+     "id": "54400028",
+     "playerId": "1005",
+     "player": "Alwande Roaldsøy",
+     "shotNumber": 3,
+     "didScore": false
+    },
+    {
+     "id": "54400042",
+     "playerId": "1007",
+     "player": "Marvin Young",
+     "shotNumber": 4,
+     "didScore": false
+    },
+    {
+     "id": "54400056",
+     "playerId": "1009",
+     "player": "Andrej Kostic",
+     "shotNumber": 5,
+     "didScore": false
+    }
+   ]
+  },
+  {
+   "id": "2",
+   "team": "Fortuna",
+   "shots": [
+    {
+     "id": "54400007",
+     "playerId": "1002",
+     "player": "Anthony Descotte",
+     "shotNumber": 1,
+     "didScore": true
+    },
+    {
+     "id": "54400021",
+     "playerId": "1004",
+     "player": "Ganni Buyukhan",
+     "shotNumber": 2,
+     "didScore": false
+    },
+    {
+     "id": "54400035",
+     "playerId": "1006",
+     "player": "Justin Hubner",
+     "shotNumber": 3,
+     "didScore": true
+    },
+    {
+     "id": "54400049",
+     "playerId": "1008",
+     "player": "Syb van Ottele",
+     "shotNumber": 4,
+     "didScore": false
+    },
+    {
+     "id": "54400063",
+     "playerId": "1010",
+     "player": "Shiloh 't Zand",
+     "shotNumber": 5,
+     "didScore": true
+    }
+   ]
+  }
+ ],
+ "commentary": [
+  {
+   "text": "Goal! Sparta 2(1), Fortuna 2(0). Milan Zonneveld (Sparta) converts the penalty with a right footed shot to the bottom left corner.",
+   "time": {
+    "value": 5500,
+    "displayValue": "90'"
+   },
+   "play": {
+    "type": {
+     "text": "Penalty - Scored"
+    },
+    "period": {
+     "number": 5
+    }
+   }
+  },
+  {
+   "text": "Goal! Sparta 2(1), Fortuna 2(1). Anthony Descotte (Fortuna) converts the penalty with a right footed shot to the top right corner.",
+   "time": {
+    "value": 5540,
+    "displayValue": "90'"
+   },
+   "play": {
+    "type": {
+     "text": "Penalty - Scored"
+    },
+    "period": {
+     "number": 5
+    }
+   }
+  },
+  {
+   "text": "Goal! Sparta 2(2), Fortuna 2(1). Bas Kuipers (Sparta) converts the penalty with a left footed shot to the centre of the goal.",
+   "time": {
+    "value": 5580,
+    "displayValue": "90'"
+   },
+   "play": {
+    "type": {
+     "text": "Penalty - Scored"
+    },
+    "period": {
+     "number": 5
+    }
+   }
+  },
+  {
+   "text": "Penalty saved! Ganni Buyukhan (Fortuna) fails to capitalise on this great opportunity, right footed shot saved in the bottom left corner.",
+   "time": {
+    "value": 5620,
+    "displayValue": "90'"
+   },
+   "play": {
+    "type": {
+     "text": "Penalty - Saved"
+    },
+    "period": {
+     "number": 5
+    }
+   }
+  },
+  {
+   "text": "Penalty missed! Bad penalty by Alwande Roaldsøy (Sparta) right footed shot is too high.",
+   "time": {
+    "value": 5660,
+    "displayValue": "90'"
+   },
+   "play": {
+    "type": {
+     "text": "Penalty - Missed"
+    },
+    "period": {
+     "number": 5
+    }
+   }
+  },
+  {
+   "text": "Goal! Sparta 2(2), Fortuna 2(2). Justin Hubner (Fortuna) converts the penalty with a left footed shot to the bottom right corner.",
+   "time": {
+    "value": 5700,
+    "displayValue": "90'"
+   },
+   "play": {
+    "type": {
+     "text": "Penalty - Scored"
+    },
+    "period": {
+     "number": 5
+    }
+   }
+  },
+  {
+   "text": "Penalty saved! Marvin Young (Sparta) fails to capitalise on this great opportunity, right footed shot saved in the top right corner.",
+   "time": {
+    "value": 5740,
+    "displayValue": "90'"
+   },
+   "play": {
+    "type": {
+     "text": "Penalty - Saved"
+    },
+    "period": {
+     "number": 5
+    }
+   }
+  },
+  {
+   "text": "Penalty missed! Bad penalty by Syb van Ottele (Fortuna) right footed shot hits the left post.",
+   "time": {
+    "value": 5780,
+    "displayValue": "90'"
+   },
+   "play": {
+    "type": {
+     "text": "Penalty - Missed"
+    },
+    "period": {
+     "number": 5
+    }
+   }
+  },
+  {
+   "text": "Penalty saved! Andrej Kostic (Sparta) fails to capitalise on this great opportunity, right footed shot saved in the bottom right corner.",
+   "time": {
+    "value": 5820,
+    "displayValue": "90'"
+   },
+   "play": {
+    "type": {
+     "text": "Penalty - Saved"
+    },
+    "period": {
+     "number": 5
+    }
+   }
+  },
+  {
+   "text": "Goal! Sparta 2(2), Fortuna 2(3). Shiloh 't Zand (Fortuna) converts the penalty with a right footed shot to the top left corner.",
+   "time": {
+    "value": 5860,
+    "displayValue": "90'"
+   },
+   "play": {
+    "type": {
+     "text": "Penalty - Scored"
+    },
+    "period": {
+     "number": 5
+    }
+   }
+  }
+ ],
+ "rosters": [
+  {
+   "homeAway": "home",
+   "roster": [
+    {
+     "starter": true,
+     "position": {
+      "abbreviation": "G"
+     },
+     "athlete": {
+      "id": "2001",
+      "displayName": "Nick Olij"
+     }
+    }
+   ]
+  },
+  {
+   "homeAway": "away",
+   "roster": [
+    {
+     "starter": true,
+     "position": {
+      "abbreviation": "G"
+     },
+     "athlete": {
+      "id": "2002",
+      "displayName": "Mattijs Branderhorst"
+     }
+    }
+   ]
+  }
+ ],
+ "keyEvents": [],
+ "boxscore": {
+  "teams": []
+ }
+}
