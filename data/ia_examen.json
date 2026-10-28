@@ -1,10 +1,13 @@
 {
- "fecha": "2026-10-28T03:53Z",
- "puntaje": 0,
- "aprobadas": 0,
+ "fecha": "2026-10-28T03:57Z",
+ "puntaje": 0.25,
+ "aprobadas": 5,
  "total": 20,
- "modelos": [],
- "ms_promedio": 78,
+ "modelos": [
+  "gemma-4-26b-a4b-it",
+  "gemini-3.5-flash-lite"
+ ],
+ "ms_promedio": 54,
  "votos_gente": {
   "por_modelo": {},
   "por_tipo": {}
@@ -22,7 +25,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 309,
+   "ms": 217,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -35,7 +38,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 65,
+   "ms": 69,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -48,7 +51,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 62,
+   "ms": 60,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -61,7 +64,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 77,
+   "ms": 56,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -74,7 +77,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 62,
+   "ms": 51,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -87,7 +90,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 77,
+   "ms": 58,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -100,7 +103,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 78,
+   "ms": 54,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -113,7 +116,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 69,
+   "ms": 34,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -126,7 +129,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 83,
+   "ms": 59,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -139,7 +142,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 74,
+   "ms": 41,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -152,7 +155,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 65,
+   "ms": 30,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -165,7 +168,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 83,
+   "ms": 46,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -178,7 +181,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 65,
+   "ms": 46,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -191,7 +194,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 63,
+   "ms": 51,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -204,7 +207,7 @@
    "fallas": [
     "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
    ],
-   "ms": 66,
+   "ms": 36,
    "modelo": null,
    "cache": false,
    "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
@@ -213,66 +216,62 @@
   {
    "q": "¿Quién gana?",
    "tipo": "partido",
-   "ok": false,
-   "fallas": [
-    "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
-   ],
-   "ms": 64,
-   "modelo": null,
-   "cache": false,
-   "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
+   "ok": true,
+   "fallas": [],
+   "ms": 47,
+   "modelo": "gemma-4-26b-a4b-it",
+   "cache": true,
+   "r": "¡Hola! Para el partido de **Lille vs Lens** de este **VIERNES 30** (17:05), el modelo de Ballytics no identifica un favorito claro, ya que las probabilidades están muy repartidas. ⚽\n\nAquí tienes el análisis detallado:\n\n- **Lille (local)**: Tiene un **40 %** de probabilidad de ganar. Su cuota justa es **2,52**. Con la cuota de la casa (2,45), el valor esperado es **-2,7 %**.\n- **Empate**: Tiene un **26 %** de probabilidad. Su cuota justa es **3,90**. Con la cuota de la casa (3,55), el valor esperado es **-9,0 %**.\n- **Lens (visita)**: Tiene un **35 %** de probabilidad. Su cuota justa es **2,88**. Con la cuota de la casa (2,80), el valor esperado es **-2,7 %**.\n\nEl modelo prevé un partido con goles, con un **56 %** para **más de 2,5 goles** (cuota justa **1,79**) y un **59 %** para **ambos marcan** (cuota justa **1,68**). El marcador más probable según nuestras estadísticas es un **1-1**.\n\nRecuerda que el modelo se equivoca seguido y en el backtest apostar solo por valor perdió dinero.\n\nJuega con responsabilidad (+18).",
    "refs": []
   },
   {
    "q": "¿Cuántos goles se esperan y cuál es el marcador más probable?",
    "tipo": "partido",
-   "ok": false,
-   "fallas": [
-    "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
-   ],
-   "ms": 71,
-   "modelo": null,
-   "cache": false,
-   "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
+   "ok": true,
+   "fallas": [],
+   "ms": 24,
+   "modelo": "gemma-4-26b-a4b-it",
+   "cache": true,
+   "r": "¡Hola! Analicemos lo que proyecta el modelo para el partido entre **Lille vs Lens** de la Ligue 1 (VIERNES 30 17:05) ⚽.\n\nSegún el modelo de Ballytics, los datos de goles son los siguientes:\n\n- **Goles esperados (xG):** Se prevé un partido con presencia ofensiva, con un **xG de 1,51** para el **Lille** y **1,41** para el **Lens**.\n- **Marcador más probable:** El resultado que el modelo identifica con mayor probabilidad es el **1-1**.\n- **Mercado de goles:** La probabilidad de que haya **más de 2,5 goles** es del **56 %** (cuota justa 1,79).\n\nRecuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero.\n\nJuega con responsabilidad (+18).",
    "refs": []
   },
   {
    "q": "Si pagan el empate a 3,40, ¿tiene valor?",
    "tipo": "partido",
-   "ok": false,
-   "fallas": [
-    "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
-   ],
-   "ms": 42,
-   "modelo": null,
-   "cache": false,
-   "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
-   "refs": []
+   "ok": true,
+   "fallas": [],
+   "ms": 26,
+   "modelo": "gemini-3.5-flash-lite",
+   "cache": true,
+   "r": "¡Hola! Analicemos el encuentro de la Ligue 1 entre Lille vs Lens para el viernes 30 a las 17:05 ⚽.\n\n- **Empate**: La probabilidad del modelo es **26 %** (cuota justa **3,90**).\n\nSi DraftKings paga el empate a **3,40**, el valor esperado (EV) es **-11,6 %** (probabilidad por cuota menos 1), por lo que **no tiene valor** según las matemáticas de Ballytics.\n\nEl marcador más probable que ve el modelo es el **1-1** (con goles esperados de 1,51 para el local y 1,41 para la visita).\n\nRecuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero.\nJuega con responsabilidad (+18).",
+   "refs": [
+    {
+     "id": "m1",
+     "mercado": "D",
+     "dia": null
+    }
+   ]
   },
   {
    "q": "¿Cuántas tarjetas y córners se esperan, y quién es el árbitro?",
    "tipo": "partido",
-   "ok": false,
-   "fallas": [
-    "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
-   ],
-   "ms": 44,
-   "modelo": null,
-   "cache": false,
-   "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
+   "ok": true,
+   "fallas": [],
+   "ms": 40,
+   "modelo": "gemini-3.5-flash-lite",
+   "cache": true,
+   "r": "¡Hola! Para el duelo de Ligue 1 entre Lille vs Lens este VIERNES 30 a las 17:05, el modelo Ballytics proyecta lo siguiente:\n- **Córners esperados**: 9,2 en total.\n- **Tarjetas esperadas**: 4,8 en total.\n- **Árbitro**: Sin árbitro designado todavía.\n\nRecuerda que el modelo se equivoca seguido y que el backtest de apostar solo por valor perdió dinero. Juega con responsabilidad (+18). ⚽",
    "refs": []
   },
   {
    "q": "¿Hay bajas importantes?",
    "tipo": "partido",
-   "ok": false,
-   "fallas": [
-    "sin respuesta: Llegaste a las 20 preguntas de hoy. Vuelve mañana."
-   ],
-   "ms": 46,
-   "modelo": null,
-   "cache": false,
-   "r": "Llegaste a las 20 preguntas de hoy. Vuelve mañana.",
+   "ok": true,
+   "fallas": [],
+   "ms": 27,
+   "modelo": "gemini-3.5-flash-lite",
+   "cache": true,
+   "r": "¡Hola! Para el partidazo entre **Lille vs Lens** de este viernes 30 a las 17:05, el modelo nos trae estos datos clave:\n- **Bajas**: **sin datos** reportados para este encuentro.\n- **Modelo Ballytics**: ve un duelo bien apretado, con un **40 %** de probabilidad para el local (cuota justa 2,52) y un **35 %** para la visita (cuota justa 2,88).\n- **Goles**: apunta a que habrá acción, con un **56 %** para más de 2,5 goles (cuota justa 1,79) y un marcador más probable de **1-1**.\nJuega con responsabilidad (+18).",
    "refs": []
   }
  ]
