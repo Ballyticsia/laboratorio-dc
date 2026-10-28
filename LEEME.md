@@ -119,6 +119,15 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - Los datos del modelo van en las instrucciones del sistema: probabilidades 1X2, xG previsto, +2,5, ambos marcan, córners y tarjetas esperadas, bajas, comparativa con Pinnacle (o mercado sin margen), cuotas, tabla y goleadores. La IA responde solo con esos datos y no da consejos de apuesta.
 - Topes en `worker/index.js`: `IA_TOPE_PERSONA` (20 preguntas al día por persona) e `IA_TOPE_DIA` (400 en total). Las preguntas repetidas salen de la caché por 30 minutos.
 
+- Botones 👍/👎 en cada respuesta: `POST /ia/voto` guarda pregunta, respuesta, modelo y voto por 60 días (KV `iav:…`); `GET /ia/resumen` da los conteos por día, modelo y tipo. El detalle (`GET /ia/votos`) solo lo puede leer el examen automático, con un código derivado de `GEMINI_API_KEY`.
+
+## Picks públicos
+- `pipeline/picks_publicos.py`, desde el 28-10-2026. Dos listas por día con regla fija, guardadas en `data/picks_publicos.json` (el historial de git prueba la hora en que se fijó cada lista):
+  - **Seguros:** hasta 3 por día, el resultado 1X2 que Ballytics ve más probable si es de 60 % o más.
+  - **Valor:** hasta 3 por día, donde el modelo propio ve un valor esperado de 5 % o más con la cuota de la casa y 3 puntos o más sobre el mercado sin margen (cuota entre 1,50 y 6,00), sin repetir partidos de los seguros.
+- La lista del día D se fija a las 18:00 (hora de Chile) del día D-1 o en la primera actualización después, solo con partidos que no han empezado, y no cambia más. Cuota real de DraftKings (ESPN) del momento en que se fijó; 1 unidad por pick; ganado suma cuota − 1, perdido resta 1, sin resultado 4 días después queda nulo. También se guarda la cuota de cierre.
+- Se ve en la sección Picks (`#/picks`), en una tarjeta del inicio y la IA los conoce. Si se cambia una regla, anotar la fecha en `REGLAS["cambios"]`.
+
 ## Cambiar cosas
 - **Horario:** la línea `cron` del workflow (está en hora UTC; Chile es UTC-3).
 - **Ligas:** la lista `LIGAS` en `pipeline/generar.py` (códigos de ESPN como `eng.1`, `esp.1`, `por.1`, `ned.1`, `arg.1`, `chi.1`).

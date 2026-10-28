@@ -145,6 +145,7 @@ async function load() {
   }).then(() => { D.allLoaded = true; });
   await Promise.all([...prio].map(ensure));
   [D.registro, D.metodo] = await Promise.all([getJSON("data/registro.json").catch(() => null), getJSON("data/metodologia.json").catch(() => null)]);
+  getJSON("data/picks_publicos.json").then(x => { D.picksPub = x; if (R && (R.v === "inicio" || R.v === "picks")) render(); }).catch(() => {});
   document.getElementById("foot-upd").innerHTML = `<span class="dot"></span>Actualizado ${new Date(D.indice.actualizado).toLocaleDateString("es-CL")} ${hhmm(D.indice.actualizado)}`;
   buildMenu();
 }
@@ -259,6 +260,8 @@ function fromHash() {
     case "prode": return { v: "prode", id: p[1], tab: p[2] };
     case "noticias": return { v: "noticias" };
     case "ia": return { v: "ia" };
+    case "picks": return { v: "picks" };
+    case "terminos": return { v: "terminos" };
     case "comp": return { v: "comp", liga: p[1], tab: p[2] || "partidos" };
     case "club": return { v: "club", liga: p[1], id: p[2], tab: p[3] || "partidos" };
     case "": case undefined: return { v: "inicio", liga: "todas" };
@@ -292,11 +295,11 @@ function render() {
     setTimeout(() => ensure(want).then(() => { if (R.liga === want) render(); }), er ? 1500 : 0);
     return;
   }
-  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", privacidad: "metodo", combinada: "seguimiento", envivo: "vivo", competiciones: "vivo", comp: "vivo", club: "vivo", noticias: "vivo", selecciones: "vivo", ficha: "vivo", prode: "prode" }[R.v] || R.v);
+  const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", privacidad: "metodo", terminos: "metodo", combinada: "seguimiento", envivo: "vivo", competiciones: "vivo", comp: "vivo", club: "vivo", noticias: "vivo", selecciones: "vivo", ficha: "vivo", prode: "prode" }[R.v] || R.v);
   document.querySelectorAll("[data-nav]").forEach(b => b.setAttribute("aria-current", b.dataset.nav === sec ? "page" : "false"));
   const f = { inicio: vInicio, liga: vLiga, partido: vPartido, equipo: vEquipo, registro: vRegistro, metodo: vMetodo,
     sobre: vSobre, responsable: vResponsable, jugador: vJugador, comparar: vComparar, combinada: vCombinada, seguimiento: vSeguimiento,
-    vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias, selecciones: vSelecciones, ficha: vFicha, prode: vProde, privacidad: vPrivacidad, nf: vNoEncontrado, ia: vIA }[R.v] || vInicio;
+    vivo: vVivo, envivo: vEnVivo, competiciones: vCompeticiones, comp: vComp, club: vClub, noticias: vNoticias, selecciones: vSelecciones, ficha: vFicha, prode: vProde, privacidad: vPrivacidad, nf: vNoEncontrado, ia: vIA, picks: vPicks, terminos: vTerminos }[R.v] || vInicio;
   $app.innerHTML = staleBanner() + f();
   if (R.v === "partido") { bindOdds(); if (R.tab === "alineaciones" || document.getElementById("xi-adj")) loadSummary(); }
   if (R.v === "comparar") bindCompare();
@@ -635,8 +638,18 @@ async function iaCtxDia(q) {
     registro_modelo: g && g.n ? { partidos_calificados: g.n, acierto_ganador: pct(g.acierto_1x2, 1), aciertos_si_no: G ? `${G.aciertos} de ${G.n} (${pct(G.aciertos / G.n, 1)})` : null,
       por_mercado: G ? G.por.map(x => `${x.mercado} ${pct(x.acierto, 0)} en ${x.n}`) : null, log_loss: `${dec(g.logloss, 3)} (respuesta ingenua ${dec(g.logloss_ingenuo, 3)}; menos es mejor)`,
       clv: g.clv && g.clv.n ? `En ${g.clv.n} partidos donde el modelo veía más que la cuota temprana, el mercado se movió hacia el modelo el ${pct(g.clv.a_favor, 0)} de las veces (movimiento medio ${dec(g.clv.mov_pts, 1)} puntos)` : "el CLV recién empieza a medirse" } : null,
+    picks_publicos: iaCtxPicks(),
   };
   return { ctx, idmap };
+}
+// picks públicos (regla fija, calificados gane o pierda): la IA los cita si preguntan por "los picks de hoy" o por el récord
+function iaCtxPicks() {
+  const P = D.picksPub; if (!P) return undefined;
+  const hoyK = isoDay(new Date()), Rs = P.resumen || {};
+  const lst = (P.dias || []).filter(d => d.dia >= hoyK).sort((a, b) => a.dia.localeCompare(b.dia)).slice(0, 2).map(d => ({ dia: iaDia(d.dia + "T12:00"),
+    picks: d.picks.map(f => { const L = D.ligas[f.liga] || { equipos: {} }; return `${PP_EST[f.est].n}: ${f.home} vs ${f.away} → ${f.lado === "D" ? "Empate" : "Gana " + corto(L, f.lado === "H" ? f.home : f.away)} · cuota ${dec(f.cuota)} · prob ${pct(f.prob)}${f.res ? ` · ${f.res === "G" ? "GANADO" : f.res === "P" ? "PERDIDO" : "NULO"}` : ""}`; }) }));
+  const rec = k => { const x = Rs[k]; return x && x.n ? `${x.n} calificados, ${x.ganados} ganados, ${ppU(x.unidades)} (ROI ${pct(x.roi, 1)})` : "sin picks calificados aún"; };
+  return { reglas: P.reglas ? `Seguros: ${P.reglas.seguro} Valor: ${P.reglas.valor} ${P.reglas.fijado}` : undefined, listas: lst, record_seguros: rec("seguro"), record_valor: rec("valor"), desde: (P.reglas || {}).desde };
 }
 const iaMd = t => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^#{1,4} (.+)$/gm, "<b>$1</b>").split(/\n+/).map(l => /^\s*[-•*] /.test(l) ? `<li>${l.replace(/^\s*[-•*] /, "")}</li>` : /^\s*\d+[.)] /.test(l) ? `<li>${l.replace(/^\s*\d+[.)] /, "")}</li>` : `<p>${l}</p>`).join("").replace(/(<li>.*?<\/li>)+/g, m => `<ul>${m}</ul>`);
 // ---- tarjetas de los partidos que nombró la IA
@@ -698,7 +711,8 @@ function iaChat(scope, mode) {
     <p>${mp ? `Pregúntame lo que quieras de <b>${esc(corto(mp.L, mp.p.home))} vs ${esc(corto(mp.L, mp.p.away))}</b>: favoritos, goles, bajas, cuotas.` : "Soy tu analista de fútbol. Pregúntame por los partidos de hoy, de mañana o del finde, por un equipo, por lo que está en vivo o por cómo le va al modelo."}</p></div>
     <div class="ia-pop"><span class="lbl">Preguntas populares</span><div class="ia-grid">${sug.map(x => `<button data-iaq="${esc(x)}"><span class="ia-q-ic" aria-hidden="true">✦</span><span>${esc(x)}</span></button>`).join("")}</div></div>`;
   const last = h.length - 1;
-  const log = h.map((m, i) => m.r === "ia" ? `<div class="ia-m ia"><span class="ia-av" aria-hidden="true">✦</span><div class="ia-bub">${iaMd(m.t)}${m.cards || ""}${i === last && (m.sug || []).length ? `<div class="ia-next">${m.sug.map(x => `<button data-iaq="${esc(x)}">${esc(x)}</button>`).join("")}</div>` : ""}</div></div>` : `<div class="ia-m yo"><div class="ia-bub">${esc(m.t)}</div></div>`).join("");
+  const fb = (m, i) => m.rid ? `<div class="ia-fb" role="group" aria-label="¿Te sirvió esta respuesta?">${m.v ? `<span class="faint">${m.v > 0 ? "Gracias 👍" : "Gracias, lo revisaremos 👎"}</span>` : `<span class="faint">¿Te sirvió?</span><button data-iavote="1" data-iai="${i}" aria-label="Sí, me sirvió">👍</button><button data-iavote="-1" data-iai="${i}" aria-label="No me sirvió">👎</button>`}</div>` : "";
+  const log = h.map((m, i) => m.r === "ia" ? `<div class="ia-m ia"><span class="ia-av" aria-hidden="true">✦</span><div class="ia-bub">${iaMd(m.t)}${m.cards || ""}${fb(m, i)}${i === last && (m.sug || []).length ? `<div class="ia-next">${m.sug.map(x => `<button data-iaq="${esc(x)}">${esc(x)}</button>`).join("")}</div>` : ""}</div></div>` : `<div class="ia-m yo"><div class="ia-bub">${esc(m.t)}</div></div>`).join("");
   return `<div class="iachat ${mode}" data-ia="${esc(scope)}">${chip}<div class="ia-scroll">${h.length ? `<div class="ia-log" aria-live="polite">${log}</div>` : welcome}</div>
     <form class="ia-f" data-iaf="${esc(scope)}"><input name="q" maxlength="400" autocomplete="off" placeholder="Pregúntame lo que quieras" aria-label="Tu pregunta"><button class="ia-send" aria-label="Enviar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-6 16-3-7z"/></svg></button></form>
     <p class="ia-legal">Respuestas generadas por IA con los datos del modelo; puede equivocarse. No es un consejo de apuesta. +18.</p></div>`;
@@ -732,7 +746,7 @@ async function iaAsk(scope, q) {
     const r = await (await fetch(url + "/ia", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ q, uid: myUid(), tipo, ctx, hist: h.slice(0, -1).slice(-4).map(m => ({ r: m.r, t: m.t })) }) })).json();
     if (!r.ok) throw new Error(r.error || "La IA no respondió. Prueba de nuevo.");
     const refs = tipo === "dia" ? (Array.isArray(r.refs) && r.refs.length ? r.refs : iaRefsPorNombre(r.r, idmap)) : [];
-    h.push({ r: "ia", t: r.r, cards: iaCardsRefs(refs, idmap), sug: (r.sug || []).slice(0, 3) });
+    h.push({ r: "ia", t: r.r, cards: iaCardsRefs(refs, idmap), sug: (r.sug || []).slice(0, 3), rid: r.rid, m: r.modelo, q, tipo });
   } catch (e) { h.pop(); IA_BUSY[scope] = false; iaRepaint(); const b = document.querySelector(`.iachat[data-ia="${CSS.escape(scope)}"] .ia-scroll`); if (b) b.insertAdjacentHTML("beforeend", `<div class="ia-m ia err"><div class="ia-bub">${esc(e.message && e.message.length > 12 ? e.message : "No pude conectar con la IA. Prueba de nuevo.")}</div></div>`); return; }
   IA_BUSY[scope] = false; iaRepaint();
 }
@@ -742,6 +756,11 @@ document.addEventListener("click", e => {
   const o = e.target.closest("[data-iaopen]"); if (o) { e.preventDefault(); iaOpen(o.dataset.iaopen || undefined); return; }
   const s = e.target.closest("[data-iascope]"); if (s) { IASCOPE = s.dataset.iascope; iaRepaint(); return; }
   if (e.target.closest("[data-iareset]")) { IAH[IASCOPE] = []; iaRepaint(); return; }
+  const vb = e.target.closest("[data-iavote]");
+  if (vb) { const box = vb.closest("[data-ia]"), sc = box && box.dataset.ia, m = sc && (IAH[sc] || [])[+vb.dataset.iai]; if (!m || m.v) return;
+    m.v = +vb.dataset.iavote; iaRepaint();
+    pushCfg().then(url => url && fetch(url + "/ia/voto", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ rid: m.rid, v: m.v, uid: myUid(), q: m.q, r: m.t, m: m.m, tipo: m.tipo }) })).catch(() => {});
+    return; }
   if (e.target.closest("[data-iaclose]") || e.target.id === "iad") { iaClose(); return; }
   if (e.target.closest("#iad [data-go]")) iaClose();
 });
@@ -883,6 +902,7 @@ function vInicio() {
     ${installBanner()}
     <p class="promise">Probabilidades de fútbol explicadas, con un <button class="link" data-go="registro">registro público</button> para revisar cuánto acierta el modelo. <button class="ia-cta" data-iaopen><span aria-hidden="true">✦</span> Pregúntale a la IA</button></p>
     <div class="hero panel">${carousel("hero", hero, "Partidos destacados")}</div>
+    ${ppHome()}
     ${mine}
     <div class="row" id="partidos" style="justify-content:space-between"><h2>Partidos</h2><span class="note">Elige el día y la liga · horario local</span></div>
     ${chips}
@@ -1244,6 +1264,81 @@ function calChart(pts) {
   pts.forEach(p => s += `<circle cx="${sx(p.pred)}" cy="${sy(p.real)}" r="${(3 + 5 * Math.sqrt(p.n / mx)).toFixed(1)}" fill="#3d8bff" stroke="#0e131e" stroke-width="1.5"><title>Predijo ${pct(p.pred)} · ocurrió ${pct(p.real)} · ${p.n} casos</title></circle>`);
   return s + `<text x="${(W + pad) / 2}" y="${H - 2}" text-anchor="middle">probabilidad predicha (%)</text></svg>`;
 }
+/* ---------- picks públicos: dos listas diarias con regla fija, calificadas gane o pierda ---------- */
+const PP_EST = { seguro: { n: "Seguros", c: "#3d8bff", d: "El resultado más probable, si es de 60 % o más" }, valor: { n: "Valor", c: "#ffb020", d: "Donde el modelo propio ve más que la casa" } };
+const ppLado = (L, f) => f.lado === "D" ? "Empate" : `Gana ${corto(L, f.lado === "H" ? f.home : f.away)}`;
+const ppU = u => u == null ? "—" : `${u > 0 ? "+" : u < 0 ? "−" : ""}${dec(Math.abs(u), 2)} u`;
+const ppPlata = u => `${u > 0 ? "+" : u < 0 ? "−" : ""}$${Math.round(Math.abs(u) * 1000).toLocaleString("es-CL")}`;
+function ppFila(f, corta) {
+  const L = D.ligas[f.liga] || { equipos: {}, nombre: (D.meta && D.meta[f.liga] || {}).nombre || "" };
+  const t = f.lado === "H" ? f.home : f.lado === "A" ? f.away : null, g = f.res === "G" ? f.cuota - 1 : f.res === "P" ? -1 : 0;
+  const st = f.res == null ? `<span class="pp-r pend">${new Date(f.kickoff).getTime() > Date.now() ? hhmm(f.kickoff) : "en juego"}</span>` : f.res === "N" ? `<span class="pp-r nulo">nulo</span>` : `<span class="pp-r ${f.res === "G" ? "ok" : "ko"}">${f.res === "G" ? "✓" : "✗"} ${ppU(g)}</span>`;
+  return `<button class="pp-f" data-go="${D.ligas[f.liga] ? "partido" : "registro"}" data-liga="${esc(f.liga)}" data-id="${esc(f.id)}">
+    ${t ? badge(L, t) : `<span class="badge" style="background:var(--panel2);color:var(--muted)">X</span>`}
+    <span class="pp-m"><b>${esc(ppLado(L, f))}</b><small>${esc(corto(L, f.home))} vs ${esc(corto(L, f.away))}${f.hg != null ? ` · ${f.hg}–${f.ag}` : ""}${corta ? "" : ` · ${esc(L.nombre || "")}`}</small></span>
+    <span class="pp-n num"><b>${dec(f.cuota)}</b><small>${pct(f.prob)}</small></span>${corta ? "" : `<span class="pp-e" style="--c:${PP_EST[f.est].c}">${PP_EST[f.est].n}</span>`}${st}</button>`;
+}
+function ppCurva(R_) {
+  const S = Object.entries(PP_EST).map(([k, e]) => ({ e, s: (R_[k] || {}).serie || [] })).filter(x => x.s.length);
+  if (!S.length) return "";
+  const dias = [...new Set(S.flatMap(x => x.s.map(p => p.dia)))].sort(), all = S.flatMap(x => x.s.map(p => p.u));
+  // el ancho del dibujo sigue a la pantalla, para que el texto quede siempre del mismo tamaño
+  const y0 = Math.min(0, ...all), y1 = Math.max(0, ...all), W = Math.round(Math.min(760, Math.max(300, window.innerWidth - 90))), H = 210, pl = 44, n = Math.max(dias.length, 2);
+  const cx = d => pl + dias.indexOf(d) * (W - pl - 12) / (n - 1), cy = v => 12 + (y1 - v) * (H - 40) / ((y1 - y0) || 1);
+  const raw = (y1 - y0) / 4 || 1, p10 = Math.pow(10, Math.floor(Math.log10(raw))), step = [1, 2, 5, 10].map(m => m * p10).find(s => s >= raw);
+  let c = `<svg viewBox="0 0 ${W} ${H}" width="${W}" style="max-width:100%;height:auto" role="img" aria-label="Ganancia acumulada de los picks públicos">`;
+  for (let v = Math.ceil(y0 / step) * step; v <= y1 + 1e-9; v += step) c += `<line x1="${pl}" x2="${W - 12}" y1="${cy(v)}" y2="${cy(v)}" stroke="${Math.abs(v) < 1e-9 ? "#8792a6" : "rgba(148,163,184,.14)"}"/><text x="${pl - 6}" y="${cy(v) + 4}" text-anchor="end">${v > 0 ? "+" : ""}${dec(v, step < 1 ? 1 : 0)}</text>`;
+  S.forEach(({ e, s }) => { c += `<polyline fill="none" stroke="${e.c}" stroke-width="2.2" stroke-linejoin="round" points="${s.map(p => `${cx(p.dia)},${cy(p.u)}`).join(" ")}"/>`; const l = s[s.length - 1]; c += `<circle cx="${cx(l.dia)}" cy="${cy(l.u)}" r="4" fill="${e.c}"><title>${e.n}: ${ppU(l.u)}</title></circle>`; });
+  c += `<text x="${pl}" y="${H - 4}">${esc(fecha(dias[0] + "T12:00"))}</text><text x="${W - 12}" y="${H - 4}" text-anchor="end">${esc(fecha(dias[dias.length - 1] + "T12:00"))}</text>`;
+  return c + `</svg><div class="row note">${S.map(({ e, s }) => `<span><span style="display:inline-block;width:12px;height:3px;background:${e.c};vertical-align:middle"></span> ${e.n}: <b class="num">${ppU(s[s.length - 1].u)}</b></span>`).join("")}</div>`;
+}
+function ppKpis(k, x) {
+  const e = PP_EST[k];
+  if (!x || !x.n) return `<div class="panel pp-k" style="--c:${e.c}"><span class="pp-kh">${e.n}</span><small class="muted">${e.d}</small><p class="note">${x && x.pendientes ? `${x.pendientes} picks esperando resultado.` : "Todavía sin picks calificados."}</p></div>`;
+  return `<div class="panel pp-k" style="--c:${e.c}"><span class="pp-kh">${e.n}</span><small class="muted">${e.d}</small>
+    <b class="pp-big num ${x.unidades > 0 ? "good" : x.unidades < 0 ? "bad" : ""}">${ppU(x.unidades)}</b>
+    <span class="muted">ROI <b class="num">${x.roi > 0 ? "+" : ""}${pct(x.roi, 1)}</b> · ${x.ganados} de ${x.n} acertados (${pct(x.acierto, 0)}; se esperaba ${pct(x.esperado, 0)}) · cuota media ${dec(x.cuota_media)}</span>
+    <span class="faint">Con $1.000 por pick: ${ppPlata(x.unidades)} en ${x.n} picks${x.pendientes ? ` · ${x.pendientes} por jugarse` : ""}</span></div>`;
+}
+function vPicks() {
+  const P = D.picksPub;
+  if (!P) {
+    if (D.picksPubErr) return `<section class="view narrow"><h1>Picks públicos</h1><div class="panel empty stack"><b>La primera lista se publica con la próxima actualización.</b><span class="muted">Dos listas por día con regla fija, calificadas gane o pierda. Vuelve en un rato.</span></div></section>`;
+    getJSON("data/picks_publicos.json").then(x => { D.picksPub = x; }).catch(() => { D.picksPubErr = 1; }).then(() => { if (R.v === "picks") render(); });
+    return `<section class="view">${skeleton()}</section>`; }
+  const Rs = P.resumen || {}, T = Rs.todos || {}, hoyK = isoDay(new Date()), dias = P.dias || [];
+  const prox = dias.filter(d => d.dia >= hoyK).sort((a, b) => a.dia.localeCompare(b.dia)), hist = dias.filter(d => d.dia < hoyK);
+  const lista = d => `<div class="panel flush pp-dia"><div class="ph"><h3>${esc(dayLabel(d.dia))}</h3><span class="note">Fijada ${esc(fecha(d.fijado))} ${esc(hhmm(d.fijado))}${d.tarde ? " (el mismo día, con los partidos que faltaban)" : ""}</span></div>
+    ${d.picks.length ? Object.keys(PP_EST).map(k => { const fs = d.picks.filter(f => f.est === k); return fs.length ? `<div class="pp-g"><span class="lbl" style="color:${PP_EST[k].c}">${PP_EST[k].n}</span>${fs.map(f => ppFila(f, true)).join("")}</div>` : ""; }).join("") : `<p class="empty">Ningún partido cumplió la regla ese día. Eso también cuenta: no se fuerza un pick.</p>`}</div>`;
+  const pocos = (T.n || 0) < 100;
+  const lim = VV.ppLim || 10;
+  return `<section class="view" aria-labelledby="h-pp">
+    <h1 id="h-pp">Picks públicos</h1>
+    <p class="muted">Dos listas por día con una regla fija. Se publican antes de los partidos y se califican todas, ganen o pierdan, con la cuota real que pagaba la casa. Así se ve con números, y no con un caso suelto, cómo le iría a quien sigue a Ballytics.</p>
+    ${pocos ? `<div class="panel note-panel"><b>${T.n ? `Muestra chica (${T.n} picks calificados).` : `Empezó el ${esc(fecha((P.reglas || {}).desde + "T12:00"))}.`}</b> Con menos de 100 picks una buena o mala racha es casi pura suerte: con cuotas cercanas a 1,30, perder 2 de 6 ya deja el día en negativo. Mira la curva cuando pasen algunas semanas.</div>` : ""}
+    <div class="grid2">${Object.keys(PP_EST).map(k => ppKpis(k, Rs[k])).join("")}</div>
+    ${T.n ? `<div class="panel stack"><h3>Ganancia acumulada</h3><p class="note">1 unidad por pick. Si la línea sube, la regla ganó plata con las cuotas que había.</p>${ppCurva(Rs)}${T.clv != null ? `<p class="note">Cuota al fijar contra la de cierre: <b class="num">${T.clv > 0 ? "+" : ""}${pct(T.clv, 1)}</b> ${help("Si la cuota de cierre (la última antes del partido) quedó más baja que la que se tomó al fijar la lista, el mercado se movió a favor del pick. Ganarle a la cuota de cierre de forma sostenida es la mejor señal de que hay valor real, más que el resultado de unos pocos partidos.")}</p>` : ""}</div>` : ""}
+    <h2>Próximas listas</h2>
+    ${prox.length ? prox.map(lista).join("") : ""}
+    ${P.proxima && !prox.some(d => d.dia === P.proxima.dia) ? `<div class="panel note-panel">La lista de ${esc(dayLabel(P.proxima.dia).toLowerCase())} se fija ${esc(dayLabel(dayKey(P.proxima.hora)).toLowerCase())} a las ${esc(hhmm(P.proxima.hora))} (hora local).</div>` : ""}
+    ${hist.length ? `<h2>Historial</h2>${hist.slice(0, lim).map(lista).join("")}${hist.length > lim ? `<button class="vmore" id="pp-more">Ver más días (${hist.length - lim} restantes)</button>` : ""}` : ""}
+    <div class="panel stack"><h3>Las reglas</h3><ul class="pp-rules">
+      <li><b>Seguros.</b> ${esc((P.reglas || {}).seguro || "")}</li><li><b>Valor.</b> ${esc((P.reglas || {}).valor || "")}</li>
+      <li>${esc((P.reglas || {}).fijado || "")}</li><li>${esc((P.reglas || {}).monto || "")} Ganado suma la cuota menos 1; perdido resta 1; suspendido queda nulo.</li></ul>
+      <p class="note">Cada lista queda guardada en el <a class="link" href="https://github.com/Ballyticsia/laboratorio-dc/commits/main/data/picks_publicos.json" target="_blank" rel="noopener">historial público del repositorio</a> con su hora, antes de que empiecen los partidos: nadie puede borrar los que se pierden.</p></div>
+    <div class="panel note-panel"><b>No es un consejo de apuesta.</b> Las casas cobran un margen y la mayoría de las personas que apuestan pierden plata en el tiempo. Si apuestas, que sea poco, con un límite fijo y nunca para recuperar lo perdido. <button class="link" data-go="responsable">Juego responsable</button> · +18</div>
+  </section>`;
+}
+document.addEventListener("click", e => { if (e.target.id === "pp-more") { VV.ppLim = (VV.ppLim || 10) + 10; go({ v: "picks", keepScroll: true }); } });
+function ppHome() {
+  const P = D.picksPub; if (!P) return "";
+  const hoyK = isoDay(new Date()), d = (P.dias || []).filter(x => x.dia >= hoyK && x.picks.length).sort((a, b) => a.dia.localeCompare(b.dia))[0], T = (P.resumen || {}).todos || {};
+  if (!d && !T.n) return "";
+  return `<div class="panel pp-home"><div class="ph"><h3><span class="tag">Picks públicos</span> ${d ? esc(dayLabel(d.dia)) : "Récord"}</h3><button class="link" data-go="picks">Ver todo →</button></div>
+    ${d ? `<div class="pp-hl">${d.picks.filter(f => f.est === "seguro").concat(d.picks.filter(f => f.est === "valor")).slice(0, 4).map(f => ppFila(f, true)).join("")}</div>` : ""}
+    <p class="note">${T.n ? `Récord: <b class="num ${T.unidades > 0 ? "good" : T.unidades < 0 ? "bad" : ""}">${ppU(T.unidades)}</b> en ${T.n} picks (${T.ganados} acertados, ROI ${T.roi > 0 ? "+" : ""}${pct(T.roi, 1)}).` : "Regla fija, cuota real y todos se califican, ganen o pierdan."} No es un consejo de apuesta.</p></div>`;
+}
+
 /* ---------- registro público ---------- */
 const poisOverJ = (line, lam) => { let t = Math.exp(-lam), c = t; for (let i = 1; i <= Math.floor(line); i++) { t *= lam / i; c += t; } return 1 - c; };
 function regPicks(f) {
@@ -1289,6 +1384,7 @@ function vRegistro() {
   return `<section class="view" aria-labelledby="h-r">
     <h1 id="h-r">Resultados del modelo</h1>
     <p class="muted">Para cada partido se guarda la última predicción publicada antes del inicio (el robot actualiza cada 2 horas) y, al terminar, se califica con el resultado real: ganador, goles, ambos marcan, marcador, córners, tarjetas, goleador y amarilla. Las filas calificadas no se recalculan y el historial completo, con cada cambio, queda en el <a class="link" href="https://github.com/Ballyticsia/laboratorio-dc/commits/main/data/registro.csv" target="_blank" rel="noopener">repositorio público</a>.${g.desde ? ` Registro desde el ${fecha(g.desde + "T12:00")}.` : ""}</p>
+    <button class="panel pp-link" data-go="picks"><span><b>Picks públicos</b><small class="muted" style="display:block">Dos listas por día con regla fija y cuota real, calificadas gane o pierda</small></span><span aria-hidden="true">→</span></button>
     ${g.n && g.n < 100 ? `<div class="panel note-panel"><b>Muestra todavía pequeña (${g.n} partidos).</b> Con menos de 100 partidos el acierto cambia mucho por azar: el del ganador (${pct(g.acierto_1x2, 0)}) podría estar en realidad entre ${pct(wilson(g.acierto_1x2, g.n)[0], 0)} y ${pct(wilson(g.acierto_1x2, g.n)[1], 0)} (intervalo de 95 %). Sirve para revisar, no para sacar conclusiones.</div>` : ""}
     ${hero}
     <div class="kpis">${kpi("m", "Partidos calificados", g.n || 0, `${(g.filas || []).filter(f => f.hg == null).length} por jugarse`)}${kpi("", "Acierto del ganador", pct(g.acierto_1x2, 1), g.n ? `entre ${pct(wilson(g.acierto_1x2, g.n)[0], 0)} y ${pct(wilson(g.acierto_1x2, g.n)[1], 0)} con 95 % de confianza` : "el resultado más probable")}${kpi("k", `Log-loss ${help(TIPS.logloss)}`, dec(g.logloss, 3), `ingenuo ${dec(g.logloss_ingenuo, 3)} · menos es mejor`)}${kpi("", "Marcador exacto", pct(g.marcador_exacto, 1), "el más probable")}</div>
@@ -1819,7 +1915,7 @@ function vSobre() {
 /* ---------- privacidad ---------- */
 function vPrivacidad() {
   return `<section class="view narrow" aria-labelledby="h-pv"><h1 id="h-pv">Privacidad</h1>
-    <p class="muted">Qué datos usa Ballytics, para qué, cuánto tiempo y cómo borrarlos. Actualizado el 24 de octubre de 2026.</p>
+    <p class="muted">Qué datos usa Ballytics, para qué, cuánto tiempo y cómo borrarlos. Actualizado el 28 de octubre de 2026. Ver también los <button class="link" data-go="terminos">términos de uso</button>.</p>
     <div class="panel stack prose">
       <h3>Quién es responsable</h3><p>Ballytics es un proyecto personal sin fines de lucro. Para cualquier consulta sobre tus datos, escribe en <a class="link" href="https://github.com/Ballyticsia/laboratorio-dc/issues" target="_blank" rel="noopener">el repositorio público del proyecto</a>.</p>
       <h3>Lo que queda solo en tu teléfono o computador</h3><p>Equipos y ligas favoritas, tus pronósticos guardados, preferencias de avisos, tema claro u oscuro, prodes a los que entraste y la última lista de partidos. Se guardan en el almacenamiento del navegador y no se envían a ningún servidor.</p>
@@ -1827,13 +1923,31 @@ function vPrivacidad() {
       <ul><li><b>Identificador anónimo:</b> un código al azar creado por tu navegador. El servidor guarda solo una versión cifrada, para que votes una vez por partido y para el prode. No incluye tu nombre, correo ni ubicación.</li>
         <li><b>"¿Quién gana?":</b> cuántos votos tiene cada resultado y cuál fue tu voto (asociado al identificador cifrado). Se borra solo a los 60 días.</li>
         <li><b>Prode:</b> el nombre del grupo, el apodo que elijas y tus pronósticos. Los ven los demás participantes del grupo.</li>
-        <li><b>Avisos:</b> si activas los avisos, la dirección de suscripción que entrega tu navegador, los partidos que sigues y qué avisos quieres. Se borra sola si no se usa en 60 días.</li></ul>
-      <h3>Otros servicios</h3><p>La página está alojada en GitHub Pages. Los resultados en vivo, escudos y fotos se piden directamente a ESPN y a API-Football, que reciben tu dirección IP como cualquier sitio que visitas. Ballytics no usa cookies de publicidad ni de seguimiento.</p>
+        <li><b>Avisos:</b> si activas los avisos, la dirección de suscripción que entrega tu navegador, los partidos que sigues y qué avisos quieres. Se borra sola si no se usa en 60 días.</li>
+        <li><b>Ballytics IA:</b> cuántas preguntas hiciste hoy (para el límite diario, asociado al identificador cifrado). Si marcas 👍 o 👎 en una respuesta, se guardan esa pregunta, la respuesta y tu voto durante 60 días para mejorar la IA.</li></ul>
+      <h3>Otros servicios</h3><p>La página está alojada en GitHub Pages. Los resultados en vivo, escudos y fotos se piden directamente a ESPN y a API-Football, que reciben tu dirección IP como cualquier sitio que visitas. Las preguntas a la IA, junto con los datos de los partidos, se envían a Google (Gemini) o, si no responde, a los modelos de Cloudflare para generar la respuesta; no se envía tu nombre ni tu identificador. No escribas datos personales en el chat. Ballytics no usa cookies de publicidad ni de seguimiento.</p>
       <h3>Tus derechos</h3><p>Puedes borrar todo con el botón de abajo. Para pedir una copia o corregir algo, escribe en el repositorio. Ballytics se está adaptando a la Ley 21.719 de protección de datos personales, que empieza a regir el 1 de diciembre de 2026.</p>
       <h3>Edad y juego responsable</h3><p>Las probabilidades son de un modelo estadístico y no son consejos de apuesta. Si apuestas, debes ser mayor de 18 años. <button class="link" data-go="responsable">Juego responsable</button></p>
     </div>
     <div class="panel stack" id="pv-box"><h3>Borrar mis datos</h3><p class="note">Borra lo guardado en este navegador, tus avisos y tu participación en los prodes de este dispositivo. Los votos ya contados quedan como números anónimos.</p><button class="btn ghost" id="pv-del">Borrar mis datos</button></div>
   </section>`;
+}
+function vTerminos() {
+  return `<section class="view narrow" aria-labelledby="h-tu"><h1 id="h-tu">Términos de uso</h1>
+    <p class="muted">Las reglas para usar Ballytics. Actualizado el 28 de octubre de 2026. Al usar el sitio aceptas estos términos; si no estás de acuerdo, no lo uses.</p>
+    <div class="panel stack prose">
+      <h3>Qué es Ballytics</h3><p>Una herramienta de estadística de fútbol: probabilidades calculadas por un modelo, datos de partidos y un registro público de cuánto acierta. Ballytics <b>no es una casa de apuestas</b>: no acepta apuestas, no recibe ni paga dinero y no tiene acuerdos con casas de apuestas, ligas ni clubes.</p>
+      <h3>No es un consejo de apuesta</h3><p>Las probabilidades, las cuotas justas, los picks públicos y las respuestas de la IA son información estadística y pueden equivocarse. Ningún contenido del sitio es una recomendación personal ni una garantía de resultado. Si decides apostar, la decisión y el riesgo son tuyos. Las casas cobran un margen, y la mayoría de las personas que apuestan pierden dinero con el tiempo.</p>
+      <h3>Solo mayores de 18 años</h3><p>El contenido sobre cuotas y apuestas es para mayores de 18 años. Respeta las leyes de tu país sobre apuestas. Si sientes que el juego te está afectando, revisa la página de <button class="link" data-go="responsable">juego responsable</button>.</p>
+      <h3>Sin garantías sobre los datos</h3><p>Los resultados, estadísticas, alineaciones, lesiones, árbitros y cuotas vienen de terceros y pueden tener errores, demoras o faltar. Los datos en vivo pueden llegar con retraso. El modelo no conoce todo lo que pasa en un equipo. El sitio se entrega "tal cual", sin garantía de que esté siempre disponible ni libre de errores, y Ballytics no responde por pérdidas que vengan de usar esta información.</p>
+      <h3>Ballytics IA</h3><p>Las respuestas las genera un modelo de inteligencia artificial a partir de los datos de Ballytics. Pueden ser incompletas o incorrectas: revisa siempre el partido antes de decidir algo. Hay un límite de preguntas por día. No escribas datos personales en el chat.</p>
+      <h3>Picks públicos</h3><p>Son una prueba estadística con regla fija y un monto ficticio de 1 unidad por pick, para medir el modelo de forma honesta. No son una invitación a apostar ni un servicio de pronósticos.</p>
+      <h3>Árbitros</h3><p>Las estadísticas de árbitros (tarjetas, penales y resultados de los partidos que dirigieron) son descriptivas. Una diferencia con el promedio puede deberse al tipo de partidos que le tocan y no implica ninguna acusación ni falta de imparcialidad.</p>
+      <h3>Fuentes y marcas</h3><p>Datos de ESPN (marcadores, estadísticas y cuotas de DraftKings), API-Football (lesiones, árbitros, fotos y xG) y The Odds API (cuotas de Pinnacle y otras casas). Los nombres, escudos y fotos de ligas, clubes y jugadores pertenecen a sus dueños y se usan solo para identificarlos; su uso no implica relación ni patrocinio.</p>
+      <h3>Uso correcto</h3><p>No uses el sitio para extraer datos de forma masiva, sobrecargar el servidor o abusar de la IA, los avisos o los prodes. Los apodos y nombres de grupos ofensivos se pueden borrar sin aviso.</p>
+      <h3>Privacidad</h3><p>Qué datos se guardan y cómo borrarlos está en la página de <button class="link" data-go="privacidad">privacidad</button>.</p>
+      <h3>Cambios y contacto</h3><p>Estos términos pueden cambiar; la fecha de arriba indica la última versión. El código del sitio es público. Para dudas, errores o pedir que se corrija algo, escribe en <a class="link" href="https://github.com/Ballyticsia/laboratorio-dc/issues" target="_blank" rel="noopener">el repositorio del proyecto</a>.</p>
+    </div></section>`;
 }
 document.addEventListener("click", async e => {
   const b = e.target.closest("#pv-del, #pv-yes"); if (!b) return;

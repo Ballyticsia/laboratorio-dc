@@ -140,6 +140,13 @@ async function borrar(env, b) {
       hecho.push(`prode ${code}`);
     }
   }
+  if (okUid(b.uid)) {   // votos 👍/👎 de la IA de esta persona
+    const fin = ":" + (await hash(b.uid)).slice(0, 10);
+    let cur, n = 0;
+    do { const l = await env.SUBS.list({ prefix: "iav:", cursor: cur, limit: 1000 }); cur = l.list_complete ? null : l.cursor;
+      for (const k of l.keys) if (k.name.endsWith(fin)) { await env.SUBS.delete(k.name); n++; } } while (cur);
+    if (n) hecho.push("votos de la IA");
+  }
   return json({ ok: true, borrado: hecho });
 }
 async function novedades(env, b) {
@@ -512,6 +519,7 @@ Reglas:
 - No recomiendes partidos EN VIVO o TERMINADOS salvo que pregunten por ellos. Para "cómo van" o resultados usa "en_vivo_ahora" y "resultados_de_hoy".
 - Partidos "(copa)": probabilidad del modelo con la fuerza de liga, sin ajuste por cuota. "SOLO MERCADO": probabilidad de la casa, sin modelo Ballytics. Acláralo si los usas, y prefiere los partidos con modelo.
 - Si preguntan por un equipo, usa "equipos_consultados". Si preguntan cuánto acierta el modelo, usa "registro_modelo" y recuerda que la muestra es chica si son menos de 100 partidos.
+- "picks_publicos" son las dos listas diarias de Ballytics con regla fija (Seguros y Valor), publicadas antes de los partidos y calificadas gane o pierda con la cuota real. Si preguntan por "los picks de hoy", "los picks de Ballytics" o si seguir a Ballytics gana plata, usa esas listas y su récord tal cual (con los perdidos), y di que se ven completas en la sección Picks. Si el récord tiene menos de 100 picks, di que la muestra es chica.
 - Para combinadas, usa partidos distintos y da la probabilidad total (multiplica las probabilidades) y su cuota justa.
 - Tono cercano y entusiasta, como un buen analista. Puedes usar 1 o 2 emojis de fútbol. Cuando nombres un partido, escribe los dos equipos ("Arsenal vs Everton").
 - No prometas ganancias ni digas "apuesta a" o montos. Si piden una recomendación, di qué ve más probable el modelo y si alguna cuota tiene valor según el modelo, y recuerda en una línea que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero.
@@ -555,9 +563,33 @@ async function preguntarIA(env, b, ctx, req) {
     } catch (e) { txt = ""; fallos.push(m.split("/").pop() + ": " + String(e).slice(0, 160)); }
   }
   if (!txt) return json({ ok: false, error: "La IA no respondió. Prueba de nuevo en un rato." }, 502);
-  const out = { ok: true, r: txt.slice(0, 3500), refs, sug, modelo, quedan: Math.max(0, IA_TOPE_PERSONA - dia.u[h]), ...(fallos.length ? { fallos } : {}) };
+  const rid = (await hash(q + "|" + Date.now() + "|" + Math.random())).slice(0, 16);
+  const out = { ok: true, r: txt.slice(0, 3500), refs, sug, modelo, rid, quedan: Math.max(0, IA_TOPE_PERSONA - dia.u[h]), ...(fallos.length ? { fallos } : {}) };
   ctx.waitUntil(cache.put(ck, json(out, 200, { "cache-control": "public, max-age=1800" })));
   return json(out);
+}
+
+// 👍/👎 de las respuestas de la IA: pregunta, respuesta y voto se guardan 60 días para mejorarla
+async function iaVoto(env, b) {
+  const rid = String(b.rid || ""), v = +b.v, uid = String(b.uid || "");
+  if (!/^[A-Za-z0-9_-]{8,32}$/.test(rid) || ![1, -1].includes(v) || !okUid(uid)) return json({ ok: false, error: "datos" }, 400);
+  const key = `iav:${rid}:${(await hash(uid)).slice(0, 10)}`, prev = await env.SUBS.get(key, "json");
+  const m = String(b.m || "").slice(0, 40), tipo = b.tipo === "partido" ? "partido" : "dia";
+  await env.SUBS.put(key, JSON.stringify({ v, q: String(b.q || "").slice(0, 400), r: String(b.r || "").slice(0, 2000), m, tipo, t: new Date().toISOString() }), { expirationTtl: 60 * 86400 });
+  const res = (await env.SUBS.get("iavres", "json")) || { d: {}, m: {}, tipo: {} }, d = ymdUTC();
+  const add = (o, k, val, s) => { const x = o[k] || (o[k] = [0, 0]); x[val > 0 ? 0 : 1] += s; };
+  for (const [o, k] of [[res.d, d], [res.m, m || "?"], [res.tipo, tipo]]) { if (prev) add(o, k, prev.v, -1); add(o, k, v, 1); }
+  Object.keys(res.d).sort().slice(0, -90).forEach(k => delete res.d[k]);
+  await env.SUBS.put("iavres", JSON.stringify(res));
+  return json({ ok: true });
+}
+async function iaVotos(env, req) {
+  // detalle solo para el examen automático (GitHub Actions), que se identifica con un código derivado de la clave de Gemini
+  const tok = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  if (!env.GEMINI_API_KEY || tok !== await hash("ballytics-ia-votos|" + env.GEMINI_API_KEY)) return json({ ok: false, error: "no autorizado" }, 401);
+  const l = await env.SUBS.list({ prefix: "iav:", limit: 300 }), out = [];
+  for (const k of l.keys) { const x = await env.SUBS.get(k.name, "json"); if (x) out.push(x); }
+  return json({ ok: true, votos: out.sort((a, b) => (b.t || "").localeCompare(a.t || "")) });
 }
 
 export default {
@@ -572,13 +604,15 @@ export default {
       else if (p.startsWith("/jugador/")) res = await jugador(env, p.split("/")[2], ctx, req);
       else if (p === "/dia") res = await dia(ctx, (u.searchParams.get("d") || "").split(","));
       else if (p === "/jugadores") res = await jugadoresPartido(env, u.searchParams);
+      else if (p === "/ia/resumen") res = json({ ok: true, ...((await env.SUBS.get("iavres", "json")) || { d: {}, m: {}, tipo: {} }) });
+      else if (p === "/ia/votos") res = await iaVotos(env, req);
       else if (p === "/afestado") res = json({ ok: true, ...((await env.SUBS.get("afrem", "json")) || {}), pedidos: Object.keys((await env.SUBS.get("afped", "json")) || {}).length });
       else if (p.startsWith("/prode/") && req.method === "GET") res = await prodeVer(env, p.split("/")[2] || "", u.searchParams.get("uid"), ctx);
       else if (req.method === "POST") {
         if (+(req.headers.get("content-length") || 0) > (p === "/ia" ? 60000 : 8192)) return cors(req, json({ ok: false, error: "demasiado grande" }, 413));
         const b = await req.json().catch(() => ({}));
         if (p === "/ia") return cors(req, await preguntarIA(env, b, ctx, req));
-        const R = { "/follow": follow, "/unfollow": unfollow, "/prefs": setPrefs, "/novedades": novedades, "/voto": votar, "/prode/crear": prodeCrear, "/prode/unirse": prodeUnirse, "/prode/pick": prodePick, "/borrar": borrar }[p];
+        const R = { "/follow": follow, "/unfollow": unfollow, "/prefs": setPrefs, "/novedades": novedades, "/voto": votar, "/prode/crear": prodeCrear, "/prode/unirse": prodeUnirse, "/prode/pick": prodePick, "/borrar": borrar, "/ia/voto": iaVoto }[p];
         res = R ? await R(env, b, ctx) : json({ error: "no existe" }, 404);
       } else res = json({ ok: true, servicio: "Ballytics" });
     } catch (e) { res = json({ ok: false, error: String(e) }, 500); }

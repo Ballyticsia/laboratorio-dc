@@ -25,6 +25,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import datos  # noqa: E402
 import fotos  # noqa: E402
 import arbitros  # noqa: E402
+import picks_publicos  # noqa: E402
 import copas  # noqa: E402
 import cuotas  # noqa: E402
 import lesiones  # noqa: E402
@@ -956,6 +957,12 @@ def main():
     reg = ledger_update(preds_reg, jug_df, now.isoformat(timespec="minutes"), votos_gente([str(p["id"]) for p in preds_reg]))
     with open(os.path.join(SALIDA, "registro.json"), "w", encoding="utf-8") as f:
         json.dump(ledger_summary(reg, base), f, ensure_ascii=False, separators=(",", ":"))
+    try:   # picks públicos: nunca deben impedir publicar
+        pp = picks_publicos.actualizar([(L["id"], p) for L, out, _ in pendientes for p in out["partidos"]], jug_df, now)
+        with open(os.path.join(SALIDA, "picks_publicos.json"), "w", encoding="utf-8") as f:
+            json.dump(clean(pp), f, ensure_ascii=False, separators=(",", ":"))
+    except Exception as e:
+        print("  ✗ picks públicos:", e)
     for L, out, _ in pendientes:
         with open(os.path.join(SALIDA, f"{L['id']}.json"), "w", encoding="utf-8") as f:
             json.dump(clean(out), f, ensure_ascii=False, separators=(",", ":"))

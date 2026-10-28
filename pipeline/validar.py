@@ -94,6 +94,19 @@ def main():
         malos = [k for k, v in (j.get("picks") or {}).items() if not (str(k).isdigit() and re.fullmatch(r"\d{1,2}-\d{1,2}", str(v)))]
         if malos:
             err(f"picks.json: {len(malos)} pronósticos con formato inválido")
+    pp = os.path.join(DATA, "picks_publicos.json")
+    if os.path.exists(pp):
+        j = leer(pp) or {}
+        for d in j.get("dias", []):
+            for f in d.get("picks", []):
+                donde = f"picks públicos {d.get('dia')} {f.get('id')}"
+                prob(f.get("prob"), donde)
+                if f.get("est") not in ("seguro", "valor") or f.get("lado") not in ("H", "D", "A"):
+                    err(f"{donde}: estrategia o lado inválido")
+                if not isinstance(f.get("cuota"), (int, float)) or not 1 < f["cuota"] < 50:
+                    err(f"{donde}: cuota inválida ({f.get('cuota')})")
+                if f.get("res") not in (None, "G", "P", "N"):
+                    err(f"{donde}: resultado inválido ({f.get('res')})")
     for extra in ("metodologia.json", "fotos.json", "arbitros.json"):
         p = os.path.join(DATA, extra)
         if os.path.exists(p):
