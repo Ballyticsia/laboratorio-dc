@@ -170,3 +170,28 @@ def guardar_estado():
     os.makedirs(CARPETA, exist_ok=True)
     with open(os.path.join(CARPETA, "estado.json"), "w", encoding="utf-8") as f:
         json.dump(dict(ESTADO, actualizado=datetime.now(timezone.utc).isoformat(timespec="minutes")), f, ensure_ascii=False, indent=1)
+
+
+def suscripcion():
+    """Plan y vencimiento de API-Football (/status, no gasta consultas). Se pide una vez al día."""
+    path = os.path.join(CARPETA, "suscripcion.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            sv = json.load(f)
+        if datetime.now(timezone.utc) - datetime.fromisoformat(sv["revisado"]) < timedelta(hours=20):
+            return sv
+    except (OSError, ValueError, KeyError):
+        sv = None
+    if not os.environ.get("API_FOOTBALL_KEY", "").strip():
+        return sv
+    try:
+        r = _get("/status").get("response") or {}
+        s = r.get("subscription") or {}
+        sv = {"plan": s.get("plan"), "vence": (s.get("end") or "")[:10] or None, "activa": bool(s.get("active")),
+              "limite_dia": (r.get("requests") or {}).get("limit_day"), "revisado": datetime.now(timezone.utc).isoformat(timespec="minutes")}
+        os.makedirs(CARPETA, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(sv, f, ensure_ascii=False, indent=1)
+    except Exception as e:
+        print("  (no pude revisar la suscripción de API-Football:", e, ")")
+    return sv

@@ -712,6 +712,14 @@ def main():
         hist = {}
     stamp = now.strftime("%Y-%m-%dT%H:%MZ")
     bajas = lesiones.cargar()
+    sus = lesiones.suscripcion()
+    if sus and sus.get("vence"):
+        quedan = (date.fromisoformat(sus["vence"]) - today).days
+        print(f"  API-Football: plan {sus.get('plan')} hasta el {sus['vence']} ({quedan} días)")
+        if quedan <= 7:   # el workflow abre un issue con este archivo
+            with open(os.path.join(RAIZ, "data", "aviso_renovar.txt"), "w", encoding="utf-8") as fa:
+                fa.write(f"El plan {sus.get('plan')} de API-Football vence el {sus['vence']} (quedan {quedan} días). "
+                         "Sin él, Ballytics deja de mostrar lesiones, árbitros, fotos y xG. Renueva en dashboard.api-football.com.\n")
     xg.recolectar()
     try:   # xG solo si el backtest mensual (pipeline/backtest_xg.py) mostró que mejora
         with open(os.path.join(RAIZ, "data", "backtest_xg.json"), encoding="utf-8") as fx:

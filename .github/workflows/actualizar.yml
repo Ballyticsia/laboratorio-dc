@@ -104,6 +104,16 @@ jobs:
       - id: deploy
         uses: actions/deploy-pages@v5
 
+      - name: Avisar si hay que renovar API-Football
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f data/aviso_renovar.txt ] || exit 0
+          titulo="Renovar API-Football"
+          abierto=$(gh issue list --repo "${{ github.repository }}" --state open --search "$titulo in:title" --json number --jq '.[0].number')
+          [ -n "$abierto" ] || gh issue create --repo "${{ github.repository }}" --title "$titulo" --body "$(cat data/aviso_renovar.txt)"
+
       - name: Avisar si falló
         if: failure()
         env:
