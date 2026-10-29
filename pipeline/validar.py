@@ -74,8 +74,12 @@ def main():
                 err(f"{d}: id repetido")
             ids.add(p.get("id"))
             partido(p, d)
-            for g in p.get("goleadores", []) + p.get("tarjetas_jug", []):
-                prob(g.get("p"), f"{d} jugador {g.get('jid')}")
+        det = leer(os.path.join(DATA, "detalle", f"{l['id']}.json"))
+        if det is None:
+            err(f"{l['id']}: falta el detalle de los partidos (detalle/{l['id']}.json)")
+        for pid, x in (det or {}).items():
+            for g in x.get("goleadores", []) + x.get("tarjetas_jug", []):
+                prob(g.get("p"), f"{l['id']}/{pid} jugador {g.get('jid')}")
         for t in L.get("tabla", []):
             if not isinstance(t.get("pts"), (int, float)):
                 err(f"{l['id']}: tabla con puntos inválidos ({t.get('equipo')})")
@@ -113,6 +117,9 @@ def main():
             if not isinstance(r.get("pj"), int) or r["pj"] < 1 or not r.get("slug"):
                 err(f"arbitros/{os.path.basename(f)}: árbitro inválido ({r.get('n')})")
                 break
+    ag = leer(os.path.join(DATA, "agenda.json"))
+    if ag is not None and not (ag.get("ligas") or {}):
+        err("agenda.json sin ligas")
     for extra in ("metodologia.json", "fotos.json", "arbitros.json"):
         p = os.path.join(DATA, extra)
         if os.path.exists(p):

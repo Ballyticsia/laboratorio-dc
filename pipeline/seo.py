@@ -267,6 +267,9 @@ def main():
         L = leer(os.path.join(DATA, f"{meta['id']}.json"))
         if not L:
             continue
+        det = leer(os.path.join(DATA, "detalle", f"{meta['id']}.json"), {}) or {}
+        for p in L.get("partidos", []):   # goleadores y demás detalle de cada partido
+            p.update(det.get(str(p.get("id")), {}))
         ligas[L["id"]] = L
         prox = []
         for p in L.get("partidos", []):

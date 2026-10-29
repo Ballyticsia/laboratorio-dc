@@ -1627,3 +1627,31 @@ body.ia-open #iafab{display:none}
 @media (min-width:761px) and (max-width:900px){.brand b{display:none}.search input{width:120px}}
 /* contraste: el equipo menos favorito se lee bien en los dos temas (antes casi no se veía en modo claro) */
 .tline .und{color:color-mix(in srgb,var(--ink) 78%,transparent);font-weight:500}
+/* íconos propios */
+.ico{width:1.05em;height:1.05em;vertical-align:-.16em;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.vh-cup,.pso-cup,.pso-gk em{display:inline-flex;align-items:center;gap:4px}
+.vbell .ico{width:17px;height:17px}
+.arb-tc{display:inline-flex;align-items:center;gap:4px}
+/* en vivo, teléfono: cada equipo en su línea (como SofaScore), sin cortar los nombres a la mitad */
+@media (max-width:760px){
+  .vrow{grid-template-columns:46px minmax(0,1fr) auto;gap:8px;padding:9px 12px}
+  .vmid{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"h s" "a s";row-gap:6px;column-gap:10px}
+  .vmid .vt.l{grid-area:h;flex-direction:row-reverse;justify-content:flex-end}
+  .vmid .vt.r{grid-area:a}
+  .vmid .vsc,.vmid .vtime{grid-area:s;align-self:center}
+  .vmid .vsc{display:flex;flex-direction:column;align-items:flex-end;gap:6px;line-height:22px;min-width:24px;font-size:15px}
+  .vmid .vsc i{display:none}
+  .vmid .vsc .vpen{order:9;font-size:10px;line-height:1}
+  .vmid .vtime{min-width:0;font-size:13px}
+  .vtn{white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;display:block!important;-webkit-line-clamp:unset;font-size:13.5px!important;overflow-wrap:normal!important}
+  .vt{gap:8px}
+  .vside{gap:4px}
+}
+.vsc b{font-weight:inherit}
+@media (max-width:760px){.vmid .vsc{display:flex!important;flex-direction:column}.vmid .vsc b{display:block;line-height:22px}}
+/* filas de partidos más compactas (como FotMob/SofaScore) */
+.mrow{padding:9px 16px;gap:12px}
+.mrow .teams{gap:5px}
+.mrow .tline .badge{width:24px;height:24px;border-radius:7px}
+.mrow .tline .n{font-size:14px}
+@media (max-width:760px){.mtabs{display:flex!important;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:2px}.mtabs button{flex:none;white-space:nowrap}.mtabs::-webkit-scrollbar{display:none}}

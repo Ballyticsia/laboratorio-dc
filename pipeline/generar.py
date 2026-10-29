@@ -39,6 +39,7 @@ REG_JUG = os.path.join(RAIZ, "data", "registro_jugadores.json")   # goleadores y
 EXTRA = {}   # id -> córners, tarjetas, goleadores y amonestados reales de cada partido jugado
 HISTORIAL = os.path.join(RAIZ, "data", "historial.json")
 TEMPORADAS = 3
+DETALLE_CAMPOS = ("hist", "xi_prob", "tarjetas_jug", "goleadores", "h2h")   # van en site/data/detalle/<liga>.json
 SIMS = 10000
 DETALLE_DIAS = 21
 HOME_L2 = 20.0      # localía propia de cada equipo, encogida hacia el promedio (backtest: log-loss 0,9948 → 0,9942)   # partidos con análisis completo (córners, tarjetas, goleadores, h2h)
@@ -995,9 +996,41 @@ def main():
             json.dump(clean(pp), f, ensure_ascii=False, separators=(",", ":"))
     except Exception as e:
         print("  ✗ picks públicos:", e)
+    # el detalle de cada partido (goleadores, amarillas, alineación probable, historial y cruces) va en un archivo
+    # aparte que se baja solo al abrir un partido: así el archivo de cada liga pesa ~40 % menos
+    os.makedirs(os.path.join(SALIDA, "detalle"), exist_ok=True)
     for L, out, _ in pendientes:
+        det = {}
+        for p in out["partidos"]:
+            d = {k: p.pop(k) for k in DETALLE_CAMPOS if k in p}
+            if d:
+                det[str(p["id"])] = d
+        with open(os.path.join(SALIDA, "detalle", f"{L['id']}.json"), "w", encoding="utf-8") as f:
+            json.dump(clean(det), f, ensure_ascii=False, separators=(",", ":"))
         with open(os.path.join(SALIDA, f"{L['id']}.json"), "w", encoding="utf-8") as f:
             json.dump(clean(out), f, ensure_ascii=False, separators=(",", ":"))
+        for i, p in enumerate(out["partidos"]):   # se devuelve en memoria para lo que viene después (agenda)
+            p.update(det.get(str(p["id"]), {}))
+    # agenda liviana para el inicio: partidos de ayer a 8 días y resultados de ayer y hoy de todas las ligas,
+    # con lo justo para la lista (el inicio ya no necesita bajar las 27 ligas completas)
+    try:
+        ag = {}
+        desde, hasta = now_ts - pd.Timedelta(days=2), now_ts + pd.Timedelta(days=9)
+        CAMPOS = ("id", "kickoff", "home", "away", "estado", "lh", "la", "pH", "pD", "pA", "pO25", "pBTTS", "top", "calib", "modelo", "cuotas", "mercado", "ch", "ca", "th", "ta")
+        for L, out, _ in pendientes:
+            ps = [{k: p[k] for k in CAMPOS if k in p} for p in out["partidos"]
+                  if desde <= pd.Timestamp(p["kickoff"]).tz_localize(None) <= hasta]
+            rs = [{k: x[k] for k in ("id", "kickoff", "home", "away", "hg", "ag", "goles") if k in x} for x in out.get("resultados", [])
+                  if pd.Timestamp(x["kickoff"]).tz_localize(None) >= desde]
+            teams = {t for p in ps for t in (p["home"], p["away"])} | {t for x in rs for t in (x["home"], x["away"])}
+            ag[L["id"]] = dict(id=out["id"], nombre=out["nombre"], pais=out["pais"], region=out["region"], logo=out.get("logo"), slug=out.get("slug"),
+                               tabla_ok=out.get("tabla_ok"), equipos={t: v for t, v in out["equipos"].items() if t in teams}, partidos=ps, resultados=rs,
+                               modelo={"rho": (out.get("modelo") or {}).get("rho")},   # basta para la tabla de marcadores del destacado
+                               tabla=[{k: s_.get(k) for k in ("equipo", "pos", "pts", "pj", "forma")} for s_ in out.get("tabla", []) if s_["equipo"] in teams])
+        with open(os.path.join(SALIDA, "agenda.json"), "w", encoding="utf-8") as f:
+            json.dump(clean(dict(actualizado=now.isoformat(timespec="minutes"), ligas=ag)), f, ensure_ascii=False, separators=(",", ":"))
+    except Exception as e:
+        print("  ✗ agenda:", e)
     # marcador más probable de cada partido próximo: Ballytics juega con él en los prodes (lo lee el worker)
     picks = {str(p["id"]): p["top"] for L, out, _ in pendientes for p in out["partidos"] if p.get("top")}
     with open(os.path.join(SALIDA, "picks.json"), "w", encoding="utf-8") as f:
