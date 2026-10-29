@@ -1,5 +1,6 @@
 #!/bin/bash
 set +e
+# medición 4: después de "Partido más rápido al entrar directo"
 mkdir -p diag/out/lh2 diag/out/cap2
 B=https://ballyticsia.github.io/laboratorio-dc
 URLS="ballytics_inicio|$B/ ballytics_liga|$B/liga/premier/ ballytics_vivo|$B/#/vivo ballytics_partido|$B/#/partido/ligue1/401876420"
