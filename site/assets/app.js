@@ -85,20 +85,24 @@ window.bfb = img => {
 function iniOf(n) { n = String(n || "").trim(); const w = n.replace(/[^A-Za-zÀ-ÿ0-9 ]/g, " ").trim().split(/\s+/).filter(Boolean);
   return (w.length > 1 && !/^[A-Z]{3}$/.test(n) ? w.filter(x => x.length > 2 || /^[A-Z]/.test(x)).slice(0, 2).map(x => x[0]).join("") || w[0][0] : (w[0] || "?").slice(0, 3)).toUpperCase(); }
 const fbSpan = (n, abr) => `<span class="tfb fit" style="--c:${hashColor(String(n || "?"))}" aria-hidden="true">${esc(abr && abr.length <= 3 ? abr : iniOf(n))}</span>`;
+const NOFOTO = (() => { const c = lsGet("bt_nofoto", null); return new Set(c && Date.now() - c.t < 14 * DAYMS ? c.ids : []); })();
+let nofotoT0 = 0, nofotoTm = null;
+window.__nofoto = id => { id = String(id || ""); if (!/^\d+$/.test(id) || NOFOTO.has(id)) return; NOFOTO.add(id); if (!nofotoT0) nofotoT0 = Date.now();
+  clearTimeout(nofotoTm); nofotoTm = setTimeout(() => { const c = lsGet("bt_nofoto", null); lsSet("bt_nofoto", { t: c && c.t && Date.now() - c.t < 14 * DAYMS ? c.t : nofotoT0, ids: [...NOFOTO].slice(-1500) }); }, 1500); };
 /* cara del jugador: foto de ESPN (o de API-Football), con iniciales y color del equipo si no hay foto */
 function face(L, t, jid, name, size = "", alt = "") {
   const i = info(L, t), c = i.color && /^[0-9a-f]{6}$/i.test(i.color) ? i.color : null;
   const bg = c ? "#" + c : hashColor(t || name || ""), fg = c ? inkOn(c) : "#fff";
   const w = String(name || "").replace(/[^A-Za-zÀ-ÿ' -]/g, "").trim().split(/\s+/).filter(Boolean);
   const ini = ((w[0] || "?")[0] + (w.length > 1 ? w[w.length - 1][0] : "")).toUpperCase();
-  const espn = /^\d+$/.test(String(jid || "")) ? `https://a.espncdn.com/i/headshots/soccer/players/full/${jid}.png` : "";
+  const espn = /^\d+$/.test(String(jid || "")) && !NOFOTO.has(String(jid)) ? `https://a.espncdn.com/i/headshots/soccer/players/full/${jid}.png` : "";
   if (!alt && jid) alt = fotoDe(jid);
   const api = typeof alt === "string" && /^https:\/\/media\.api-sports\.io\//.test(alt) ? alt : "";
   // si ya sabemos su foto de API-Football se usa primero (ESPN casi no tiene fotos de fútbol)
   const FPX = { sm: 26, lg: 60, xl: 120 }[size] || 36;
   // foto de API-Football en tamaño justo (si falla, la original); si no hay, la de ESPN
-  const img = api ? `<span class="ph"><img class="sq"${isrc(api, FPX)} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${espn ? ` data-alt="${esc(espn)}"` : ""} onload="this.parentNode.classList.add('ok')" onerror="if(!imgErr(this)){if(this.dataset.alt){this.className='wide';this.src=this.dataset.alt;this.dataset.alt=''}else this.parentNode.remove()}"></span>`
-    : espn ? `<span class="ph"><img class="wide" src="${esc(espn)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onload="this.parentNode.classList.add('ok')" onerror="this.parentNode.remove()"></span>` : "";
+  const img = api ? `<span class="ph"><img class="sq"${isrc(api, FPX)} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${espn ? ` data-alt="${esc(espn)}"` : ""} onload="this.parentNode.classList.add('ok')" onerror="if(!imgErr(this)){if(this.dataset.alt){this.className='wide';this.src=this.dataset.alt;this.dataset.alt=''}else{__nofoto('${esc(jid)}');this.parentNode.remove()}}"></span>`
+    : espn ? `<span class="ph"><img class="wide" src="${esc(espn)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onload="this.parentNode.classList.add('ok')" onerror="__nofoto('${esc(jid)}');this.parentNode.remove()"></span>` : "";
   const crest = size !== "sm" && t ? `<span class="fb">${badge(L, t, "xs")}</span>` : "";
   return `<span class="pface ${size}" style="--fc:${bg};--ff:${fg}" aria-hidden="true"><i>${esc(ini)}</i>${img}${crest}</span>`;
 }
@@ -163,12 +167,16 @@ function ensure(id) {
 }
 // detalle de los partidos de una liga (goleadores, amarillas, alineación probable, historial, cruces): solo al abrir un partido
 const DETP = {};
+const DETJ = {};   // la descarga del detalle puede empezar antes de que llegue la liga (van en paralelo)
+const detJSON = id => DETJ[id] || (DETJ[id] = getJSON(`data/detalle/${id}.json`).catch(() => ({})));
 function ensureDet(id) {
   const L = D.ligas[id];
-  if (!L || L.lite) return ensure(id).then(x => x ? ensureDet(id) : null);
-  if (L._det) return Promise.resolve(L);
-  return DETP[id] || (DETP[id] = getJSON(`data/detalle/${id}.json`).catch(() => ({})).then(det => { const L2 = D.ligas[id];
-    (L2.partidos || []).forEach(p => { const d = det[String(p.id)]; if (d) Object.assign(p, d); }); L2._det = true; delete DETP[id]; return L2; }));
+  if (L && !L.lite && L._det) return Promise.resolve(L);
+  return DETP[id] || (DETP[id] = Promise.all([ensure(id), detJSON(id)]).then(([x, det]) => {
+    delete DETP[id]; delete DETJ[id];
+    const L2 = D.ligas[id]; if (!x || !L2 || L2.lite) return null;
+    if (!L2._det) { (L2.partidos || []).forEach(p => { const d = det[String(p.id)]; if (d) Object.assign(p, d); }); L2._det = true; }
+    return L2; }));
 }
 // todas las ligas completas: solo cuando hace falta (buscador, IA, en vivo, más análisis) o con buena conexión después de un rato
 // el registro (pesado), la metodología y las fotos de jugadores: solo cuando una pantalla los usa
@@ -192,6 +200,11 @@ function loadAll() {
 const whenAll = f => D.allLoaded ? f() : ALLW.push(f);   // espera sin provocar la descarga
 const rerenderKeep = () => { const y = window.scrollY; render(); window.scrollTo(0, y); };
 async function load() {
+  // entrada directa a una liga, partido o jugador: su archivo (y el detalle) se piden ya, en paralelo con el índice
+  const h0 = curHash().slice(2).split("/");
+  if (["liga", "partido", "equipo", "jugador", "comparar", "arbitro"].includes(h0[0]) && /^[a-z0-9_-]{2,30}$/.test(h0[1] || "")) {
+    ensure(h0[1]); if (["partido", "jugador"].includes(h0[0])) detJSON(h0[1]);
+  }
   // lo mínimo para la primera pantalla: el índice y la agenda liviana (todas las ligas, solo los partidos cercanos)
   const [ind, ag] = await Promise.all([getJSON("data/indice.json"), getJSON("data/agenda.json").catch(() => null)]);
   D.indice = ind; D.fotos = {}; D.agenda = !!ag;
@@ -406,7 +419,7 @@ function render() {
     if (er && er.n >= 2) { $app.innerHTML = `<div class="panel empty stack"><b>No pude cargar ${esc((D.meta[need] || {}).nombre || "esta liga")}.</b><span class="muted">Puede ser la conexión o que el sitio se está actualizando.</span><button class="btn" data-retry="${esc(need)}">Reintentar</button></div>`; return; }
     $app.innerHTML = skeleton();
     const want = need;
-    setTimeout(() => ensure(want).then(() => { if (R.liga === want) render(); }), er ? 1500 : 0);
+    setTimeout(() => (["partido", "jugador"].includes(R.v) ? ensureDet(want) : ensure(want)).then(() => { if (R.liga === want) render(); }), er ? 1500 : 0);
     return;
   }
   const sec = ({ partido: "inicio", equipo: "liga", jugador: "liga", comparar: "liga", sobre: "metodo", responsable: "metodo", privacidad: "metodo", terminos: "metodo", arbitro: "liga", combinada: "seguimiento", envivo: "vivo", competiciones: "vivo", comp: "vivo", club: "vivo", noticias: "vivo", selecciones: "vivo", ficha: "vivo", prode: "prode" }[R.v] || R.v);
@@ -636,8 +649,8 @@ function misPartidos() {
 
 /* ---------------- esqueletos ---------------- */
 // esqueletos de carga: tarjetas grises animadas con la forma de lo que viene
-const skelRows = n => `<div class="panel flush skel-list" aria-busy="true" aria-label="Cargando">${Array.from({ length: n }, (_, i) => `<div class="skel-r"><span class="skel sk-c"></span><span class="skel" style="width:${[62, 48, 70, 55, 66][i % 5]}%"></span><span class="skel sk-s"></span></div>`).join("")}</div>`;
-const skelHead = () => `<div class="skel-h" aria-busy="true" aria-label="Cargando"><span class="skel sk-l"></span><span class="skel" style="width:45%;height:22px"></span></div>`;
+const skelRows = n => `<div class="panel flush skel-list" role="status" aria-busy="true" aria-label="Cargando">${Array.from({ length: n }, (_, i) => `<div class="skel-r"><span class="skel sk-c"></span><span class="skel" style="width:${[62, 48, 70, 55, 66][i % 5]}%"></span><span class="skel sk-s"></span></div>`).join("")}</div>`;
+const skelHead = () => `<div class="skel-h" role="status" aria-busy="true" aria-label="Cargando"><span class="skel sk-l"></span><span class="skel" style="width:45%;height:22px"></span></div>`;
 function skeleton() {
   const line = w => `<span class="skel" style="width:${w}"></span>`;
   return `<section class="view"><div class="panel skel-box" style="height:220px"></div>
@@ -2752,7 +2765,7 @@ function vVivo() {
       <button class="vlivebtn" data-go="vivo" data-tab="${key}" data-id="${solo ? "" : "envivo"}" data-keep aria-pressed="${solo}"><span class="dot"></span>En vivo <b id="vv-n"></b></button>
       <div class="vsearch"><input id="vv-q" type="search" placeholder="Filtrar por equipo o competición" value="${esc(VV.q)}" autocomplete="off"></div>
     </div>
-    <div id="vv-list"><div class="panel empty">Buscando partidos…</div></div>
+    <div id="vv-list">${skelRows(9)}</div>
     <p class="note">Marcadores y estadísticas en vivo de ESPN. Se actualiza solo cada 30 segundos. Toca la campana de un partido para recibir un aviso cuando haya gol (mientras tengas la página abierta).</p></section>`;
 }
 async function vFillList(key, solo, refresh, evsIn) {

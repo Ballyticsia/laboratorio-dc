@@ -1675,3 +1675,11 @@ body.ia-open #iafab{display:none}
 .r-home .boot{padding-top:0}
 .r-home .boot .boot-home{display:block}
 .t.mini td.n small{font-size:11px}
+/* puntos del carrusel: área para tocar de 24 px (el punto visible sigue chico) */
+.car-dots{gap:0}
+.car-dots button{width:24px;height:24px;padding:0;background:none;display:grid;place-items:center;border-radius:6px}
+.car-dots button::after{display:none}
+.car-dots button::before{content:"";display:block;width:8px;height:8px;border-radius:4px;background:rgba(148,163,184,.35);transition:width .25s,background .25s}
+.car-dots button[aria-pressed="true"]{width:34px;background:none}
+.car-dots button[aria-pressed="true"]::before{width:22px;background:var(--pitch)}
+.hero .car-dots{left:16px;bottom:10px}
