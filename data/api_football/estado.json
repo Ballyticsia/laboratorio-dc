@@ -1,23 +1,23 @@
 {
  "activa": true,
- "consultas": 9,
- "restantes": 7424,
+ "consultas": 0,
+ "restantes": null,
  "errores": [],
  "fechas": {
   "2026-10-29": {
    "filas": 308,
-   "desde_cache": false
+   "desde_cache": true
   },
   "2026-10-30": {
    "filas": 188,
-   "desde_cache": false
+   "desde_cache": true
   },
   "2026-10-31": {
    "filas": 996,
-   "desde_cache": false
+   "desde_cache": true
   }
  },
  "partidos_con_bajas": 63,
  "partidos_ajustados": 47,
- "actualizado": "2026-10-29T05:00+00:00"
+ "actualizado": "2026-10-29T05:05+00:00"
 }
