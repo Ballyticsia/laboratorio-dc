@@ -2,18 +2,31 @@
    - Lo del propio sitio se pide primero a la red y se guarda una copia para abrir sin conexión.
    - Lo de ESPN y otros sitios va directo (no pasa por aquí).
    - Los avisos llegan como "push" sin contenido; aquí se piden los mensajes al servidor de avisos. */
-const CACHE = "bt-v19";   // cambiar al publicar cambios grandes del caparazón
-const SHELL = ["./", "index.html", "assets/app.css", "assets/app.js", "assets/competiciones.json", "assets/selecciones.json", "assets/icon-192.png"];
+const CACHE = "bt-v20";   // cambiar al publicar cambios grandes del caparazón
+const SHELL = ["./", "index.html", "assets/app.css", "assets/app.js", "assets/competiciones.json", "assets/selecciones.json", "assets/icon-192.png", "assets/fonts/manrope-latin-wght-normal.woff2", "assets/fonts/chakra-petch-latin-700-normal.woff2"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {}));
   self.skipWaiting();
 });
 self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE && k !== IMGS).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
+// escudos y fotos (ESPN, wsrv.nl, API-Football): se guardan en el teléfono y la próxima vez aparecen al instante
+const IMGS = "bt-img-v1", IMG_HOSTS = /^(a\.espncdn\.com|wsrv\.nl|images\.weserv\.nl|media\.api-sports\.io)$/, IMG_MAX = 700;
+let podar = 0;
+async function imagen(req) {
+  const c = await caches.open(IMGS), hit = await c.match(req.url);
+  if (hit) return hit;
+  try {
+    const r = await fetch(req.url, { mode: "cors", credentials: "omit" });   // con CORS se puede guardar sin ocupar espacio de más
+    if (r.ok) { c.put(req.url, r.clone()).catch(() => {}); if (++podar % 40 === 0) c.keys().then(ks => ks.length > IMG_MAX && Promise.all(ks.slice(0, ks.length - IMG_MAX).map(k => c.delete(k)))).catch(() => {}); }
+    return r;
+  } catch (x) { return fetch(req); }   // sin CORS: la imagen se pide normal y no se guarda
+}
 self.addEventListener("fetch", e => {
   const u = new URL(e.request.url);
+  if (e.request.method === "GET" && e.request.destination === "image" && IMG_HOSTS.test(u.hostname)) { e.respondWith(imagen(e.request)); return; }
   if (e.request.method !== "GET" || u.origin !== location.origin) return;
   const nav = e.request.mode === "navigate";
   e.respondWith(fetch(e.request).then(r => {

@@ -1,3 +1,14 @@
+/* Fuentes propias (SIL Open Font License, en assets/fonts): sin pedirle nada a Google, se cargan junto con la página */
+@font-face{font-family:"Chakra Petch";font-style:normal;font-weight:500;font-display:swap;src:url(fonts/chakra-petch-latin-500-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Chakra Petch";font-style:normal;font-weight:500;font-display:swap;src:url(fonts/chakra-petch-latin-ext-500-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Chakra Petch";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/chakra-petch-latin-600-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Chakra Petch";font-style:normal;font-weight:600;font-display:swap;src:url(fonts/chakra-petch-latin-ext-600-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Chakra Petch";font-style:normal;font-weight:700;font-display:swap;src:url(fonts/chakra-petch-latin-700-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Chakra Petch";font-style:normal;font-weight:700;font-display:swap;src:url(fonts/chakra-petch-latin-ext-700-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Manrope";font-style:normal;font-weight:200 800;font-display:swap;src:url(fonts/manrope-latin-wght-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Manrope";font-style:normal;font-weight:200 800;font-display:swap;src:url(fonts/manrope-latin-ext-wght-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:200 800;font-display:swap;src:url(fonts/jetbrains-mono-latin-wght-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:200 800;font-display:swap;src:url(fonts/jetbrains-mono-latin-ext-wght-normal.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 /* Ballytics — consola de análisis nocturna. Tema oscuro único, elegido a propósito.
    Layout: barra fija con navegación; vistas de una columna (móvil) o principal + lateral (escritorio). */
 :root{
@@ -364,14 +375,10 @@ body{background:var(--bg)!important}
 .field{position:absolute;left:50%;top:-30vh;width:120vh;height:120vh;transform:translateX(-50%);border-radius:50%;
   border:1px solid rgba(148,163,184,.05);box-shadow:inset 0 0 0 30vh rgba(0,0,0,0),0 0 0 1px rgba(148,163,184,.025)}
 .field::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent,rgba(148,163,184,.05),transparent)}
-@media (prefers-reduced-motion:no-preference){
-  .o1{animation:drift1 38s ease-in-out infinite alternate}
-  .o2{animation:drift2 46s ease-in-out infinite alternate}
-  .o3{animation:drift1 52s ease-in-out infinite alternate-reverse}
-}
+/* fondo quieto: las manchas animadas y desenfocadas obligaban a redibujar la pantalla todo el tiempo (se sentía "pegada") */
 @keyframes drift1{to{transform:translate(120px,80px) scale(1.08)}}
 @keyframes drift2{to{transform:translate(-140px,60px) scale(.94)}}
-.panel{background:linear-gradient(180deg,rgba(21,28,44,.82),rgba(13,18,30,.86));backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.panel{background:linear-gradient(180deg,rgba(21,28,44,.94),rgba(13,18,30,.96))}
 
 /* barras de desplazamiento discretas en todo el sitio */
 *{scrollbar-width:thin;scrollbar-color:rgba(148,163,184,.25) transparent}
@@ -1529,3 +1536,94 @@ body.ia-open #iafab{display:none}
 .vh-cup{font:700 10px var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:#f5b301;background:rgba(245,179,1,.12);border:1px solid rgba(245,179,1,.4);border-radius:999px;padding:2px 8px;margin-top:2px}
 .vhpen{font:700 15px var(--f-mono);color:var(--ink);background:color-mix(in srgb,var(--pitch) 14%,transparent);border:1px solid color-mix(in srgb,var(--pitch) 40%,transparent);border-radius:999px;padding:3px 12px;margin-top:6px}
 .vhpen-w{display:block;font-size:12px;color:var(--muted);margin-top:4px}
+/* v29: escudos sin "parpadeo": mientras cargan se ve un fondo neutro (no un cuadro de color con letras) y aparecen con un fundido */
+.badge.logo:not(.ok){background:var(--panel2)!important;color:transparent!important;border-color:var(--line)!important}
+.lmark.logo:not(.ok){background:var(--panel2);color:transparent}
+.badge .crest,.lmark img,.vlogo img,.pface .ph img{transition:opacity .18s ease-out}
+.vlogo:has(img:not(.ok)){border-radius:50%;background:var(--panel2)}
+.vlogo img:not(.ok){opacity:0}
+:root[data-theme="light"] .badge.logo:not(.ok),:root[data-theme="light"] .lmark.logo:not(.ok),:root[data-theme="light"] .vlogo:has(img:not(.ok)){background:#eef1f6!important}
+/* sin saltos al cargar: el pie de página no sube y baja mientras aparece el contenido */
+#app{min-height:calc(100vh - 140px)}
+/* v30: inicio como las apps grandes — partidos arriba, agrupados por liga; en el computador, 3 columnas */
+.promise{font-size:14px;margin:2px 0 14px}
+.home-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.hside{display:none}
+.hmain{display:flex;flex-direction:column;gap:12px;min-width:0}
+.hright{display:flex;flex-direction:column;gap:14px;min-width:0}
+.hhead{display:flex;justify-content:space-between;align-items:baseline}
+.hmain .daypanel{margin-top:0}
+/* días: una sola fila deslizable */
+.days{display:flex!important;gap:6px;overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;padding-bottom:2px}
+.days::-webkit-scrollbar{display:none}
+.dbtn{flex:1 0 64px;scroll-snap-align:center}
+/* ligas: fila de chips deslizable */
+.lscroll{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.lscroll::-webkit-scrollbar{display:none}
+.lchip{flex:none;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:999px;padding:6px 12px 6px 7px;font:600 13px var(--f-body);cursor:pointer;white-space:nowrap}
+.lchip:first-child{padding-left:12px}
+.lchip:hover{color:var(--ink);border-color:color-mix(in srgb,var(--pitch) 45%,var(--line))}
+.lchip[aria-pressed="true"]{color:var(--ink);background:var(--pitch-soft);border-color:var(--pitch)}
+.lchip .lmark.sm{width:20px;height:20px}
+/* grupos por liga */
+.lgroup+.lgroup{border-top:6px solid var(--bg)}
+.lgh{display:flex;align-items:center;gap:10px;width:100%;padding:10px 16px;background:color-mix(in srgb,var(--panel2) 70%,transparent);border:0;border-bottom:1px solid var(--line);cursor:pointer;color:var(--ink);text-align:left}
+.lgh:hover{background:var(--pitch-soft)}
+.lgh-n{display:flex;align-items:baseline;gap:8px;min-width:0;flex:1}
+.lgh-n b{font:700 13.5px var(--f-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lgh-n small{color:var(--faint);font-size:12px;white-space:nowrap}
+.lgh-c{font:600 11.5px var(--f-mono);color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+.lgh-a{width:12px;height:12px;fill:none;stroke:var(--muted);stroke-width:1.6;stroke-linecap:round}
+.lgroup .mrow:first-of-type{border-top:0}
+:root[data-theme="light"] .lgroup+.lgroup{border-top-color:#eef1f6}
+:root[data-theme="light"] .lgh{background:#f7f9fc}
+/* columna lateral de ligas (computador) */
+.hs-i{display:flex;align-items:center;gap:10px;width:100%;padding:7px 14px;background:none;border:0;border-left:3px solid transparent;color:var(--ink);cursor:pointer;text-align:left;font-size:13.5px}
+.hs-i:hover{background:var(--pitch-soft)}
+.hs-i.on{background:var(--pitch-soft);border-left-color:var(--pitch);font-weight:700}
+.hs-i>span:not(.lmark){display:flex;flex-direction:column;min-width:0;flex:1}
+.hs-i small{color:var(--faint);font-size:11px;font-weight:500}
+.hs-i>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hs-all{background:var(--pitch)!important;color:#fff!important;font-size:11px}
+.hs-fav{font-style:normal;color:var(--card);font-size:12px}
+.hs-links{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 14px 14px;border-top:1px solid var(--line);margin-top:6px}
+@media (min-width:1100px){
+  .home-grid{grid-template-columns:230px minmax(0,1fr) 330px;gap:18px}
+  .hside{display:block;position:sticky;top:78px;max-height:calc(100vh - 96px);overflow-y:auto;scrollbar-width:thin}
+  .hright{position:sticky;top:78px}
+  .hmain .lscroll{display:none}
+  .hright .hero-in{padding:18px 16px 36px;gap:14px}
+  .hright .hero-face{gap:6px}
+  .hright .ht b{font-size:15px}
+  .hright .hero-mid .xg{font-size:30px}
+  .hright .badge.xl{width:52px;height:52px}
+  .hright .hero-cta{justify-content:flex-start}
+  .hright .hero-cta .btn.ghost{display:none}
+  .hright .hero-p .nums{font-size:12px}
+}
+@media (min-width:761px) and (max-width:1099px){
+  .home-grid{grid-template-columns:minmax(0,1fr) 320px}
+  .hright .hero-in{padding:18px 16px 36px}
+  .hright .ht b{font-size:15px}.hright .hero-mid .xg{font-size:30px}.hright .badge.xl{width:52px;height:52px}
+  .hright .hero-cta .btn.ghost{display:none}
+}
+/* encabezado en una sola fila en el computador: marca, secciones, buscador y tema */
+@media (min-width:761px){
+  .top .wrap{flex-wrap:nowrap;gap:10px}
+  .brand{margin-right:6px;flex:none}
+  nav.main{flex:1 1 auto;min-width:0;gap:0}
+  nav.main button,.dd > .nav-i{padding:8px 10px;font-size:13px;letter-spacing:.05em}
+  .search{flex:none;margin-left:auto}
+  .search input{width:200px}
+  .themebtn{flex:none;order:5}
+}
+@media (min-width:761px) and (max-width:1240px){
+  /* Inicio, Mío y Modelo quedan como íconos; el resto con texto y sin ícono */
+  .nav-i:not([data-nav="inicio"]):not([data-nav="seguimiento"]):not([data-nav="registro"]) svg:not(.chev){display:none}
+  .nav-i[data-nav="inicio"] span,.nav-i[data-nav="seguimiento"] span,.nav-i[data-nav="registro"] span{display:none}
+  .search input{width:150px}.search{max-width:none}
+  nav.main button,.dd > .nav-i{padding:8px 8px;letter-spacing:.03em}
+}
+@media (min-width:761px) and (max-width:900px){.brand b{display:none}.search input{width:120px}}
+/* contraste: el equipo menos favorito se lee bien en los dos temas (antes casi no se veía en modo claro) */
+.tline .und{color:color-mix(in srgb,var(--ink) 78%,transparent);font-weight:500}
