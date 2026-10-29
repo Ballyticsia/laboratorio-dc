@@ -1,18 +1,18 @@
 {
  "activa": true,
- "creditos_usados": 10,
- "restantes": 316,
+ "creditos_usados": 4,
+ "restantes": 312,
  "consultas": {
   "soccer_epl": "sin partidos cerca",
-  "soccer_spain_la_liga": "actualizada",
+  "soccer_spain_la_liga": "copia",
   "soccer_italy_serie_a": "copia",
-  "soccer_germany_bundesliga": "actualizada",
+  "soccer_germany_bundesliga": "copia",
   "soccer_france_ligue_one": "copia",
-  "soccer_efl_champ": "actualizada",
-  "soccer_portugal_primeira_liga": "actualizada",
+  "soccer_efl_champ": "copia",
+  "soccer_portugal_primeira_liga": "copia",
   "soccer_netherlands_eredivisie": "sin partidos cerca",
-  "soccer_chile_campeonato": "sin partidos cerca",
-  "soccer_argentina_primera_division": "sin partidos cerca",
+  "soccer_chile_campeonato": "actualizada",
+  "soccer_argentina_primera_division": "actualizada",
   "soccer_brazil_campeonato": "copia",
   "soccer_usa_mls": "sin partidos cerca",
   "soccer_uefa_champs_league": "sin partidos cerca",
@@ -20,13 +20,13 @@
   "soccer_uefa_europa_league": "sin partidos cerca",
   "soccer_uefa_europa_conference_league": "sin partidos cerca",
   "soccer_conmebol_copa_sudamericana": "sin partidos cerca",
-  "soccer_mexico_ligamx": "copia",
+  "soccer_mexico_ligamx": "sin partidos cerca",
   "soccer_turkey_super_league": "copia",
   "soccer_spl": "sin partidos cerca",
-  "soccer_belgium_first_div": "actualizada"
+  "soccer_belgium_first_div": "copia"
  },
  "errores": [],
  "ligas": {},
- "partidos_con_cuota": 92,
- "actualizado": "2026-10-29T09:05+00:00"
+ "partidos_con_cuota": 101,
+ "actualizado": "2026-10-29T11:00+00:00"
 }
