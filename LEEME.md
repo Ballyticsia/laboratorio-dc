@@ -148,6 +148,9 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - **Imágenes:** todos los escudos de ESPN pasan por su redimensionador (`combiner`) y las fotos y logos de API-Football por wsrv.nl (WebP), en el tamaño en que se ven (`IMG()` en `app.js`; si falla, se pide la original). El service worker los guarda (`bt-img-v1`, hasta 700) y en la segunda visita aparecen al instante. Mientras cargan se ve un fondo neutro.
 - **Fuentes propias** en `site/assets/fonts` (licencia SIL OFL), con precarga; nada se pide a Google Fonts.
 - **Datos por partes:** el inicio solo baja `indice.json` y `agenda.json` (todos los partidos de ayer a 8 días, liviano). Las ligas completas se bajan al entrar a una liga, partido o equipo, al buscar, al usar la IA, en En vivo o al llegar a "Más análisis" (en el computador, también a los 8 segundos). El detalle de cada partido (goleadores, amarillas, alineación probable, historial y cruces) está en `data/detalle/<liga>.json` y se baja al abrir un partido. El registro y las fotos, solo cuando una pantalla los usa.
+- **Primera pantalla al instante:** `index.html` pide `indice.json` y `agenda.json` apenas abre (en paralelo con `app.js`, que los recoge de `window.__pre`) y trae escrito el texto de bienvenida del inicio, así se ve algo útil antes de que corra el JavaScript.
+- **Código achicado al publicar:** el robot pasa `app.js` (terser) y `app.css` (lightningcss) por `tests/minificar.js` justo antes de la prueba de humo; en el repositorio quedan legibles.
+- **Contraste:** los botones llenos usan `--pitch-fill` (#2563eb), que con letra blanca cumple el mínimo de lectura (4,5:1); `--pitch` queda para barras y detalles.
 
 ## Cambiar cosas
 - **Horario:** la línea `cron` del workflow (está en hora UTC; Chile es UTC-3).

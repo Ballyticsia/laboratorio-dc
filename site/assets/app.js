@@ -10,7 +10,7 @@ const timers = [];
 
 /* ---------------- utilidades ---------------- */
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const pct = (x, d = 0) => x == null || isNaN(x) ? "—" : (100 * x).toFixed(d).replace(".", ",") + " %";
+const pct = (x, d = 0) => x == null || isNaN(x) ? "—" : (100 * x).toFixed(d).replace(".", ",") + "%";
 const dec = (x, d = 2) => x == null || isNaN(x) ? "—" : Number(x).toFixed(d).replace(".", ",");
 const sgn = x => (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x);
 const DAYMS = 864e5;
@@ -29,6 +29,8 @@ const fecha = iso => new Date(iso).toLocaleDateString("es-CL", { day: "2-digit",
 const cuando = iso => `${dayLabel(dayKey(iso))} · ${hhmm(iso)}`;
 function weekStart(iso) { const d = new Date(iso); const w = (d.getDay() + 6) % 7; d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - w); return isoDay(d); }
 function hashColor(s) { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return `hsl(${h % 360} 45% 38%)`; }
+/* texto blanco u oscuro, el que tenga más contraste sobre ese color (fórmula WCAG) */
+function inkOn(hex) { const n = parseInt(hex, 16), ch = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; const L = 0.2126 * ch((n >> 16) & 255) + 0.7152 * ch((n >> 8) & 255) + 0.0722 * ch(n & 255); return 1.05 / (L + 0.05) >= (L + 0.05) / 0.053 ? "#fff" : "#07090f"; }
 function lum(hex) { const n = parseInt(hex, 16); return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; }
 const pts5 = f => (f || []).reduce((s, c) => s + ({ G: 3, E: 1, P: 0 }[c] || 0), 0);
 
@@ -46,7 +48,7 @@ const ICO = {
 const YC = `<i class="ycard" role="img" aria-label="amarilla"></i>`, RC = `<i class="rcard" role="img" aria-label="roja"></i>`;
 /* imágenes en el tamaño justo: ESPN tiene su propio redimensionador y las de API-Football pasan por wsrv.nl (WebP, caché de 1 año).
    Un escudo de 500 px pesa 30–300 KB; a 80 px pesa 1–7 KB. Si el redimensionado falla, se pide la imagen original (data-o). */
-const DPR = Math.min(2, Math.max(1, Math.round(window.devicePixelRatio || 1)));
+const DPR = Math.min(2, Math.max(1, window.devicePixelRatio || 1));   // sin redondear: 1,75 pide 128 px y no 200
 function IMG(u, px = 32) {
   u = String(u || ""); if (!u) return u;
   const n = px * DPR, s = n <= 48 ? 48 : n <= 80 ? 80 : n <= 128 ? 128 : 200;
@@ -61,7 +63,7 @@ window.imgErr = img => { const o = img && img.dataset && img.dataset.o; if (o) {
 const BADGE_PX = { xs: 32, sm: 24, lg: 56, xl: 72 };
 function badge(L, t, size = "") {
   const i = info(L, t), c = i.color && /^[0-9a-f]{6}$/i.test(i.color) ? i.color : null;
-  const bg = c ? "#" + c : hashColor(t), fg = c && lum(c) > 0.62 ? "#07090f" : "#fff";
+  const bg = c ? "#" + c : hashColor(t), fg = c ? inkOn(c) : "#fff";
   const ab = (i.abr || t.replace(/[^A-Za-zÀ-ÿ ]/g, "").split(" ").map(w => w[0]).join("").slice(0, 3)).toUpperCase();
   const logo = typeof i.logo === "string" && /^https:\/\//.test(i.logo) ? i.logo : null;
   const img = logo ? `<img class="crest"${isrc(logo, BADGE_PX[size] || 32)} alt="" loading="${LOK.has(logo) ? "eager" : "lazy"}" decoding="async" referrerpolicy="no-referrer" onload="${LOK_JS}" onerror="if(!imgErr(this)){this.parentNode.classList.remove('logo');this.remove()}">` : "";
@@ -86,7 +88,7 @@ const fbSpan = (n, abr) => `<span class="tfb fit" style="--c:${hashColor(String(
 /* cara del jugador: foto de ESPN (o de API-Football), con iniciales y color del equipo si no hay foto */
 function face(L, t, jid, name, size = "", alt = "") {
   const i = info(L, t), c = i.color && /^[0-9a-f]{6}$/i.test(i.color) ? i.color : null;
-  const bg = c ? "#" + c : hashColor(t || name || ""), fg = c && lum(c) > 0.62 ? "#07090f" : "#fff";
+  const bg = c ? "#" + c : hashColor(t || name || ""), fg = c ? inkOn(c) : "#fff";
   const w = String(name || "").replace(/[^A-Za-zÀ-ÿ' -]/g, "").trim().split(/\s+/).filter(Boolean);
   const ini = ((w[0] || "?")[0] + (w.length > 1 ? w[w.length - 1][0] : "")).toUpperCase();
   const espn = /^\d+$/.test(String(jid || "")) ? `https://a.espncdn.com/i/headshots/soccer/players/full/${jid}.png` : "";
@@ -148,7 +150,10 @@ function markets(m) {
 }
 
 /* ---------------- datos ---------------- */
-async function getJSON(p) { const r = await fetch(p, { cache: "no-cache" }); if (!r.ok) throw new Error(p + " " + r.status); return r.json(); }
+async function getJSON(p) {
+  // index.html ya pidió el índice y la agenda mientras bajaba este archivo: se usa esa misma descarga (una sola vez)
+  const pre = window.__pre && window.__pre[p]; if (pre) { delete window.__pre[p]; return pre; }
+  const r = await fetch(p, { cache: "no-cache" }); if (!r.ok) throw new Error(p + " " + r.status); return r.json(); }
 const PEND = {}, LOADERR = {};
 function ensure(id) {
   // si falla, se borra la promesa (para poder reintentar) y se anota el error; nunca se reintenta en bucle
@@ -423,7 +428,16 @@ function render() {
   if (R.v === "inicio") vigilarMas();
   if (["registro", "metodo", "partido", "picks"].includes(R.v)) loadExtras();
   if (["partido", "jugador", "equipo", "envivo", "arbitro", "liga"].includes(R.v)) loadFotos();
-  const hs = document.querySelector('.hsort [aria-pressed="true"]'); if (hs && hs.offsetLeft > hs.parentNode.clientWidth - 40) hs.parentNode.scrollLeft = hs.offsetLeft - 60;
+  centrarActivos();
+}
+/* en las barras que se deslizan de lado, deja a la vista la opción elegida (p. ej. "Árbitros" en el teléfono) */
+function centrarActivos() {
+  for (const sc of document.querySelectorAll(".hsort,.tabs2.wide,.vdays,.mtabs,.vhub,.lscroll")) {
+    if (sc.scrollWidth <= sc.clientWidth + 2) continue;
+    const b = sc.querySelector('[aria-pressed="true"],[aria-selected="true"],[aria-current="page"]'); if (!b) continue;
+    const x = b.getBoundingClientRect().left - sc.getBoundingClientRect().left + sc.scrollLeft;
+    if (x < sc.scrollLeft || x + b.offsetWidth > sc.scrollLeft + sc.clientWidth) sc.scrollLeft = Math.max(0, x - (sc.clientWidth - b.offsetWidth) / 2);
+  }
 }
 
 // para las pruebas automáticas (tests/): ruta actual, enlace limpio y datos cargados
@@ -654,8 +668,8 @@ function iaCtxPartido(L, p) {
     cuotas_casa: p.cuotas ? { local: p.cuotas.h, empate: p.cuotas.d, visita: p.cuotas.a, casa: p.cuotas.casa || "ESPN", linea_goles: p.cuotas.linea, mas: p.cuotas.over, menos: p.cuotas.under } : null,
     cuotas_del_usuario: Object.keys(tus).length ? tus : null,
     corners_esperados: p.ch != null ? dec(p.ch + p.ca, 1) : null, tarjetas_esperadas: p.th != null ? dec(p.th + p.ta, 1) : null,
-    promedios_temporada: { local: { goles: dec(eh.gf), recibe: dec(eh.gc), tiros_al_arco: dec(eh.tiros_arco, 1), corners: dec(eh.corners, 1), tarjetas: dec(eh.tarjetas, 1), posesion: eh.posesion != null ? dec(eh.posesion, 0) + " %" : null },
-      visita: { goles: dec(ea.gf), recibe: dec(ea.gc), tiros_al_arco: dec(ea.tiros_arco, 1), corners: dec(ea.corners, 1), tarjetas: dec(ea.tarjetas, 1), posesion: ea.posesion != null ? dec(ea.posesion, 0) + " %" : null } },
+    promedios_temporada: { local: { goles: dec(eh.gf), recibe: dec(eh.gc), tiros_al_arco: dec(eh.tiros_arco, 1), corners: dec(eh.corners, 1), tarjetas: dec(eh.tarjetas, 1), posesion: eh.posesion != null ? dec(eh.posesion, 0) + "%" : null },
+      visita: { goles: dec(ea.gf), recibe: dec(ea.gc), tiros_al_arco: dec(ea.tiros_arco, 1), corners: dec(ea.corners, 1), tarjetas: dec(ea.tarjetas, 1), posesion: ea.posesion != null ? dec(ea.posesion, 0) + "%" : null } },
     tabla: { local: sh.pos ? `${sh.pos}º, ${sh.pts} pts, forma ${(sh.forma || []).join("")}` : null, visita: sa.pos ? `${sa.pos}º, ${sa.pts} pts, forma ${(sa.forma || []).join("")}` : null },
     bajas: p.bajas ? { local: (p.bajas.h || []).slice(0, 8).map(x => `${x.jug} (${x.tipo === "Missing Fixture" ? "baja" : "duda"}${x.goles ? `, ${x.goles} goles` : ""})`), visita: (p.bajas.a || []).slice(0, 8).map(x => `${x.jug} (${x.tipo === "Missing Fixture" ? "baja" : "duda"}${x.goles ? `, ${x.goles} goles` : ""})`) } : "sin datos",
     goleadores_probables: (p.goleadores || []).slice(0, 5).map(g => `${g.jugador} ${pct(g.p)}`),
@@ -999,7 +1013,7 @@ function vInicio() {
       <div class="sgrid">
         <div><span class="lbl">Goles/PJ</span><b class="num">${dec(st.gf)}</b></div><div><span class="lbl">Recibe/PJ</span><b class="num">${dec(st.gc)}</b></div>
         <div><span class="lbl">Tiros al arco</span><b class="num">${dec(st.tiros_arco, 1)}</b></div><div><span class="lbl">Córners</span><b class="num">${dec(st.corners, 1)}</b></div>
-        <div><span class="lbl">Posesión</span><b class="num">${st.posesion != null ? dec(st.posesion, 0) + " %" : "—"}</b></div><div><span class="lbl">Tarjetas</span><b class="num">${dec(st.tarjetas, 1)}</b></div>
+        <div><span class="lbl">Posesión</span><b class="num">${st.posesion != null ? dec(st.posesion, 0) + "%" : "—"}</b></div><div><span class="lbl">Tarjetas</span><b class="num">${dec(st.tarjetas, 1)}</b></div>
       </div>
       <button class="btn ghost sm" data-go="equipo" data-liga="${L.id}" data-team="${esc(e.equipo)}">Ver equipo</button></div>`;
   }).filter(Boolean);
@@ -1196,11 +1210,12 @@ function weekWidget(L, sel) {
   return `<div class="wnav">${nav(i - 1, "Semana anterior")}<b>Semana del ${esc(lab)}</b>${nav(i + 1, "Semana siguiente")}</div>${res ? `<div class="rlist">${res}</div>` : ""}${fx}`;
 }
 function lPartidos(L) { return `<div class="panel flush">${weekWidget(L, R.wk)}</div>`; }
-function scorersTable(L, n = 25, team = null) {
+function scorersTable(L, n = 25, team = null, mini = false) {
   const gs = (L.goleadores || []).filter(g => !team || g.equipo === team).slice(0, n);
   if (!gs.length) return `<div class="empty">Sin goles registrados todavía.</div>`;
-  return `<table class="t"><thead><tr><th>#</th><th>Jugador</th><th class="n">Goles</th><th class="n hide-m">Penales</th><th>Últimos 5</th></tr></thead><tbody>` +
-    gs.map((g, i) => `<tr class="click" data-go="jugador" data-liga="${L.id}" data-id="${esc(g.jid)}"><td><span class="pos">${i + 1}</span></td><td class="team">${face(L, g.equipo, g.jid, g.jugador)}<span>${esc(g.jugador)}${team ? "" : `<small class="faint" style="display:block;font-weight:500">${esc(corto(L, g.equipo))}</small>`}</span></td><td class="n"><b>${g.goles}</b></td><td class="n hide-m">${g.penales}</td><td><span class="l5">${(g.ult5 || []).map(v => `<i class="${v ? "on" : ""}">${v || "·"}</i>`).join("")}</span></td></tr>`).join("") + `</tbody></table>`;
+  // mini: versión angosta para la columna lateral (solo puesto, jugador y goles)
+  return `<table class="t${mini ? " mini" : ""}"><thead><tr><th>#</th><th>Jugador</th><th class="n">Goles</th>${mini ? "" : `<th class="n hide-m">Penales</th><th>Últimos 5</th>`}</tr></thead><tbody>` +
+    gs.map((g, i) => `<tr class="click" data-go="jugador" data-liga="${L.id}" data-id="${esc(g.jid)}"><td><span class="pos">${i + 1}</span></td><td class="team">${face(L, g.equipo, g.jid, g.jugador)}<span>${esc(g.jugador)}${team ? "" : `<small class="faint" style="display:block;font-weight:500">${esc(corto(L, g.equipo))}</small>`}</span></td><td class="n"><b>${g.goles}</b>${mini && g.penales ? `<small class="faint"> (${g.penales} pen.)</small>` : ""}</td>${mini ? "" : `<td class="n hide-m">${g.penales}</td><td><span class="l5">${(g.ult5 || []).map(v => `<i class="${v ? "on" : ""}">${v || "·"}</i>`).join("")}</span></td>`}</tr>`).join("") + `</tbody></table>`;
 }
 function cardsTable(L, n = 20) {
   const ts = (L.amonestados || []).slice(0, n);
@@ -1273,7 +1288,7 @@ function lResumen(L) {
       ${L.tabla_ok ? `<div class="panel flush scroll"><div class="ph"><h3>Tabla</h3><button class="link" data-go="liga" data-liga="${L.id}" data-tab="tabla">Completa →</button></div>${fullTable(L, true)}</div>` : groupTables(L, true)}
     </div>
     <aside class="stack">
-      <div class="panel flush"><div class="ph"><h3>Goleadores</h3><button class="link" data-go="liga" data-liga="${L.id}" data-tab="jugadores">Todos →</button></div><div class="scroll">${scorersTable(L, 6)}</div></div>
+      <div class="panel flush"><div class="ph"><h3>Goleadores</h3><button class="link" data-go="liga" data-liga="${L.id}" data-tab="jugadores">Todos →</button></div><div class="scroll">${scorersTable(L, 6, null, true)}</div></div>
       <div class="panel stack"><div class="row" style="justify-content:space-between"><h3>Rachas</h3><button class="link" data-go="liga" data-liga="${L.id}" data-tab="rachas">Todas →</button></div>${rachasList(L, (L.rachas || []).slice(0, 6))}</div>
     </aside></div>`;
 }
@@ -1414,7 +1429,7 @@ function vEquipo() {
     <div class="lhead panel">${badge(L, t, "xl")}<div><h1 id="h-e">${esc(corto(L, t))}</h1><span class="row" style="gap:8px;margin-top:6px">${starBtn("t", L.id + "|" + t, "Seguir este equipo")}<button class="btn ghost sm cmp-btn" data-go="comparar" data-liga="${L.id}" data-team="${esc(t)}">Comparar</button><button class="btn ghost sm" data-ics="team" data-liga="${L.id}" data-team="${esc(t)}">Partidos al calendario</button></span><span class="muted">${esc(L.nombre)}${s.pos ? ` · ${s.pos}º con ${s.pts} pts en ${s.pj} partidos` : ""}</span></div><span style="margin-left:auto">${formHtml(s.forma)}</span></div>
     <div class="kpis">${s.ataque ? kpi("m", "Ataque", dec(s.ataque), "1,00 = promedio liga") + kpi("", "Defensa", dec(s.defensa), "menos es mejor") : ""}${s.pts_esp != null ? kpi("", "Pts finales", dec(s.pts_esp, 1), "proyección") + kpi("k", "Campeón", pct(s.p_campeon, 1), "") : ""}${zs}</div>
     ${st.pj ? `<div class="panel stack"><h3>Estadísticas de la temporada</h3><div class="sgrid wide">
-      ${[["Goles/PJ", dec(st.gf)], ["Recibe/PJ", dec(st.gc)], ["Tiros/PJ", dec(st.tiros, 1)], ["Al arco/PJ", dec(st.tiros_arco, 1)], ["Córners/PJ", dec(st.corners, 1)], ["Posesión", st.posesion != null ? dec(st.posesion, 0) + " %" : "—"],
+      ${[["Goles/PJ", dec(st.gf)], ["Recibe/PJ", dec(st.gc)], ["Tiros/PJ", dec(st.tiros, 1)], ["Al arco/PJ", dec(st.tiros_arco, 1)], ["Córners/PJ", dec(st.corners, 1)], ["Posesión", st.posesion != null ? dec(st.posesion, 0) + "%" : "—"],
          ["Tarjetas/PJ", dec(st.tarjetas, 1)], ["Faltas/PJ", dec(st.faltas, 1)], ["Ambos marcan", pct(st.ambos)], ["+2,5 goles", pct(st.over25)], ["Vallas invictas", st.vallas], ["Sin marcar", st.sin_marcar]]
         .map(([n, v]) => `<div><span class="lbl">${n}</span><b class="num">${v}</b></div>`).join("")}</div></div>` : ""}
     <div class="grid2">
@@ -2713,7 +2728,7 @@ function vRow(e) {
   const m = vModel(e.id), f = followed()[e.id];
   const so = e.h.so != null && e.a.so != null && (e.h.so || e.a.so || enPenales(e)) ? `<small class="vpen">pen. ${esc(e.h.so)}-${esc(e.a.so)}</small>` : "";
   const sc = e.state === "pre" ? `<span class="vtime">${hhmm(e.date)}</span>` : `<span class="vsc num"><b>${esc(e.h.score ?? "")}</b><i>-</i><b>${esc(e.a.score ?? "")}</b>${so}</span>`;
-  const st = isLive(e) ? `<span class="vmin live">${esc(vClock(e))}</span>` : e.state === "post" ? `<span class="vmin">${esc(/pen/i.test(e.detail) ? "Penales" : /AET|ET/i.test(e.detail) && e.detail !== "FT" ? "Alargue" : "Final")}</span>` : /postp|cancel|susp|delay/i.test(e.detail) ? `<span class="vmin warn">${esc(e.detail)}</span>` : `<span class="vmin">&nbsp;</span>`;
+  const st = isLive(e) ? `<span class="vmin live">${esc(vClock(e))}</span>` : e.state === "post" ? `<span class="vmin">${esc(/pen/i.test(e.detail) ? "Penales" : /AET|ET/i.test(e.detail) && e.detail !== "FT" ? "Alargue" : "Final")}</span>` : /postp|cancel|susp|delay/i.test(e.detail) ? `<span class="vmin warn">${esc(e.detail)}</span>` : `<span class="vmin vpre">${hhmm(e.date)}</span>`;
   return `<div class="vrow ${e.state}" data-go="envivo" data-id="${esc(e.id)}" role="link" tabindex="0">
     ${st}<span class="vmid">${vTeam(e, "h", "l")}${sc}${vTeam(e, "a", "r")}</span>
     <span class="vside">${m && e.state !== "post" ? `<span class="vmodel" title="Probabilidad Ballytics">${pct(m.p.pH)} · ${pct(m.p.pD)} · ${pct(m.p.pA)}</span>` : ""}${e.state !== "post" ? `<button class="vbell${f ? " on" : ""}" data-follow="${esc(e.id)}" title="${f ? "Dejar de seguir" : "Avisarme de goles"}" aria-label="Avisarme de goles">${f ? ICO.bell : ICO.belloff}</button>` : ""}</span></div>`;
@@ -3771,7 +3786,7 @@ function pmModal(pid, mid) {
   const body = (isGk ? sec("Arco", [["Atajadas", fmt(v("sv", "saves"))], ["Goles recibidos", fmt(v("gc", "goalsConceded"))]]) : "")
     + sec("Ataque", [["Goles", fmt(v("g", "totalGoals"))], ["Asistencias", fmt(v("as", "goalAssists"))], ["Tiros (al arco)", v("sh", "totalShots") == null ? "—" : `${v("sh", "totalShots")}<small> (${v("sot", "shotsOnTarget") ?? 0})</small>`],
         ["Regates exitosos", af && af.dr != null ? fmt(af.drs ?? 0, af.dr) : "—"], ["Fueras de juego", fmt(v("off", "offsides"))], ["Penales", af && (af.ps || af.pm) ? `${af.ps || 0} convertido${af.ps === 1 ? "" : "s"}${af.pm ? ` · ${af.pm} errado${af.pm === 1 ? "" : "s"}` : ""}` : "—"]])
-    + sec("Pases", [["Pases", fmt(af ? af.pas : null)], ["Pases precisos", af && af.acc != null && af.pas ? (af.acc <= af.pas ? `${af.acc}<small> (${Math.round(100 * af.acc / af.pas)} %)</small>` : `${af.acc} %`) : "—"], ["Pases clave", fmt(af ? af.kp : null)]])
+    + sec("Pases", [["Pases", fmt(af ? af.pas : null)], ["Pases precisos", af && af.acc != null && af.pas ? (af.acc <= af.pas ? `${af.acc}<small> (${Math.round(100 * af.acc / af.pas)}%)</small>` : `${af.acc}%`) : "—"], ["Pases clave", fmt(af ? af.kp : null)]])
     + sec("Defensa", [["Quites", fmt(af ? af.tk : null)], ["Intercepciones", fmt(af ? af.int : null)], ["Tiros bloqueados", fmt(af ? af.blk : null)], ["Duelos ganados", af && af.du ? fmt(af.duw ?? 0, af.du) : "—"]])
     + sec("Faltas y tarjetas", [["Faltas cometidas", fmt(v("fc", "foulsCommitted"))], ["Faltas recibidas", fmt(v("fd", "foulsSuffered"))], ["Amarillas", fmt(v("yc", "yellowCards"))], ["Rojas", fmt(v("rc", "redCards"))]]);
   const m = document.createElement("div"); m.className = "vmodal pmodal";

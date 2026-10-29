@@ -27,8 +27,13 @@
 <link rel="preload" href="assets/fonts/chakra-petch-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preconnect" href="https://a.espncdn.com">
 <link rel="preconnect" href="https://site.api.espn.com" crossorigin>
-<script>try{if(localStorage.getItem("bt_theme")==="light")document.documentElement.dataset.theme="light"}catch(e){}</script>
-<link rel="stylesheet" href="assets/app.css?v=60">
+<script>try{if(localStorage.getItem("bt_theme")==="light")document.documentElement.dataset.theme="light"}catch(e){}
+try{var h=location.hash;if(!h||h==="#"||h==="#/"||/^#\/inicio\b/.test(h))document.documentElement.classList.add("r-home");
+/* los datos de la primera pantalla se piden de inmediato, en paralelo con app.js */
+var pj=function(p){return fetch(p,{cache:"no-cache"}).then(function(r){if(!r.ok)throw new Error(p+" "+r.status);return r.json()})};
+window.__pre={"data/indice.json":pj("data/indice.json"),"data/agenda.json":pj("data/agenda.json")};
+for(var k in window.__pre)window.__pre[k].catch(function(){})}catch(e){}</script>
+<link rel="stylesheet" href="assets/app.css?v=61">
 </head>
 <body>
 <div class="bg" aria-hidden="true"><span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span><span class="field"></span></div>
@@ -60,7 +65,7 @@
     </div>
   </div>
 </div>
-<main class="gut"><div class="wrap" id="app"><section class="view boot" aria-busy="true" aria-label="Cargando Ballytics"><div class="panel skel-box"></div><div class="panel flush skel-list"><div class="skel-r"><span class="skel sk-c"></span><span class="skel" style="width:60%"></span><span class="skel sk-s"></span></div><div class="skel-r"><span class="skel sk-c"></span><span class="skel" style="width:45%"></span><span class="skel sk-s"></span></div><div class="skel-r"><span class="skel sk-c"></span><span class="skel" style="width:70%"></span><span class="skel sk-s"></span></div><div class="skel-r"><span class="skel sk-c"></span><span class="skel" style="width:52%"></span><span class="skel sk-s"></span></div></div></section></div></main>
+<main class="gut"><div class="wrap" id="app"><section class="view boot" aria-busy="true" aria-label="Cargando Ballytics"><p class="promise boot-home">Probabilidades de fútbol con un <button class="link" data-go="registro">registro público</button> de cada predicción. <button class="ia-cta" data-iaopen><span aria-hidden="true">✦</span> Pregúntale a la IA</button></p><div class="panel skel-box"></div><div class="panel flush skel-list"><div class="skel-r"><span class="skel sk-c"></span><span class="skel" style="width:60%"></span><span class="skel sk-s"></span></div><div class="skel-r"><span class="skel sk-c"></span><span class="skel" style="width:45%"></span><span class="skel sk-s"></span></div><div class="skel-r"><span class="skel sk-c"></span><span class="skel" style="width:70%"></span><span class="skel sk-s"></span></div><div class="skel-r"><span class="skel sk-c"></span><span class="skel" style="width:52%"></span><span class="skel sk-s"></span></div></div></section></div></main>
 <div class="gut"><footer class="wrap">
   <span id="foot-upd"></span>
   <span class="flinks"><button class="link" data-go="sobre">Sobre Ballytics</button><button class="link" data-go="responsable">Juego responsable</button><button class="link" data-go="metodo">Cómo funciona</button><button class="link" data-go="privacidad">Privacidad</button><button class="link" data-go="terminos">Términos</button></span>
@@ -74,6 +79,6 @@
   <button data-go="registro" data-nav="registro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8l1 2h2v15H5V6h2zM8.5 12.5l2.2 2.2 4.8-4.8"/></svg><span>Modelo</span></button>
   <button data-go="seguimiento" data-nav="seguimiento"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M6 15l4-4 3 3 5-6"/><path d="M15 8h3v3"/></svg><span>Mío</span></button>
 </nav>
-<script src="assets/app.js?v=60" defer></script>
+<script src="assets/app.js?v=61" defer></script>
 </body>
 </html>

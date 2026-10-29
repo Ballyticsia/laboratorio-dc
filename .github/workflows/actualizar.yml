@@ -90,9 +90,10 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ hashFiles('tests/package-lock.json') }}
 
-      - name: Prueba de humo (abre las pantallas en un navegador; si algo se rompe, no se publica)
+      - name: Achicar el código y prueba de humo (abre las pantallas en un navegador; si algo se rompe, no se publica)
         run: |
           cd tests && npm ci --no-audit --no-fund && npx playwright install --with-deps chromium >/dev/null
+          node minificar.js
           node humo.js
 
       - uses: actions/configure-pages@v6
