@@ -1,14 +1,27 @@
 #!/bin/bash
-# Diagnóstico de rendimiento y diseño: Lighthouse (móvil) de Ballytics y de sitios parecidos, capturas y prueba del redimensionador de ESPN
 set +e
-mkdir -p diag/out/lh diag/out/cap
-B=https://ballyticsia.github.io/laboratorio-dc
-URLS="ballytics_inicio|$B/ ballytics_liga|$B/liga/premier/ ballytics_vivo|$B/#/vivo sofascore|https://www.sofascore.com/ fotmob|https://www.fotmob.com/ 365scores|https://www.365scores.com/es onefootball|https://onefootball.com/es/inicio"
-for x in $URLS; do n=${x%%|*}; u=${x#*|}
-  timeout 150 npx --yes lighthouse@12.6.0 "$u" --quiet --output=json --output-path=diag/out/lh/$n.json --only-categories=performance,accessibility,best-practices,seo --chrome-flags="--headless=new --no-sandbox" --max-wait-for-load=60000 || echo "falló $n"
-done
-python3 diag/resumir.py > diag/out/resumen.txt 2>&1
-# redimensionador de ESPN
-for u in "https://a.espncdn.com/i/teamlogos/soccer/500/359.png" "https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/359.png&w=80&h=80" "https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/359.png&w=80&h=80&format=webp" "https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/23.png&w=64&h=64" "https://a.espncdn.com/i/headshots/soccer/players/full/253989.png" "https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/253989.png&w=96&h=70" "https://media.api-sports.io/football/players/1100.png"; do
-  echo "$u $(curl -s -o /dev/null -w '%{http_code} %{size_download} %{content_type} %{time_total}' "$u")" >> diag/out/espn.txt; done
-node diag/capturas.js || echo "capturas fallaron"
+mkdir -p diag/out
+pip install -q pillow >/dev/null 2>&1
+python3 - > diag/out/img.txt 2>&1 <<'PY'
+import urllib.request, io, time
+from PIL import Image
+U = ["https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/359.png&w=80&h=80",
+     "https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/23.png&w=80&h=80",
+     "https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/1543.png&w=80&h=80",
+     "https://a.espncdn.com/combiner/i?img=/i/teamlogos/countries/500/arg.png&w=80&h=80",
+     "https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500-dark/359.png&w=80&h=80",
+     "https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/11995.png&w=48&h=48",
+     "https://a.espncdn.com/i/leaguelogos/soccer/500/1543.png",
+     "https://wsrv.nl/?url=media.api-sports.io/football/players/1100.png&w=96&h=96&fit=cover&output=webp",
+     "https://wsrv.nl/?url=media.api-sports.io/football/leagues/203.png&w=96&h=96&fit=contain&output=webp",
+     "https://media.api-sports.io/football/leagues/203.png",
+     "https://images.weserv.nl/?url=media.api-sports.io/football/players/1100.png&w=96&h=96&fit=cover&output=webp"]
+for u in U:
+    t = time.time()
+    try:
+        r = urllib.request.urlopen(urllib.request.Request(u, headers={"User-Agent": "Mozilla/5.0"}), timeout=30)
+        b = r.read(); im = Image.open(io.BytesIO(b))
+        print(r.status, len(b), im.size, im.mode, r.headers.get("content-type"), r.headers.get("cache-control"), r.headers.get("access-control-allow-origin"), round(time.time()-t, 2), u)
+    except Exception as e:
+        print("ERR", e, u)
+PY
