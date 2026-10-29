@@ -71,6 +71,15 @@ jobs:
           binding = "AI"
           [triggers]
           crons = ["* * * * *"]
+          # límite por persona (IP): escrituras y lecturas por minuto
+          [[ratelimits]]
+          name = "RL_w"
+          namespace_id = "1001"
+          simple = { limit = 40, period = 60 }
+          [[ratelimits]]
+          name = "RL_r"
+          namespace_id = "1002"
+          simple = { limit = 400, period = 60 }
           EOF
           sed -i 's/^          //' worker/wrangler.toml
           echo "url=https://ballytics-avisos.$SUB.workers.dev" >> "$GITHUB_OUTPUT"
@@ -79,7 +88,7 @@ jobs:
         working-directory: worker
         run: |
           npm install --omit=dev --no-audit --no-fund
-          npx --yes wrangler@4 deploy
+          npx --yes wrangler@4.150.0 deploy
       - name: Clave de Gemini para la IA (si existe el secreto)
         if: steps.s.outputs.ok == 'si'
         working-directory: worker
@@ -88,7 +97,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if [ -n "$GEMINI_API_KEY" ]; then printf '%s' "$GEMINI_API_KEY" | npx --yes wrangler@4 secret put GEMINI_API_KEY; else echo "Sin GEMINI_API_KEY: la IA usa solo Cloudflare."; fi
+          if [ -n "$GEMINI_API_KEY" ]; then printf '%s' "$GEMINI_API_KEY" | npx --yes wrangler@4.150.0 secret put GEMINI_API_KEY; else echo "Sin GEMINI_API_KEY: la IA usa solo Cloudflare."; fi
       - name: Clave de API-Football para el xG en vivo (si existe el secreto)
         if: steps.s.outputs.ok == 'si'
         working-directory: worker
@@ -97,7 +106,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if [ -n "$API_FOOTBALL_KEY" ]; then printf '%s' "$API_FOOTBALL_KEY" | npx --yes wrangler@4 secret put API_FOOTBALL_KEY; else echo "Sin API_FOOTBALL_KEY: el centro del partido no muestra xG en vivo."; fi
+          if [ -n "$API_FOOTBALL_KEY" ]; then printf '%s' "$API_FOOTBALL_KEY" | npx --yes wrangler@4.150.0 secret put API_FOOTBALL_KEY; else echo "Sin API_FOOTBALL_KEY: el centro del partido no muestra xG en vivo."; fi
       - name: Probar y guardar la dirección para el sitio
         if: steps.s.outputs.ok == 'si'
         run: |

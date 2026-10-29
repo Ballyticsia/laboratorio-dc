@@ -41,6 +41,31 @@ function cors(req, res) {
 const json = (o, status = 200, extra = {}) => new Response(JSON.stringify(o), { status, headers: { "content-type": "application/json", ...extra } });
 const espn = async url => { const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 Ballytics" } }); if (!r.ok) throw new Error(`ESPN ${r.status}`); return r.json(); };
 
+/* ================= límites por persona (IP) =================
+   Evita que alguien con un script llene el almacenamiento o gaste las cuotas gratis (KV, ESPN, IA).
+   Usa el limitador de Cloudflare (binding RL, configurado en avisos.yml); si no está, un contador
+   en memoria por servidor, que igual frena los bucles simples.                                     */
+const MEM = new Map();
+async function permitido(env, req, tipo) {
+  const ip = req.headers.get("cf-connecting-ip") || "x", lim = tipo === "w" ? 40 : 400;   // por minuto: escrituras / lecturas
+  try { if (env["RL_" + tipo]) return (await env["RL_" + tipo].limit({ key: ip })).success; } catch (e) {}
+  const k = tipo + ip, now = Date.now(), x = MEM.get(k);
+  if (!x || now - x.t > 60000) { MEM.set(k, { t: now, n: 1 }); if (MEM.size > 5000) MEM.clear(); return true; }
+  return ++x.n <= lim;
+}
+// cuerpo JSON con tope real (no solo el content-length, que se puede omitir)
+async function leerJSON(req, max) {
+  const r = req.body && req.body.getReader(); if (!r) return {};
+  const parts = []; let n = 0;
+  for (;;) { const { done, value } = await r.read(); if (done) break; n += value.length; if (n > max) { try { r.cancel(); } catch (e) {} return null; } parts.push(value); }
+  const buf = new Uint8Array(n); let o = 0; for (const p of parts) { buf.set(p, o); o += p.length; }
+  try { const j = JSON.parse(new TextDecoder().decode(buf)); return j && typeof j === "object" ? j : {}; } catch (e) { return {}; }
+}
+// id de cada respuesta de la IA firmado por el servidor: así solo se puede votar por respuestas reales
+const RID_SAL = env => "ballytics-rid|" + (env.GEMINI_API_KEY || env.API_FOOTBALL_KEY || "sin-clave");
+async function nuevoRid(env) { const a = b64u(crypto.getRandomValues(new Uint8Array(6))); return a + (await hash(RID_SAL(env) + "|" + a)).slice(0, 8); }
+async function ridValido(env, rid) { return /^[A-Za-z0-9_-]{16}$/.test(rid) && (await hash(RID_SAL(env) + "|" + rid.slice(0, 8))).slice(0, 8) === rid.slice(8); }
+
 /* ================= validaciones ================= */
 // solo servicios de push reales: el servidor nunca hace pedidos a direcciones arbitrarias
 const PUSH_OK = [/^fcm\.googleapis\.com$/, /^android\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/, /^push\.services\.mozilla\.com$/,
@@ -92,15 +117,21 @@ async function push(env, sub) {
   return r.status;
 }
 function prefsOf(p) { const o = { ...PREFS_DEF }; if (p && typeof p === "object") for (const k of Object.keys(o)) if (k in p) o[k] = p[k] ? 1 : 0; return o; }
+const MAX_POR_SUB = 60;
 async function follow(env, b) {
   const sub = b.subscription;
   if (!pushValido(sub) || !sub.keys || !b.id || !/^\d{5,12}$/.test(String(b.id))) return json({ ok: false, error: "datos inválidos" }, 400);
+  const ev = await evento(env, String(b.id));   // nunca se confía en lo que manda el navegador
+  if (!ev) return json({ ok: false, error: "No encontré ese partido." }, 404);
+  if (ev.state === "post") return json({ ok: false, error: "El partido ya terminó." }, 409);
   const h = await hash(sub.endpoint);
   const limpio = { endpoint: sub.endpoint, keys: { p256dh: String(sub.keys.p256dh || "").slice(0, 200), auth: String(sub.keys.auth || "").slice(0, 100) } };
   await env.SUBS.put(`sub:${h}`, JSON.stringify({ ...limpio, prefs: prefsOf(b.prefs) }), { expirationTtl: 60 * 60 * 24 * 60 });
   const seg = (await env.SUBS.get("seguidos", "json")) || {};
   if (!seg[b.id] && Object.keys(seg).length >= MAX_SEGUIDOS) return json({ ok: false, error: "lleno" }, 429);
-  const e = seg[b.id] || { slug: String(b.slug || "all").replace(/[^a-z0-9._]/gi, "") || "all", name: clean(b.name, 80), s: b.s || "", st: String(b.st || ""), d: b.date || "", subs: [] };
+  if (!(seg[b.id] && seg[b.id].subs.includes(h)) && Object.values(seg).filter(x => x.subs.includes(h)).length >= MAX_POR_SUB) return json({ ok: false, error: "Sigues demasiados partidos." }, 429);
+  const sOk = /^\d{1,2}-\d{1,2}$/.test(String(b.s || "")) ? String(b.s) : "", stOk = ["pre", "in", "post"].includes(b.st) ? b.st : ev.state;
+  const e = seg[b.id] || { slug: String(ev.slug || "all").replace(/[^a-z0-9._]/gi, "").slice(0, 40) || "all", name: clean(`${ev.h} vs ${ev.a}`, 80), s: sOk, st: stOk, d: ev.k, subs: [] };
   if (!e.subs.includes(h)) e.subs.push(h);
   seg[b.id] = e;
   await env.SUBS.put("seguidos", JSON.stringify(seg));
@@ -539,7 +570,7 @@ async function preguntarIA(env, b, ctx, req) {
   const hist = (Array.isArray(b.hist) ? b.hist : []).slice(-4).map(m => ({ role: m.r === "ia" ? "assistant" : "user", content: String(m.t || "").slice(0, 700) })).filter(m => m.content);
   // respuestas repetidas (misma pregunta y mismos datos) salen de la caché y no gastan
   const cache = caches.default, ck = new Request("https://ia.ballytics/" + await hash(q.toLowerCase() + "|" + datos + "|" + JSON.stringify(hist)));
-  const hit = await cache.match(ck); if (hit) return json({ ...(await hit.json()), cache: true });
+  const hit = await cache.match(ck); if (hit) return json({ ...(await hit.json()), rid: await nuevoRid(env), cache: true });
   // topes: total del día y por persona (una sola escritura en KV por pregunta)
   const key = `ia:${ymdUTC()}`, dia = (await env.SUBS.get(key, "json")) || { n: 0, u: {} }, h = await hash(uid);
   const ip = await hash(req.headers.get("cf-connecting-ip") || "x");
@@ -565,7 +596,7 @@ async function preguntarIA(env, b, ctx, req) {
     } catch (e) { txt = ""; fallos.push(m.split("/").pop() + ": " + String(e).slice(0, 160)); }
   }
   if (!txt) return json({ ok: false, error: "La IA no respondió. Prueba de nuevo en un rato." }, 502);
-  const rid = (await hash(q + "|" + Date.now() + "|" + Math.random())).slice(0, 16);
+  const rid = await nuevoRid(env);
   const out = { ok: true, r: txt.slice(0, 3500), refs, sug, modelo, rid, quedan: Math.max(0, IA_TOPE_PERSONA - dia.u[h]), ...(fallos.length ? { fallos } : {}) };
   ctx.waitUntil(cache.put(ck, json(out, 200, { "cache-control": "public, max-age=1800" })));
   return json(out);
@@ -597,7 +628,7 @@ async function xgVivo(env, ctx, f) {
 // 👍/👎 de las respuestas de la IA: pregunta, respuesta y voto se guardan 60 días para mejorarla
 async function iaVoto(env, b) {
   const rid = String(b.rid || ""), v = +b.v, uid = String(b.uid || "");
-  if (!/^[A-Za-z0-9_-]{8,32}$/.test(rid) || ![1, -1].includes(v) || !okUid(uid)) return json({ ok: false, error: "datos" }, 400);
+  if (![1, -1].includes(v) || !okUid(uid) || !(await ridValido(env, rid))) return json({ ok: false, error: "datos" }, 400);
   const key = `iav:${rid}:${(await hash(uid)).slice(0, 10)}`, prev = await env.SUBS.get(key, "json");
   const m = String(b.m || "").slice(0, 40), tipo = b.tipo === "partido" ? "partido" : "dia";
   await env.SUBS.put(key, JSON.stringify({ v, q: String(b.q || "").slice(0, 400), r: String(b.r || "").slice(0, 2000), m, tipo, t: new Date().toISOString() }), { expirationTtl: 60 * 86400 });
@@ -622,6 +653,7 @@ export default {
     if (req.method === "OPTIONS") return cors(req, new Response(null, { status: 204 }));
     const u = new URL(req.url), p = u.pathname;
     let res;
+    if (!(await permitido(env, req, req.method === "POST" ? "w" : "r"))) return cors(req, json({ ok: false, error: "Demasiadas solicitudes seguidas. Espera un minuto." }, 429, { "retry-after": "60" }));
     try {
       if (p === "/vapid") res = json({ publicKey: (await vapid(env)).pub });
       else if (p === "/estado") { const seg = (await env.SUBS.get("seguidos", "json")) || {}; res = json({ ok: true, partidos: Object.keys(seg).length }); }
@@ -635,13 +667,15 @@ export default {
       else if (p === "/afestado") res = json({ ok: true, ...((await env.SUBS.get("afrem", "json")) || {}), pedidos: Object.keys((await env.SUBS.get("afped", "json")) || {}).length });
       else if (p.startsWith("/prode/") && req.method === "GET") res = await prodeVer(env, p.split("/")[2] || "", u.searchParams.get("uid"), ctx);
       else if (req.method === "POST") {
-        if (+(req.headers.get("content-length") || 0) > (p === "/ia" ? 60000 : 8192)) return cors(req, json({ ok: false, error: "demasiado grande" }, 413));
-        const b = await req.json().catch(() => ({}));
+        const max = p === "/ia" ? 60000 : 8192;
+        if (+(req.headers.get("content-length") || 0) > max) return cors(req, json({ ok: false, error: "demasiado grande" }, 413));
+        const b = await leerJSON(req, max);
+        if (!b) return cors(req, json({ ok: false, error: "demasiado grande" }, 413));
         if (p === "/ia") return cors(req, await preguntarIA(env, b, ctx, req));
         const R = { "/follow": follow, "/unfollow": unfollow, "/prefs": setPrefs, "/novedades": novedades, "/voto": votar, "/prode/crear": prodeCrear, "/prode/unirse": prodeUnirse, "/prode/pick": prodePick, "/borrar": borrar, "/ia/voto": iaVoto }[p];
         res = R ? await R(env, b, ctx) : json({ error: "no existe" }, 404);
       } else res = json({ ok: true, servicio: "Ballytics" });
-    } catch (e) { res = json({ ok: false, error: String(e) }, 500); }
+    } catch (e) { console.error(p, e); res = json({ ok: false, error: "Error interno. Prueba de nuevo en un rato." }, 500); }
     return cors(req, res);
   },
   async scheduled(event, env, ctx) { ctx.waitUntil(revisar(env)); },

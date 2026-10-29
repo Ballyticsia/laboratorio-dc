@@ -101,8 +101,8 @@ function face(L, t, jid, name, size = "", alt = "") {
   // si ya sabemos su foto de API-Football se usa primero (ESPN casi no tiene fotos de fútbol)
   const FPX = { sm: 26, lg: 60, xl: 120 }[size] || 36;
   // foto de API-Football en tamaño justo (si falla, la original); si no hay, la de ESPN
-  const img = api ? `<span class="ph"><img class="sq"${isrc(api, FPX)} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${espn ? ` data-alt="${esc(espn)}"` : ""} onload="this.parentNode.classList.add('ok')" onerror="if(!imgErr(this)){if(this.dataset.alt){this.className='wide';this.src=this.dataset.alt;this.dataset.alt=''}else{__nofoto('${esc(jid)}');this.parentNode.remove()}}"></span>`
-    : espn ? `<span class="ph"><img class="wide" src="${esc(espn)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onload="this.parentNode.classList.add('ok')" onerror="__nofoto('${esc(jid)}');this.parentNode.remove()"></span>` : "";
+  const img = api ? `<span class="ph"><img class="sq"${isrc(api, FPX)} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${espn ? ` data-alt="${esc(espn)}"` : ""} onload="this.parentNode.classList.add('ok')" onerror="if(!imgErr(this)){if(this.dataset.alt){this.className='wide';this.src=this.dataset.alt;this.dataset.alt=''}else{__nofoto('${/^\d+$/.test(String(jid)) ? jid : ""}');this.parentNode.remove()}}"></span>`
+    : espn ? `<span class="ph"><img class="wide" src="${esc(espn)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onload="this.parentNode.classList.add('ok')" onerror="__nofoto('${/^\d+$/.test(String(jid)) ? jid : ""}');this.parentNode.remove()"></span>` : "";
   const crest = size !== "sm" && t ? `<span class="fb">${badge(L, t, "xs")}</span>` : "";
   return `<span class="pface ${size}" style="--fc:${bg};--ff:${fg}" aria-hidden="true"><i>${esc(ini)}</i>${img}${crest}</span>`;
 }
@@ -2668,7 +2668,7 @@ async function vFillNatNext() {
   box.innerHTML = show.length ? `<div class="panel flush vcomp"><div class="vch"><b>${mine.length ? "Próximos partidos de mis selecciones" : "Próximos partidos de selecciones"}</b><small class="faint" style="margin-left:auto">${evs.length} en los próximos meses</small></div>${show.map(e => `<div class="vday sm"><span class="lbl">${esc(new Date(e.date).toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" }))} · ${esc(e.comp)}</span></div>${vRow(e)}`).join("")}</div>`
     : `<div class="panel empty">No hay partidos de selecciones programados en los próximos meses.</div>`;
 }
-const compImg = (c, cls = "") => c && c.l ? `<img class="cimg ${cls}"${isrc(c.l, /xl/.test(cls) ? 72 : 28)} alt="" loading="lazy" referrerpolicy="no-referrer" onerror="if(!imgErr(this))this.replaceWith(Object.assign(document.createElement('span'),{className:'cflag',textContent:'${esc(c.f || "⚽")}'}))">` : `<span class="cflag">${esc((c && c.f) || "⚽")}</span>`;
+const compImg = (c, cls = "") => c && c.l ? `<img class="cimg ${cls}"${isrc(c.l, /xl/.test(cls) ? 72 : 28)} alt="" data-f="${esc(c.f || "⚽")}" loading="lazy" referrerpolicy="no-referrer" onerror="if(!imgErr(this))this.replaceWith(Object.assign(document.createElement('span'),{className:'cflag',textContent:this.dataset.f}))">` : `<span class="cflag">${esc((c && c.f) || "⚽")}</span>`;
 function modelBySlug(slug) { return Object.values(D.ligas || {}).find(L => L.slug === slug) || (D.indice ? D.indice.ligas.find(l => l.slug === slug) : null); }
 
 /* ---------- partidos del día ---------- */
@@ -2873,9 +2873,10 @@ function stTable(groups, hi = [], slug = "") {
     }).join("")}</tbody></table>${notes.size ? `<div class="vleg">${[...notes].map(([c, d]) => `<span><i style="background:${esc(c)}"></i>${esc(d)}</span>`).join("")}</div>` : ""}</div>`;
   }).join("");
 }
+const safeHref = u => /^https?:\/\//i.test(String(u || "")) ? String(u) : "#";
 function newsCards(arts) {
   return arts.length ? `<div class="vnews">${arts.map(a => { const img = ((a.images || [])[0] || {}).url, href = ((a.links || {}).web || {}).href;
-    return `<a class="vnc panel flush" href="${esc(href || "#")}" target="_blank" rel="noopener noreferrer">${img ? `<img src="${esc(img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}<span class="vnt">${a._lg ? `<small class="tag">${esc(a._lg)}</small>` : ""}<b>${esc(a.headline || "")}</b>${a.description ? `<span class="muted">${esc(a.description)}</span>` : ""}<small class="faint">${a.published ? esc(cuando(a.published)) : ""} · ESPN</small></span></a>`; }).join("")}</div>`
+    return `<a class="vnc panel flush" href="${esc(safeHref(href))}" target="_blank" rel="noopener noreferrer">${img ? `<img src="${esc(img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}<span class="vnt">${a._lg ? `<small class="tag">${esc(a._lg)}</small>` : ""}<b>${esc(a.headline || "")}</b>${a.description ? `<span class="muted">${esc(a.description)}</span>` : ""}<small class="faint">${a.published ? esc(cuando(a.published)) : ""} · ESPN</small></span></a>`; }).join("")}</div>`
     : `<div class="panel empty">No hay noticias para esta competición.</div>`;
 }
 async function vNews(slug) {

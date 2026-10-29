@@ -152,6 +152,13 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - **Código achicado al publicar:** el robot pasa `app.js` (terser) y `app.css` (lightningcss) por `tests/minificar.js` justo antes de la prueba de humo; en el repositorio quedan legibles.
 - **Contraste:** los botones llenos usan `--pitch-fill` (#2563eb), que con letra blanca cumple el mínimo de lectura (4,5:1); `--pitch` queda para barras y detalles.
 
+## Seguridad
+- **Claves:** solo en los secretos de GitHub (API_FOOTBALL_KEY, ODDS_API_KEY, GEMINI_API_KEY, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID) y en Cloudflare. Nunca en el código ni en el sitio; GitHub tiene activado el escaneo de secretos y el bloqueo al subir uno por error.
+- **Sitio:** HTTPS de GitHub Pages y una política de contenido (`Content-Security-Policy` en `index.html`): solo corren scripts del propio sitio y solo se habla con ESPN y el servidor de Ballytics. Si cambia la dirección de `site/avisos.json`, hay que actualizar `connect-src`. Todo lo que viene de afuera (ESPN, la IA, apodos del prode) se escapa antes de mostrarlo y los enlaces externos solo pueden ser `http(s)`.
+- **Servidor (worker):** límite por IP (40 escrituras y 400 lecturas por minuto, limitador de Cloudflare `RL_w`/`RL_r`), cuerpo de las peticiones con tope real, CORS solo para el sitio, los partidos a seguir o votar se comprueban en ESPN, los avisos solo van a servicios de push reales, los votos de la IA solo valen para respuestas firmadas por el servidor y los errores no muestran detalles internos. La IA tiene tope por persona, por IP y por día.
+- **Datos personales:** no hay cuentas ni contraseñas. El navegador guarda un identificador al azar; en Privacidad se puede borrar todo lo del servidor.
+- **Robots:** solo acciones oficiales de GitHub y wrangler con versión fija.
+
 ## Cambiar cosas
 - **Horario:** la línea `cron` del workflow (está en hora UTC; Chile es UTC-3).
 - **Ligas:** la lista `LIGAS` en `pipeline/generar.py` (códigos de ESPN como `eng.1`, `esp.1`, `por.1`, `ned.1`, `arg.1`, `chi.1`).
