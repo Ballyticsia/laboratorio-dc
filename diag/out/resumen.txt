@@ -1,0 +1,184 @@
+
+=== 365scores https://www.365scores.com/es {'performance': 25, 'accessibility': 74, 'best-practices': 57, 'seo': 92}
+FCP 6.6 s | LCP 22.7 s | TBT 5,200 ms | CLS 0.017 | SI 21.2 s | peso Total size was 4,950 KiB | DOM 1,067 elements | JS boot 13.9 s | hilo principal 20.4 s
+recursos: Total 2408 req 4950KB, Script 222 req 2928KB, Other 1115 req 769KB, Document 386 req 473KB, Image 666 req 369KB, Font 3 req 225KB, Stylesheet 16 req 186KB, Media 0 req 0KB, Third-party 2173 req 3076KB
+
+=== ballytics_inicio https://ballyticsia.github.io/laboratorio-dc/ {'performance': 36, 'accessibility': 91, 'best-practices': 100, 'seo': 100}
+FCP 3.3 s | LCP 7.2 s | TBT 1,560 ms | CLS 0.151 | SI 4.3 s | peso Total size was 6,342 KiB | DOM 2,650 elements | JS boot 2.2 s | hilo principal 9.6 s
+recursos: Total 170 req 6342KB, Image 124 req 5616KB, Other 37 req 490KB, Script 1 req 121KB, Font 5 req 84KB, Stylesheet 2 req 28KB, Document 1 req 3KB, Media 0 req 0KB, Third-party 170 req 6342KB
+más pesados:
+      306KB    68ms Image https://a.espncdn.com/i/teamlogos/soccer/500/11995.png
+      237KB    37ms Image https://a.espncdn.com/i/teamlogos/soccer/500/21829.png
+      228KB    22ms Image https://a.espncdn.com/i/teamlogos/soccer/500/9967.png
+      223KB   104ms Image https://media.api-sports.io/football/leagues/203.png
+      211KB    38ms Image https://a.espncdn.com/i/teamlogos/soccer/500/22168.png
+      190KB    49ms Image https://a.espncdn.com/i/leaguelogos/soccer/500/1944.png
+      155KB    34ms Image https://a.espncdn.com/i/teamlogos/soccer/500/2690.png
+      152KB   191ms Image https://a.espncdn.com/i/leaguelogos/soccer/500/6.png
+      142KB   102ms Image https://a.espncdn.com/i/leaguelogos/soccer/500/1543.png
+      130KB    76ms Image https://a.espncdn.com/i/leaguelogos/soccer/500/58.png
+      128KB    32ms Image https://a.espncdn.com/i/teamlogos/soccer/500/227.png
+      128KB    62ms Image https://a.espncdn.com/i/teamlogos/soccer/500/382.png
+      126KB    24ms Image https://a.espncdn.com/i/teamlogos/soccer/500/10739.png
+      125KB    83ms Image https://a.espncdn.com/i/leaguelogos/soccer/500/2488.png
+  [uses-responsive-images] score=0.5 Est savings of 3,547 KiB items=48
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/11995.png" alt="" loading="lazy" decoding', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/11995.png', 'totalBytes': '312911', 'wastedBytes': '310320'}
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/21829.png" alt="" loading="lazy" decoding', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/21829.png', 'totalBytes': '241984', 'wastedBytes': '239980'}
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/9967.png" alt="" loading="lazy" decoding=', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/9967.png', 'totalBytes': '232813', 'wastedBytes': '230885'}
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/22168.png" alt="" loading="lazy" decoding', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/22168.png', 'totalBytes': '215765', 'wastedBytes': '213978'}
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/2690.png" alt="" loading="lazy" decoding=', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/2690.png', 'totalBytes': '158099', 'wastedBytes': '156790'}
+  [render-blocking-resources] score=0 Est savings of 300 ms items=3
+       {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.js?v=58', 'totalBytes': '124240', 'wastedMs': '1901'}
+       {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=57', 'totalBytes': '26864', 'wastedMs': '158'}
+       {'url': 'https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Manrope:wght@400;500;600;700&fam', 'totalBytes': '1593', 'wastedMs': '794'}
+  [unused-javascript] score=0 Est savings of 98 KiB items=1
+       {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.js?v=58', 'totalBytes': '123524', 'wastedBytes': '100379'}
+  [unused-css-rules] score=0.5 Est savings of 20 KiB items=1
+       {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=57', 'wastedBytes': '20215', 'totalBytes': '26707'}
+  [modern-image-formats] score=0.5 Est savings of 4,195 KiB items=73
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/11995.png" alt="" loading="lazy" decoding', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/11995.png', 'totalBytes': '312911', 'wastedBytes': '284967.45'}
+       {'node': '<img src="https://media.api-sports.io/football/leagues/203.png" alt="" loading="eager" referrerpolicy="no-refe', 'url': 'https://media.api-sports.io/football/leagues/203.png', 'totalBytes': '227393', 'wastedBytes': '222197.65'}
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/21829.png" alt="" loading="lazy" decoding', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/21829.png', 'totalBytes': '241984', 'wastedBytes': '216177.65'}
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/9967.png" alt="" loading="lazy" decoding=', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/9967.png', 'totalBytes': '232813', 'wastedBytes': '200586.15'}
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/22168.png" alt="" loading="lazy" decoding', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/22168.png', 'totalBytes': '215765', 'wastedBytes': '187348.65'}
+  [unminified-javascript] score=0 Est savings of 16 KiB items=1
+       {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.js?v=58', 'totalBytes': '124052', 'wastedBytes': '16539'}
+  [layout-shifts] score=0 2 layout shifts found items=2
+       {'node': '<div class="gut">'}
+       {}
+  [uses-long-cache-ttl] score=0.5 126 resources found items=126
+       {'url': 'https://a.espncdn.com/i/leaguelogos/soccer/500/45.png', 'cacheLifetimeMs': '5000', 'totalBytes': '34665', 'wastedBytes': '34640.927083333336'}
+       {'url': 'https://a.espncdn.com/i/leaguelogos/soccer/500/45.png', 'cacheLifetimeMs': '5000', 'totalBytes': '0', 'wastedBytes': '0'}
+       {'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/22028.png', 'cacheLifetimeMs': '11000', 'totalBytes': '115333', 'wastedBytes': '115156.79680555555'}
+       {'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/11995.png', 'cacheLifetimeMs': '12000', 'totalBytes': '313301', 'wastedBytes': '312778.83166666667'}
+       {'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/160.png', 'cacheLifetimeMs': '25000', 'totalBytes': '59415', 'wastedBytes': '59208.697916666664'}
+  [color-contrast] score=0  items=8
+       {'node': '<button class="btn sm" data-install="">'}
+       {'node': '<button class="btn" data-go="partido" data-liga="ligue1" data-id="401876420">'}
+       {'node': '<button data-hsort="hora" aria-pressed="true">'}
+       {'node': '<span class="badge  logo" style="background:#3bb8e2;color:#fff" aria-hidden="true">'}
+       {'node': '<span class="badge  logo" style="background:#0093EC;color:#fff" aria-hidden="true">'}
+  [heading-order] score=0  items=1
+       {'node': '<h3>'}
+
+=== ballytics_liga https://ballyticsia.github.io/laboratorio-dc/liga/premier/ {'performance': 73, 'accessibility': 93, 'best-practices': 100, 'seo': 100}
+FCP 3.2 s | LCP 5.0 s | TBT 10 ms | CLS 0 | SI 4.9 s | peso Total size was 2,196 KiB | DOM 938 elements | JS boot 0.2 s | hilo principal 1.2 s
+recursos: Total 71 req 2196KB, Image 27 req 1846KB, Other 36 req 123KB, Script 1 req 121KB, Font 4 req 74KB, Stylesheet 2 req 28KB, Document 1 req 4KB, Media 0 req 0KB, Third-party 71 req 2196KB
+más pesados:
+      232KB   252ms Image https://a.espncdn.com/i/teamlogos/soccer/500/357.png
+      186KB    20ms Image https://a.espncdn.com/i/teamlogos/soccer/500/361.png
+      145KB    10ms Image https://a.espncdn.com/i/teamlogos/soccer/500/388.png
+      143KB    21ms Image https://a.espncdn.com/i/teamlogos/soccer/500/368.png
+      128KB    12ms Image https://a.espncdn.com/i/teamlogos/soccer/500/382.png
+      121KB   277ms Script https://ballyticsia.github.io/laboratorio-dc/assets/app.js?v=58
+      118KB   236ms Image https://a.espncdn.com/i/teamlogos/soccer/500/337.png
+       79KB    15ms Image https://a.espncdn.com/i/teamlogos/soccer/500/384.png
+       78KB   215ms Fetch https://ballyticsia.github.io/laboratorio-dc/data/fotos.json
+       76KB    17ms Image https://a.espncdn.com/i/teamlogos/soccer/500/362.png
+       76KB    14ms Image https://a.espncdn.com/i/teamlogos/soccer/500/331.png
+       74KB    80ms Image https://a.espncdn.com/i/teamlogos/soccer/500/306.png
+       72KB   234ms Image https://a.espncdn.com/i/teamlogos/soccer/500/360.png
+       60KB   232ms Image https://a.espncdn.com/i/teamlogos/soccer/500/349.png
+  [uses-responsive-images] score=0.5 Est savings of 1,777 KiB items=26
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/357.png" alt="" loading="lazy" decoding="', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/357.png', 'totalBytes': '237616', 'wastedBytes': '235648'}
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/361.png" alt="" loading="lazy" decoding="', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/361.png', 'totalBytes': '189751', 'wastedBytes': '188180'}
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/388.png" alt="" loading="lazy" decoding="', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/388.png', 'totalBytes': '147977', 'wastedBytes': '146752'}
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/368.png" alt="" loading="lazy" decoding="', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/368.png', 'totalBytes': '146091', 'wastedBytes': '144881'}
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/382.png" alt="" loading="lazy" decoding="', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/382.png', 'totalBytes': '130387', 'wastedBytes': '129307'}
+  [render-blocking-resources] score=0 Est savings of 2,250 ms items=3
+       {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.js?v=58', 'totalBytes': '124220', 'wastedMs': '1970'}
+       {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=57', 'totalBytes': '26889', 'wastedMs': '303'}
+       {'url': 'https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Manrope:wght@400;500;600;700&fam', 'totalBytes': '1593', 'wastedMs': '798'}
+  [unused-javascript] score=0 Est savings of 105 KiB items=1
+       {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.js?v=58', 'totalBytes': '123524', 'wastedBytes': '107563'}
+  [unused-css-rules] score=0 Est savings of 22 KiB items=1
+       {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=57', 'wastedBytes': '22854', 'totalBytes': '26707'}
+  [modern-image-formats] score=0.5 Est savings of 1,315 KiB items=25
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/357.png" alt="" loading="lazy" decoding="', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/357.png', 'totalBytes': '237616', 'wastedBytes': '212308.7'}
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/361.png" alt="" loading="lazy" decoding="', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/361.png', 'totalBytes': '189751', 'wastedBytes': '153941'}
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/368.png" alt="" loading="lazy" decoding="', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/368.png', 'totalBytes': '146091', 'wastedBytes': '113467.05'}
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/388.png" alt="" loading="lazy" decoding="', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/388.png', 'totalBytes': '147977', 'wastedBytes': '108115.3'}
+       {'node': '<img class="crest" src="https://a.espncdn.com/i/teamlogos/soccer/500/382.png" alt="" loading="lazy" decoding="', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/382.png', 'totalBytes': '130387', 'wastedBytes': '98913.85'}
+  [unminified-javascript] score=0 Est savings of 16 KiB items=1
+       {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.js?v=58', 'totalBytes': '124052', 'wastedBytes': '16539'}
+  [largest-contentful-paint-element] score=0 4,990 ms items=2
+       {}
+       {}
+  [uses-long-cache-ttl] score=0.5 28 resources found items=28
+       {'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/393.png', 'cacheLifetimeMs': '22000', 'totalBytes': '20871', 'wastedBytes': '20807.2275'}
+       {'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/367.png', 'cacheLifetimeMs': '34000', 'totalBytes': '26452', 'wastedBytes': '26327.08777777778'}
+       {'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/361.png', 'cacheLifetimeMs': '145000', 'totalBytes': '190069', 'wastedBytes': '186241.22152777776'}
+       {'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/306.png', 'cacheLifetimeMs': '300000', 'totalBytes': '75870', 'wastedBytes': '72708.75'}
+       {'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/373.png', 'cacheLifetimeMs': '300000', 'totalBytes': '22791', 'wastedBytes': '21841.375'}
+  [color-contrast] score=0  items=1
+       {'node': '<button data-go="liga" data-liga="premier" data-tab="resumen" aria-pressed="true">'}
+  [heading-order] score=0  items=1
+       {'node': '<h3>'}
+
+=== ballytics_vivo https://ballyticsia.github.io/laboratorio-dc/#/vivo {'performance': 62, 'accessibility': 96, 'best-practices': 100, 'seo': 100}
+FCP 2.9 s | LCP 5.7 s | TBT 40 ms | CLS 0.242 | SI 2.9 s | peso Total size was 6,951 KiB | DOM 1,069 elements | JS boot 0.4 s | hilo principal 2.1 s
+recursos: Total 131 req 6951KB, Image 82 req 6216KB, Other 41 req 509KB, Script 1 req 121KB, Font 4 req 74KB, Stylesheet 2 req 28KB, Document 1 req 3KB, Media 0 req 0KB, Third-party 131 req 6951KB
+más pesados:
+      306KB    58ms Image https://a.espncdn.com/i/teamlogos/soccer/500/11995.png
+      237KB    41ms Image https://a.espncdn.com/i/teamlogos/soccer/500/21829.png
+      233KB    82ms Image https://a.espncdn.com/i/teamlogos/soccer/500/2495.png
+      211KB    51ms Image https://a.espncdn.com/i/teamlogos/soccer/500/22168.png
+      204KB   120ms Image https://a.espncdn.com/i/teamlogos/soccer/500/20036.png
+      186KB    80ms Image https://a.espncdn.com/i/teamlogos/soccer/500/361.png
+      153KB   149ms Image https://a.espncdn.com/i/teamlogos/soccer/500/977.png
+      152KB   105ms Image https://a.espncdn.com/i/teamlogos/soccer/500/20301.png
+      143KB    77ms Image https://a.espncdn.com/i/teamlogos/soccer/500/368.png
+      142KB    43ms Image https://a.espncdn.com/i/leaguelogos/soccer/500/1543.png
+      125KB    48ms Image https://a.espncdn.com/i/teamlogos/soccer/500/4928.png
+      125KB    38ms Image https://a.espncdn.com/i/leaguelogos/soccer/500/2488.png
+      125KB    65ms Image https://a.espncdn.com/i/teamlogos/soccer/500/2922.png
+      125KB    73ms Image https://a.espncdn.com/i/teamlogos/soccer/500/817.png
+  [uses-responsive-images] score=0.5 Est savings of 6,154 KiB items=80
+       {'node': '<img src="https://a.espncdn.com/i/teamlogos/soccer/500/11995.png" alt="" loading="lazy" referrerpolicy="no-ref', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/11995.png', 'totalBytes': '312911', 'wastedBytes': '311056'}
+       {'node': '<img src="https://a.espncdn.com/i/teamlogos/soccer/500/21829.png" alt="" loading="lazy" referrerpolicy="no-ref', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/21829.png', 'totalBytes': '241984', 'wastedBytes': '240549'}
+       {'node': '<img src="https://a.espncdn.com/i/teamlogos/soccer/500/2495.png" alt="" loading="lazy" referrerpolicy="no-refe', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/2495.png', 'totalBytes': '238301', 'wastedBytes': '236888'}
+       {'node': '<img src="https://a.espncdn.com/i/teamlogos/soccer/500/22168.png" alt="" loading="lazy" referrerpolicy="no-ref', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/22168.png', 'totalBytes': '215765', 'wastedBytes': '214486'}
+       {'node': '<img src="https://a.espncdn.com/i/teamlogos/soccer/500/20036.png" alt="" loading="lazy" referrerpolicy="no-ref', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/20036.png', 'totalBytes': '208735', 'wastedBytes': '207497'}
+  [render-blocking-resources] score=0 Est savings of 2,110 ms items=3
+       {'url': 'https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Manrope:wght@400;500;600;700&fam', 'totalBytes': '1593', 'wastedMs': '800'}
+       {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.js?v=58', 'totalBytes': '124218', 'wastedMs': '1816'}
+       {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=57', 'totalBytes': '26867', 'wastedMs': '303'}
+  [unused-javascript] score=0 Est savings of 105 KiB items=1
+       {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.js?v=58', 'totalBytes': '123524', 'wastedBytes': '107587'}
+  [unused-css-rules] score=0 Est savings of 23 KiB items=1
+       {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=57', 'wastedBytes': '23453', 'totalBytes': '26707'}
+  [modern-image-formats] score=0.5 Est savings of 4,575 KiB items=70
+       {'node': '<img src="https://a.espncdn.com/i/teamlogos/soccer/500/11995.png" alt="" loading="lazy" referrerpolicy="no-ref', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/11995.png', 'totalBytes': '312911', 'wastedBytes': '284967.45'}
+       {'node': '<img src="https://a.espncdn.com/i/teamlogos/soccer/500/21829.png" alt="" loading="lazy" referrerpolicy="no-ref', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/21829.png', 'totalBytes': '241984', 'wastedBytes': '216177.65'}
+       {'node': '<img src="https://a.espncdn.com/i/teamlogos/soccer/500/2495.png" alt="" loading="lazy" referrerpolicy="no-refe', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/2495.png', 'totalBytes': '238301', 'wastedBytes': '204141.4'}
+       {'node': '<img src="https://a.espncdn.com/i/teamlogos/soccer/500/22168.png" alt="" loading="lazy" referrerpolicy="no-ref', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/22168.png', 'totalBytes': '215765', 'wastedBytes': '187348.65'}
+       {'node': '<img src="https://a.espncdn.com/i/teamlogos/soccer/500/20036.png" alt="" loading="lazy" referrerpolicy="no-ref', 'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/20036.png', 'totalBytes': '208735', 'wastedBytes': '182662.05'}
+  [unminified-javascript] score=0 Est savings of 16 KiB items=1
+       {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.js?v=58', 'totalBytes': '124052', 'wastedBytes': '16539'}
+  [largest-contentful-paint-element] score=0 5,650 ms items=2
+       {}
+       {}
+  [layout-shifts] score=0 3 layout shifts found items=3
+       {'node': '<div class="gut">'}
+       {'node': '<div class="gut">'}
+       {'node': '<div class="search">'}
+  [uses-long-cache-ttl] score=0.5 84 resources found items=84
+       {'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/21567.png', 'cacheLifetimeMs': '10000', 'totalBytes': '3480', 'wastedBytes': '3475.1666666666665'}
+       {'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/8040.png', 'cacheLifetimeMs': '28000', 'totalBytes': '95374', 'wastedBytes': '95003.1011111111'}
+       {'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/21124.png', 'cacheLifetimeMs': '37000', 'totalBytes': '81049', 'wastedBytes': '80632.49819444444'}
+       {'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/7632.png', 'cacheLifetimeMs': '41000', 'totalBytes': '57591', 'wastedBytes': '57263.05125'}
+       {'url': 'https://a.espncdn.com/i/teamlogos/soccer/500/977.png', 'cacheLifetimeMs': '45000', 'totalBytes': '156287', 'wastedBytes': '155310.20625000002'}
+  [color-contrast] score=0  items=1
+       {'node': '<button data-go="vivo" data-tab="20261029" data-id="" data-keep="" aria-pressed="true">'}
+
+=== fotmob https://www.fotmob.com/ {'performance': 36, 'accessibility': 96, 'best-practices': 57, 'seo': 92}
+FCP 1.4 s | LCP 26.8 s | TBT 5,760 ms | CLS 0 | SI 9.0 s | peso Total size was 3,288 KiB | DOM 5,239 elements | JS boot 9.0 s | hilo principal 14.4 s
+recursos: Total 615 req 3256KB, Script 89 req 1937KB, Other 219 req 650KB, Image 235 req 309KB, Font 4 req 188KB, Document 64 req 143KB, Stylesheet 4 req 28KB, Media 0 req 0KB, Third-party 418 req 1520KB
+
+=== onefootball https://onefootball.com/es/inicio {'performance': 36, 'accessibility': 100, 'best-practices': 79, 'seo': 92}
+FCP 1.6 s | LCP 21.1 s | TBT 3,610 ms | CLS 0.022 | SI 8.8 s | peso Total size was 3,266 KiB | DOM 1,311 elements | JS boot 5.9 s | hilo principal 8.0 s
+recursos: Total 148 req 3266KB, Script 51 req 2720KB, Image 46 req 272KB, Other 39 req 134KB, Stylesheet 8 req 66KB, Document 3 req 58KB, Font 1 req 15KB, Media 0 req 0KB, Third-party 69 req 2338KB
+
+=== sofascore https://www.sofascore.com/ {'performance': 0, 'accessibility': 0, 'best-practices': 0, 'seo': 0}
+FCP None | LCP None | TBT None | CLS None | SI None | peso None | DOM None | JS boot None | hilo principal None
+recursos: 

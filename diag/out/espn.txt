@@ -1,0 +1,7 @@
+https://a.espncdn.com/i/teamlogos/soccer/500/359.png 200 36280 image/png 0.094222
+https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/359.png&w=80&h=80 200 7153 image/png 0.024614
+https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/359.png&w=80&h=80&format=webp 400 1 text/html 0.101337
+https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/23.png&w=64&h=64 200 2130 image/png 0.216415
+https://a.espncdn.com/i/headshots/soccer/players/full/253989.png 404 1 text/html 0.123546
+https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/253989.png&w=96&h=70 404 1 text/html 0.235743
+https://media.api-sports.io/football/players/1100.png 200 23536 image/png 0.078713
