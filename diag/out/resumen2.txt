@@ -1,0 +1,186 @@
+=== ballytics_inicioPC_1 {'performance': 99, 'accessibility': 98, 'best-practices': 96, 'seo': 100} | FCP 0.3 s | LCP 1.0 s | TBT 0 ms | CLS 0 | SI 0.5 s | Total size was 599 KiB | DOM 2,241 elements
+    Total 203 req 599KB, Image 187 req 289KB, Script 1 req 105KB, Font 6 req 103KB, Other 7 req 72KB, Stylesheet 1 req 26KB
+    [render-blocking-resources] score=0 Est savings of 90 ms
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=62', 'wastedMs': '103'} 
+    [uses-responsive-images] score=0.5 Est savings of 4 KiB
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/166.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/166.png&amp;w=8
+=== ballytics_inicio_1 {'performance': 52, 'accessibility': 100, 'best-practices': 96, 'seo': 100} | FCP 2.2 s | LCP 5.3 s | TBT 1,220 ms | CLS 0 | SI 4.4 s | Total size was 690 KiB | DOM 2,241 elements
+    Total 90 req 690KB, Image 75 req 389KB, Script 1 req 105KB, Font 5 req 94KB, Other 7 req 72KB, Stylesheet 1 req 25KB
+    [largest-contentful-paint-element] score=0 5,270 ms
+        {} 
+        {} 
+        LCP: <p class="promise">
+        fase TTFB 669.87
+        fase Load Delay 0
+        fase Load Time 0
+        fase Render Delay 4596.954
+    [render-blocking-resources] score=0.5 Est savings of 0 ms
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=62', 'wastedMs': '163'} 
+    [uses-responsive-images] score=0.5 Est savings of 138 KiB
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/11995.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/11995.png&amp;w
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/21829.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/21829.png&amp;w
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/9967.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/9967.png&amp;w=
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/10739.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/10739.png&amp;w
+    [bootup-time] score=0 2.7 s
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.js?v=62', 'total': '3041.4159999999833', 'scripting': '2476.4359999999833'} 
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/', 'total': '2405.0519999999574', 'scripting': '91.06000000000003'} 
+        {'url': 'Unattributable', 'total': '1564.0719999999849', 'scripting': '80.436'} 
+    [mainthread-work-breakdown] score=0 7.0 s
+        {'groupLabel': 'Script Evaluation', 'duration': '2650.0919999999414'} 
+        {'groupLabel': 'Other', 'duration': '2403.6079999999934'} 
+        {'groupLabel': 'Style & Layout', 'duration': '1100.3959999999993'} 
+        {'groupLabel': 'Rendering', 'duration': '724.039999999964'} 
+=== ballytics_inicio_2 {'performance': 96, 'accessibility': 100, 'best-practices': 96, 'seo': 100} | FCP 1.4 s | LCP 2.6 s | TBT 50 ms | CLS 0 | SI 2.7 s | Total size was 302 KiB | DOM 2,241 elements
+    Total 88 req 302KB, Script 1 req 106KB, Font 5 req 94KB, Other 7 req 72KB, Stylesheet 1 req 26KB, Image 73 req 2KB
+    [largest-contentful-paint-element] score=0 2,620 ms
+        {} 
+        {} 
+        LCP: <p class="promise">
+        fase TTFB 642.211
+        fase Load Delay 0
+        fase Load Time 0
+        fase Render Delay 1975.0000000000002
+    [render-blocking-resources] score=0 Est savings of 540 ms
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=62', 'wastedMs': '300'} 
+    [uses-responsive-images] score=0.5 Est savings of 170 KiB
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/logos/chi.1.png'} <img src="assets/logos/chi.1.png" alt="" loading="lazy" referrerpolicy="no-referrer" onload="this.pa
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/11995.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/11995.png&amp;w
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/21829.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/21829.png&amp;w
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/9967.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/9967.png&amp;w=
+    [mainthread-work-breakdown] score=0 2.2 s
+        {'groupLabel': 'Other', 'duration': '794.7399999999942'} 
+        {'groupLabel': 'Rendering', 'duration': '591.2160000000079'} 
+        {'groupLabel': 'Style & Layout', 'duration': '423.3'} 
+        {'groupLabel': 'Script Evaluation', 'duration': '264.4640000000003'} 
+=== ballytics_inicio_3 {'performance': 86, 'accessibility': 100, 'best-practices': 96, 'seo': 100} | FCP 1.7 s | LCP 4.1 s | TBT 50 ms | CLS 0 | SI 1.7 s | Total size was 689 KiB | DOM 2,241 elements
+    Total 90 req 689KB, Image 75 req 389KB, Script 1 req 105KB, Font 5 req 94KB, Other 7 req 72KB, Stylesheet 1 req 25KB
+    [largest-contentful-paint-element] score=0 4,090 ms
+        {} 
+        {} 
+        LCP: <p class="promise">
+        fase TTFB 651.335
+        fase Load Delay 0
+        fase Load Time 0
+        fase Render Delay 3439.2954999999993
+    [render-blocking-resources] score=0 Est savings of 160 ms
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=62', 'wastedMs': '325'} 
+    [uses-responsive-images] score=0 Est savings of 138 KiB
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/11995.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/11995.png&amp;w
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/21829.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/21829.png&amp;w
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/9967.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/9967.png&amp;w=
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/10739.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/10739.png&amp;w
+    [mainthread-work-breakdown] score=0 2.1 s
+        {'groupLabel': 'Other', 'duration': '710.2799999999957'} 
+        {'groupLabel': 'Rendering', 'duration': '581.4480000000061'} 
+        {'groupLabel': 'Style & Layout', 'duration': '443.37199999999956'} 
+        {'groupLabel': 'Script Evaluation', 'duration': '289.9200000000021'} 
+=== ballytics_liga_1 {'performance': 95, 'accessibility': 98, 'best-practices': 96, 'seo': 100} | FCP 1.7 s | LCP 2.8 s | TBT 20 ms | CLS 0 | SI 1.7 s | Total size was 538 KiB | DOM 876 elements
+    Total 43 req 538KB, Other 9 req 178KB, Image 27 req 141KB, Script 1 req 105KB, Font 4 req 84KB, Stylesheet 1 req 25KB
+    [largest-contentful-paint-element] score=0 2,800 ms
+        {} 
+        {} 
+        LCP: <h1 id="h-liga">
+        fase TTFB 639.106
+        fase Load Delay 0
+        fase Load Time 0
+        fase Render Delay 2158.982
+    [render-blocking-resources] score=0 Est savings of 160 ms
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=62', 'wastedMs': '319'} 
+    [uses-responsive-images] score=0.5 Est savings of 67 KiB
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/357.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/357.png&amp;w=8
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/388.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/388.png&amp;w=8
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/361.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/361.png&amp;w=8
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/360.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/360.png&amp;w=8
+=== ballytics_liga_2 {'performance': 99, 'accessibility': 98, 'best-practices': 96, 'seo': 100} | FCP 1.1 s | LCP 2.2 s | TBT 10 ms | CLS 0 | SI 1.3 s | Total size was 538 KiB | DOM 876 elements
+    Total 43 req 538KB, Other 9 req 178KB, Image 27 req 141KB, Script 1 req 105KB, Font 4 req 84KB, Stylesheet 1 req 25KB
+    [render-blocking-resources] score=0 Est savings of 270 ms
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=62', 'wastedMs': '327'} 
+    [uses-responsive-images] score=0.5 Est savings of 67 KiB
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/357.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/357.png&amp;w=8
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/388.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/388.png&amp;w=8
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/361.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/361.png&amp;w=8
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/360.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/360.png&amp;w=8
+=== ballytics_liga_3 {'performance': 99, 'accessibility': 98, 'best-practices': 96, 'seo': 100} | FCP 1.1 s | LCP 2.1 s | TBT 10 ms | CLS 0 | SI 1.3 s | Total size was 538 KiB | DOM 876 elements
+    Total 43 req 538KB, Other 9 req 178KB, Image 27 req 141KB, Script 1 req 105KB, Font 4 req 84KB, Stylesheet 1 req 26KB
+    [render-blocking-resources] score=0 Est savings of 260 ms
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=62', 'wastedMs': '327'} 
+    [uses-responsive-images] score=0.5 Est savings of 67 KiB
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/357.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/357.png&amp;w=8
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/388.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/388.png&amp;w=8
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/361.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/361.png&amp;w=8
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/360.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/360.png&amp;w=8
+=== ballytics_partido_1 {'performance': 95, 'accessibility': 98, 'best-practices': 100, 'seo': 100} | FCP 1.1 s | LCP 2.9 s | TBT 20 ms | CLS 0 | SI 1.4 s | Total size was 291 KiB | DOM 1,066 elements
+    Total 39 req 291KB, Other 17 req 113KB, Script 1 req 105KB, Font 5 req 44KB, Stylesheet 1 req 25KB, Image 14 req 0KB
+    [largest-contentful-paint-element] score=0 2,900 ms
+        {} 
+        {} 
+        LCP: <span class="xgv">
+        fase TTFB 601.7035
+        fase Load Delay 0
+        fase Load Time 0
+        fase Render Delay 2299.5
+    [render-blocking-resources] score=0 Est savings of 240 ms
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=62', 'wastedMs': '300'} 
+    [uses-responsive-images] score=0.5 Est savings of 14 KiB
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/166.png&w=128&h=128'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/166.png&amp;w=1
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/175.png&w=128&h=128'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/175.png&amp;w=1
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/166.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/166.png&amp;w=8
+=== ballytics_partido_2 {'performance': 85, 'accessibility': 98, 'best-practices': 100, 'seo': 100} | FCP 1.1 s | LCP 4.4 s | TBT 20 ms | CLS 0 | SI 1.5 s | Total size was 541 KiB | DOM 1,066 elements
+    Total 52 req 541KB, Other 16 req 271KB, Script 1 req 105KB, Font 5 req 94KB, Image 28 req 42KB, Stylesheet 1 req 25KB
+    [largest-contentful-paint-element] score=0 4,390 ms
+        {} 
+        {} 
+        LCP: <span class="xgv">
+        fase TTFB 600.395
+        fase Load Delay 0
+        fase Load Time 0
+        fase Render Delay 3786.3450000000007
+    [render-blocking-resources] score=0 Est savings of 270 ms
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=62', 'wastedMs': '325'} 
+    [uses-responsive-images] score=0.5 Est savings of 14 KiB
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/166.png&w=128&h=128'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/166.png&amp;w=1
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/175.png&w=128&h=128'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/175.png&amp;w=1
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/166.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/166.png&amp;w=8
+=== ballytics_partido_3 {'performance': 85, 'accessibility': 98, 'best-practices': 100, 'seo': 100} | FCP 1.1 s | LCP 4.4 s | TBT 50 ms | CLS 0 | SI 1.4 s | Total size was 543 KiB | DOM 1,066 elements
+    Total 41 req 543KB, Other 16 req 269KB, Script 1 req 105KB, Font 5 req 94KB, Image 17 req 46KB, Stylesheet 1 req 25KB
+    [largest-contentful-paint-element] score=0 4,420 ms
+        {} 
+        {} 
+        LCP: <span class="xgv">
+        fase TTFB 600.005
+        fase Load Delay 0
+        fase Load Time 0
+        fase Render Delay 3817.3534
+    [render-blocking-resources] score=0 Est savings of 270 ms
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=62', 'wastedMs': '321'} 
+    [uses-responsive-images] score=0 Est savings of 14 KiB
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/166.png&w=128&h=128'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/166.png&amp;w=1
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/175.png&w=128&h=128'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/175.png&amp;w=1
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/166.png&w=80&h=80'} <img class="crest" src="https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/166.png&amp;w=8
+=== ballytics_vivo_1 {'performance': 98, 'accessibility': 100, 'best-practices': 100, 'seo': 100} | FCP 1.1 s | LCP 2.2 s | TBT 10 ms | CLS 0 | SI 1.1 s | Total size was 325 KiB | DOM 1,172 elements
+    Total 109 req 325KB, Other 38 req 147KB, Script 1 req 105KB, Font 4 req 44KB, Stylesheet 1 req 25KB, Image 64 req 0KB
+    [render-blocking-resources] score=0 Est savings of 260 ms
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=62', 'wastedMs': '309'} 
+    [uses-responsive-images] score=0.5 Est savings of 53 KiB
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2488.png&w=80&h=80'} <img class="cimg " src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2488.png&amp;
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/85.png&w=80&h=80'} <img class="cimg " src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/85.png&amp;w=
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/16.png&w=80&h=80'} <img class="cimg " src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/16.png&amp;w=
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2248.png&w=80&h=80'} <img class="cimg " src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2248.png&amp;
+=== ballytics_vivo_2 {'performance': 98, 'accessibility': 100, 'best-practices': 100, 'seo': 100} | FCP 1.1 s | LCP 2.2 s | TBT 20 ms | CLS 0 | SI 1.1 s | Total size was 435 KiB | DOM 1,172 elements
+    Total 109 req 435KB, Other 38 req 256KB, Script 1 req 105KB, Font 4 req 44KB, Stylesheet 1 req 25KB, Image 64 req 0KB
+    [render-blocking-resources] score=0 Est savings of 250 ms
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=62', 'wastedMs': '300'} 
+    [uses-responsive-images] score=0.5 Est savings of 53 KiB
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2488.png&w=80&h=80'} <img class="cimg " src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2488.png&amp;
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/85.png&w=80&h=80'} <img class="cimg " src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/85.png&amp;w=
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/16.png&w=80&h=80'} <img class="cimg " src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/16.png&amp;w=
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2248.png&w=80&h=80'} <img class="cimg " src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2248.png&amp;
+=== ballytics_vivo_3 {'performance': 99, 'accessibility': 100, 'best-practices': 100, 'seo': 100} | FCP 1.1 s | LCP 2.2 s | TBT 10 ms | CLS 0 | SI 1.1 s | Total size was 376 KiB | DOM 1,172 elements
+    Total 109 req 376KB, Other 38 req 197KB, Script 1 req 105KB, Font 4 req 44KB, Stylesheet 1 req 25KB, Image 64 req 0KB
+    [render-blocking-resources] score=0 Est savings of 240 ms
+        {'url': 'https://ballyticsia.github.io/laboratorio-dc/assets/app.css?v=62', 'wastedMs': '300'} 
+    [uses-responsive-images] score=0.5 Est savings of 53 KiB
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2488.png&w=80&h=80'} <img class="cimg " src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2488.png&amp;
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/85.png&w=80&h=80'} <img class="cimg " src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/85.png&amp;w=
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/16.png&w=80&h=80'} <img class="cimg " src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/16.png&amp;w=
+        {'url': 'https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2248.png&w=80&h=80'} <img class="cimg " src="https://a.espncdn.com/combiner/i?img=/i/leaguelogos/soccer/500/2248.png&amp;
