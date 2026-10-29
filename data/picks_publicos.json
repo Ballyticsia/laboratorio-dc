@@ -131,7 +131,7 @@
      "lado": "H",
      "prob": 0.7314,
      "cuota": 1.235,
-     "cierre": 1.333,
+     "cierre": 1.37,
      "res": null,
      "hg": null,
      "ag": null
@@ -162,9 +162,9 @@
      "prob": 0.4508,
      "cuota": 2.95,
      "cierre": 2.75,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 2,
+     "ag": 2,
      "mercado": 0.3021,
      "ev": 0.3299
     },
@@ -203,6 +203,108 @@
      "ev": 0.1964
     }
    ]
+  },
+  "2026-10-30": {
+   "fijado": "2026-10-29T22:52Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401876421",
+     "liga": "ligue1",
+     "kickoff": "2026-10-30T18:00Z",
+     "home": "Le Havre AC",
+     "away": "Paris Saint-Germain",
+     "est": "seguro",
+     "lado": "A",
+     "prob": 0.7737,
+     "cuota": 1.263,
+     "cierre": 1.263,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401850681",
+     "liga": "chile",
+     "kickoff": "2026-10-30T22:00Z",
+     "home": "Colo Colo",
+     "away": "Universidad de Concepción",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.7524,
+     "cuota": 1.278,
+     "cierre": 1.278,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401885408",
+     "liga": "portugal",
+     "kickoff": "2026-10-30T20:15Z",
+     "home": "Casa Pia",
+     "away": "Sporting CP",
+     "est": "seguro",
+     "lado": "A",
+     "prob": 0.7345,
+     "cuota": 1.294,
+     "cierre": 1.294,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401900877",
+     "liga": "arabia",
+     "kickoff": "2026-10-30T14:50Z",
+     "home": "Al Diriyah",
+     "away": "Neom SC",
+     "est": "valor",
+     "lado": "D",
+     "prob": 0.4101,
+     "cuota": 3.6,
+     "cierre": 3.6,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2634,
+     "ev": 0.4764
+    },
+    {
+     "id": "401841295",
+     "liga": "brasil",
+     "kickoff": "2026-10-30T23:00Z",
+     "home": "Corinthians",
+     "away": "Mirassol",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.2922,
+     "cuota": 4.4,
+     "cierre": 4.4,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2003,
+     "ev": 0.2857
+    },
+    {
+     "id": "401884746",
+     "liga": "bundesliga",
+     "kickoff": "2026-10-30T19:30Z",
+     "home": "SV Elversberg",
+     "away": "Mainz",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.4109,
+     "cuota": 2.95,
+     "cierre": 2.95,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.305,
+     "ev": 0.2122
+    }
+   ]
   }
  },
  "reglas": {
@@ -213,5 +315,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-10-29T20:54Z"
+ "actualizado": "2026-10-29T22:52Z"
 }
