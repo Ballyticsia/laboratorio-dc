@@ -33,7 +33,7 @@ try{var h=location.hash;if(!h||h==="#"||h==="#/"||/^#\/inicio\b/.test(h))documen
 var pj=function(p){return fetch(p,{cache:"no-cache"}).then(function(r){if(!r.ok)throw new Error(p+" "+r.status);return r.json()})};
 window.__pre={"data/indice.json":pj("data/indice.json"),"data/agenda.json":pj("data/agenda.json")};
 for(var k in window.__pre)window.__pre[k].catch(function(){})}catch(e){}</script>
-<link rel="stylesheet" href="assets/app.css?v=61">
+<link rel="stylesheet" href="assets/app.css?v=62">
 </head>
 <body>
 <div class="bg" aria-hidden="true"><span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span><span class="field"></span></div>
@@ -79,6 +79,6 @@ for(var k in window.__pre)window.__pre[k].catch(function(){})}catch(e){}</script
   <button data-go="registro" data-nav="registro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8l1 2h2v15H5V6h2zM8.5 12.5l2.2 2.2 4.8-4.8"/></svg><span>Modelo</span></button>
   <button data-go="seguimiento" data-nav="seguimiento"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M6 15l4-4 3 3 5-6"/><path d="M15 8h3v3"/></svg><span>Mío</span></button>
 </nav>
-<script src="assets/app.js?v=61" defer></script>
+<script src="assets/app.js?v=62" defer></script>
 </body>
 </html>
