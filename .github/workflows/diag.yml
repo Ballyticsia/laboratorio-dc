@@ -2,16 +2,20 @@ name: Diagnóstico
 on:
   push:
     branches: [diagnostico]
-    paths: [diag/perf.sh, .github/workflows/diag.yml]
+    paths: [diag/perf.sh, diag/resumir2.py, diag/capturas2.js, .github/workflows/diag.yml]
 permissions:
   contents: write
 jobs:
   diag:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - run: npm i --no-save playwright@1.56.0 && npx playwright install --with-deps chromium >/dev/null
       - run: bash diag/perf.sh
       - run: |
           git config user.name "Claude"; git config user.email "noreply@anthropic.com"
-          git add -f diag/out && git commit -m "Resultado diagnóstico imágenes" && git push -f origin HEAD:diagnostico
+          git add -f diag/out && git commit -m "Resultado diagnóstico después" && git push -f origin HEAD:diagnostico
