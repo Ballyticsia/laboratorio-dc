@@ -249,9 +249,9 @@
      "prob": 0.7345,
      "cuota": 1.294,
      "cierre": 1.286,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 0,
+     "ag": 2
     },
     {
      "id": "401900877",
@@ -280,7 +280,7 @@
      "lado": "A",
      "prob": 0.2922,
      "cuota": 4.4,
-     "cierre": 4.2,
+     "cierre": 4.3,
      "res": null,
      "hg": null,
      "ag": null,
@@ -298,11 +298,113 @@
      "prob": 0.4109,
      "cuota": 2.95,
      "cierre": 3.4,
+     "res": "G",
+     "hg": 4,
+     "ag": 1,
+     "mercado": 0.305,
+     "ev": 0.2122
+    }
+   ]
+  },
+  "2026-10-31": {
+   "fijado": "2026-10-30T22:48Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401900883",
+     "liga": "arabia",
+     "kickoff": "2026-10-31T18:00Z",
+     "home": "Al Hilal",
+     "away": "Al Fateh",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.9069,
+     "cuota": 1.083,
+     "cierre": 1.083,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401882822",
+     "liga": "laliga",
+     "kickoff": "2026-10-31T20:00Z",
+     "home": "Barcelona",
+     "away": "Alavés",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8977,
+     "cuota": 1.111,
+     "cierre": 1.111,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401875564",
+     "liga": "eredivisie",
+     "kickoff": "2026-10-31T17:45Z",
+     "home": "PSV Eindhoven",
+     "away": "Willem II",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8864,
+     "cuota": 1.071,
+     "cierre": 1.071,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401882820",
+     "liga": "laliga",
+     "kickoff": "2026-10-31T13:00Z",
+     "home": "Levante",
+     "away": "Atlético Madrid",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.2993,
+     "cuota": 5.5,
+     "cierre": 5.5,
      "res": null,
      "hg": null,
      "ag": null,
-     "mercado": 0.305,
-     "ev": 0.2122
+     "mercado": 0.1783,
+     "ev": 0.6462
+    },
+    {
+     "id": "401878761",
+     "liga": "premier",
+     "kickoff": "2026-10-31T17:30Z",
+     "home": "Tottenham Hotspur",
+     "away": "Crystal Palace",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.2766,
+     "cuota": 5.25,
+     "cierre": 5.25,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1793,
+     "ev": 0.4522
+    },
+    {
+     "id": "401878960",
+     "liga": "belgica",
+     "kickoff": "2026-10-31T19:45Z",
+     "home": "Anderlecht",
+     "away": "KVC Westerlo",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.2828,
+     "cuota": 5.0,
+     "cierre": 5.0,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1787,
+     "ev": 0.414
     }
    ]
   }
@@ -315,5 +417,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-10-30T20:52Z"
+ "actualizado": "2026-10-30T22:48Z"
 }
