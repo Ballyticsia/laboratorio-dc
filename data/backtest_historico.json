@@ -1,0 +1,1080 @@
+{
+ "actualizado": "2026-10-30T04:35+00:00",
+ "fuente": "Football-Data.co.uk",
+ "penaltyblog": "1.13.1",
+ "ligas": [
+  "2. Bundesliga",
+  "Argentina",
+  "Brasil",
+  "Bundesliga",
+  "Bélgica",
+  "Championship",
+  "Eredivisie",
+  "Escocia",
+  "LaLiga",
+  "LaLiga 2",
+  "Liga MX",
+  "Ligue 1",
+  "Ligue 2",
+  "MLS",
+  "Premier League",
+  "Primeira Liga",
+  "Serie A",
+  "Serie B"
+ ],
+ "temporadas": [
+  "2020-21",
+  "2021-22",
+  "2022-23",
+  "2023-24",
+  "2024-25",
+  "2025-26"
+ ],
+ "partidos_descargados": 41382,
+ "metodo_margen": "potencia",
+ "margen": {
+  "log_loss": {
+   "multiplicativo": {
+    "Bet365 (cierre)": 0.99301,
+    "Pinnacle (cierre)": 0.99894,
+    "Promedio de casas (cierre)": 1.00012
+   },
+   "aditivo": {
+    "Bet365 (cierre)": 0.99241,
+    "Pinnacle (cierre)": 0.99871,
+    "Promedio de casas (cierre)": 0.99957
+   },
+   "potencia": {
+    "Bet365 (cierre)": 0.99238,
+    "Pinnacle (cierre)": 0.99871,
+    "Promedio de casas (cierre)": 0.99958
+   },
+   "shin": {
+    "Bet365 (cierre)": 0.99248,
+    "Pinnacle (cierre)": 0.99874,
+    "Promedio de casas (cierre)": 0.99965
+   },
+   "odds_ratio": {
+    "Bet365 (cierre)": 0.9925,
+    "Pinnacle (cierre)": 0.99877,
+    "Promedio de casas (cierre)": 0.99971
+   },
+   "diferencial": {
+    "Bet365 (cierre)": 0.99241,
+    "Pinnacle (cierre)": 0.99871,
+    "Promedio de casas (cierre)": 0.99957
+   },
+   "logaritmico": {
+    "Bet365 (cierre)": 0.9925,
+    "Pinnacle (cierre)": 0.99877,
+    "Promedio de casas (cierre)": 0.99971
+   }
+  },
+  "partidos": {
+   "Bet365 (cierre)": 32186,
+   "Pinnacle (cierre)": 36871,
+   "Promedio de casas (cierre)": 41368
+  },
+  "control_penaltyblog": {
+   "multiplicativo": 0.0,
+   "aditivo": 0.0,
+   "potencia": 0.0,
+   "shin": 0.0,
+   "odds_ratio": 0.0
+  }
+ },
+ "modelos": {
+  "total": {
+   "modelo_propio": {
+    "n": 29274,
+    "ll": 1.0185,
+    "acierto": 0.4915,
+    "brier": 0.6102,
+    "n_o25": 29274,
+    "ll_o25": 0.6838
+   },
+   "pinnacle": {
+    "n": 29274,
+    "ll": 0.9966,
+    "acierto": 0.5063,
+    "brier": 0.5958,
+    "n_o25": 21109,
+    "ll_o25": 0.672
+   },
+   "bet365": {
+    "n": 21728,
+    "ll": 0.9879,
+    "acierto": 0.5171,
+    "brier": 0.5895
+   },
+   "penaltyblog": {
+    "n": 29272,
+    "ll": 1.0227,
+    "acierto": 0.4892,
+    "brier": 0.6127,
+    "n_o25": 29272,
+    "ll_o25": 0.6878
+   },
+   "mezcla": {
+    "n": 29272,
+    "ll": 1.0199,
+    "acierto": 0.49,
+    "brier": 0.6111,
+    "n_o25": 29272,
+    "ll_o25": 0.6853
+   }
+  },
+  "temporada": {
+   "2021-22": {
+    "modelo_propio": {
+     "n": 6741,
+     "ll": 1.0265,
+     "acierto": 0.4838,
+     "brier": 0.6162,
+     "n_o25": 6741,
+     "ll_o25": 0.6887
+    },
+    "pinnacle": {
+     "n": 6741,
+     "ll": 1.0029,
+     "acierto": 0.499,
+     "brier": 0.6005,
+     "n_o25": 4806,
+     "ll_o25": 0.6723
+    },
+    "bet365": {
+     "n": 4810,
+     "ll": 0.9902,
+     "acierto": 0.5096,
+     "brier": 0.5914
+    },
+    "penaltyblog": {
+     "n": 6739,
+     "ll": 1.031,
+     "acierto": 0.4815,
+     "brier": 0.6188,
+     "n_o25": 6739,
+     "ll_o25": 0.693
+    },
+    "mezcla": {
+     "n": 6739,
+     "ll": 1.0282,
+     "acierto": 0.482,
+     "brier": 0.6172,
+     "n_o25": 6739,
+     "ll_o25": 0.6904
+    }
+   },
+   "2022-23": {
+    "modelo_propio": {
+     "n": 6678,
+     "ll": 1.0138,
+     "acierto": 0.4993,
+     "brier": 0.6063,
+     "n_o25": 6678,
+     "ll_o25": 0.6846
+    },
+    "pinnacle": {
+     "n": 6678,
+     "ll": 0.9952,
+     "acierto": 0.5105,
+     "brier": 0.5943,
+     "n_o25": 4853,
+     "ll_o25": 0.6721
+    },
+    "bet365": {
+     "n": 4867,
+     "ll": 0.9862,
+     "acierto": 0.5231,
+     "brier": 0.588
+    },
+    "penaltyblog": {
+     "n": 6678,
+     "ll": 1.0179,
+     "acierto": 0.4963,
+     "brier": 0.6086,
+     "n_o25": 6678,
+     "ll_o25": 0.6881
+    },
+    "mezcla": {
+     "n": 6678,
+     "ll": 1.0151,
+     "acierto": 0.4975,
+     "brier": 0.6071,
+     "n_o25": 6678,
+     "ll_o25": 0.6858
+    }
+   },
+   "2023-24": {
+    "modelo_propio": {
+     "n": 6615,
+     "ll": 1.0193,
+     "acierto": 0.4904,
+     "brier": 0.6109,
+     "n_o25": 6615,
+     "ll_o25": 0.6775
+    },
+    "pinnacle": {
+     "n": 6615,
+     "ll": 0.9938,
+     "acierto": 0.5081,
+     "brier": 0.5937,
+     "n_o25": 4802,
+     "ll_o25": 0.6665
+    },
+    "bet365": {
+     "n": 4822,
+     "ll": 0.9826,
+     "acierto": 0.5234,
+     "brier": 0.5856
+    },
+    "penaltyblog": {
+     "n": 6615,
+     "ll": 1.0229,
+     "acierto": 0.4893,
+     "brier": 0.613,
+     "n_o25": 6615,
+     "ll_o25": 0.6812
+    },
+    "mezcla": {
+     "n": 6615,
+     "ll": 1.0204,
+     "acierto": 0.4889,
+     "brier": 0.6116,
+     "n_o25": 6615,
+     "ll_o25": 0.6788
+    }
+   },
+   "2024-25": {
+    "modelo_propio": {
+     "n": 6507,
+     "ll": 1.0145,
+     "acierto": 0.4942,
+     "brier": 0.6074,
+     "n_o25": 6507,
+     "ll_o25": 0.6804
+    },
+    "pinnacle": {
+     "n": 6507,
+     "ll": 0.9925,
+     "acierto": 0.511,
+     "brier": 0.5931,
+     "n_o25": 4728,
+     "ll_o25": 0.6733
+    },
+    "bet365": {
+     "n": 4745,
+     "ll": 0.9876,
+     "acierto": 0.5197,
+     "brier": 0.5892
+    },
+    "penaltyblog": {
+     "n": 6507,
+     "ll": 1.0188,
+     "acierto": 0.4901,
+     "brier": 0.6102,
+     "n_o25": 6507,
+     "ll_o25": 0.6838
+    },
+    "mezcla": {
+     "n": 6507,
+     "ll": 1.0159,
+     "acierto": 0.4929,
+     "brier": 0.6084,
+     "n_o25": 6507,
+     "ll_o25": 0.6816
+    }
+   },
+   "2025-26": {
+    "modelo_propio": {
+     "n": 2728,
+     "ll": 1.0175,
+     "acierto": 0.4883,
+     "brier": 0.6094,
+     "n_o25": 2728,
+     "ll_o25": 0.6931
+    },
+    "pinnacle": {
+     "n": 2728,
+     "ll": 1.0012,
+     "acierto": 0.4985,
+     "brier": 0.599,
+     "n_o25": 1920,
+     "ll_o25": 0.6819
+    },
+    "bet365": {
+     "n": 2484,
+     "ll": 0.9981,
+     "acierto": 0.5028,
+     "brier": 0.5972
+    },
+    "penaltyblog": {
+     "n": 2728,
+     "ll": 1.0221,
+     "acierto": 0.489,
+     "brier": 0.6122,
+     "n_o25": 2728,
+     "ll_o25": 0.6993
+    },
+    "mezcla": {
+     "n": 2728,
+     "ll": 1.0191,
+     "acierto": 0.4879,
+     "brier": 0.6104,
+     "n_o25": 2728,
+     "ll_o25": 0.6956
+    }
+   },
+   "2020-21": {
+    "modelo_propio": {
+     "n": 5,
+     "ll": 1.2865,
+     "acierto": 0.4,
+     "brier": 0.7651,
+     "n_o25": 5,
+     "ll_o25": 0.9029
+    },
+    "pinnacle": {
+     "n": 5,
+     "ll": 1.0122,
+     "acierto": 0.4,
+     "brier": 0.5994
+    },
+    "penaltyblog": {
+     "n": 5,
+     "ll": 1.3502,
+     "acierto": 0.4,
+     "brier": 0.7907,
+     "n_o25": 5,
+     "ll_o25": 0.9221
+    },
+    "mezcla": {
+     "n": 5,
+     "ll": 1.3162,
+     "acierto": 0.4,
+     "brier": 0.7777,
+     "n_o25": 5,
+     "ll_o25": 0.9123
+    }
+   }
+  },
+  "liga": {
+   "2. Bundesliga": {
+    "modelo_propio": {
+     "n": 1230,
+     "ll": 1.0484,
+     "acierto": 0.4748,
+     "brier": 0.6308,
+     "n_o25": 1230,
+     "ll_o25": 0.6843
+    },
+    "pinnacle": {
+     "n": 1230,
+     "ll": 1.0312,
+     "acierto": 0.4756,
+     "brier": 0.6197,
+     "n_o25": 1230,
+     "ll_o25": 0.6699
+    },
+    "bet365": {
+     "n": 1230,
+     "ll": 1.0326,
+     "acierto": 0.474,
+     "brier": 0.6207
+    },
+    "penaltyblog": {
+     "n": 1230,
+     "ll": 1.0598,
+     "acierto": 0.4618,
+     "brier": 0.6379,
+     "n_o25": 1230,
+     "ll_o25": 0.6896
+    },
+    "mezcla": {
+     "n": 1230,
+     "ll": 1.0531,
+     "acierto": 0.4626,
+     "brier": 0.6339,
+     "n_o25": 1230,
+     "ll_o25": 0.6864
+    }
+   },
+   "Argentina": {
+    "modelo_propio": {
+     "n": 2483,
+     "ll": 1.076,
+     "acierto": 0.4233,
+     "brier": 0.6509,
+     "n_o25": 2483,
+     "ll_o25": 0.6619
+    },
+    "pinnacle": {
+     "n": 2483,
+     "ll": 1.0531,
+     "acierto": 0.443,
+     "brier": 0.6357
+    },
+    "penaltyblog": {
+     "n": 2483,
+     "ll": 1.0767,
+     "acierto": 0.4281,
+     "brier": 0.6513,
+     "n_o25": 2483,
+     "ll_o25": 0.6614
+    },
+    "mezcla": {
+     "n": 2483,
+     "ll": 1.076,
+     "acierto": 0.4269,
+     "brier": 0.6509,
+     "n_o25": 2483,
+     "ll_o25": 0.6613
+    },
+    "bet365": {
+     "n": 150,
+     "ll": 1.094,
+     "acierto": 0.4267,
+     "brier": 0.6584
+    }
+   },
+   "Brasil": {
+    "modelo_propio": {
+     "n": 1747,
+     "ll": 1.0255,
+     "acierto": 0.4894,
+     "brier": 0.6143,
+     "n_o25": 1747,
+     "ll_o25": 0.6905
+    },
+    "pinnacle": {
+     "n": 1747,
+     "ll": 0.9951,
+     "acierto": 0.5169,
+     "brier": 0.5945
+    },
+    "penaltyblog": {
+     "n": 1747,
+     "ll": 1.0244,
+     "acierto": 0.4877,
+     "brier": 0.6134,
+     "n_o25": 1747,
+     "ll_o25": 0.6903
+    },
+    "mezcla": {
+     "n": 1747,
+     "ll": 1.0246,
+     "acierto": 0.4883,
+     "brier": 0.6136,
+     "n_o25": 1747,
+     "ll_o25": 0.6901
+    },
+    "bet365": {
+     "n": 158,
+     "ll": 0.965,
+     "acierto": 0.5443,
+     "brier": 0.5762
+    }
+   },
+   "Bundesliga": {
+    "modelo_propio": {
+     "n": 1338,
+     "ll": 0.9986,
+     "acierto": 0.5135,
+     "brier": 0.5964,
+     "n_o25": 1338,
+     "ll_o25": 0.6644
+    },
+    "pinnacle": {
+     "n": 1338,
+     "ll": 0.9751,
+     "acierto": 0.5366,
+     "brier": 0.5794,
+     "n_o25": 1293,
+     "ll_o25": 0.6504
+    },
+    "bet365": {
+     "n": 1338,
+     "ll": 0.9759,
+     "acierto": 0.5411,
+     "brier": 0.5798
+    },
+    "penaltyblog": {
+     "n": 1336,
+     "ll": 1.0052,
+     "acierto": 0.5067,
+     "brier": 0.6004,
+     "n_o25": 1336,
+     "ll_o25": 0.6667
+    },
+    "mezcla": {
+     "n": 1336,
+     "ll": 1.0017,
+     "acierto": 0.515,
+     "brier": 0.5984,
+     "n_o25": 1336,
+     "ll_o25": 0.6655
+    }
+   },
+   "Bélgica": {
+    "modelo_propio": {
+     "n": 1292,
+     "ll": 0.9933,
+     "acierto": 0.5163,
+     "brier": 0.5913,
+     "n_o25": 1292,
+     "ll_o25": 0.6832
+    },
+    "pinnacle": {
+     "n": 1292,
+     "ll": 0.9739,
+     "acierto": 0.5372,
+     "brier": 0.5787,
+     "n_o25": 1292,
+     "ll_o25": 0.6745
+    },
+    "bet365": {
+     "n": 1292,
+     "ll": 0.9743,
+     "acierto": 0.5372,
+     "brier": 0.5789
+    },
+    "penaltyblog": {
+     "n": 1292,
+     "ll": 0.9939,
+     "acierto": 0.5186,
+     "brier": 0.5914,
+     "n_o25": 1292,
+     "ll_o25": 0.6852
+    },
+    "mezcla": {
+     "n": 1292,
+     "ll": 0.9929,
+     "acierto": 0.517,
+     "brier": 0.5909,
+     "n_o25": 1292,
+     "ll_o25": 0.6838
+    }
+   },
+   "Championship": {
+    "modelo_propio": {
+     "n": 2386,
+     "ll": 1.0482,
+     "acierto": 0.4644,
+     "brier": 0.6313,
+     "n_o25": 2386,
+     "ll_o25": 0.6917
+    },
+    "pinnacle": {
+     "n": 2386,
+     "ll": 1.0339,
+     "acierto": 0.4744,
+     "brier": 0.6213,
+     "n_o25": 2386,
+     "ll_o25": 0.6821
+    },
+    "bet365": {
+     "n": 2386,
+     "ll": 1.0344,
+     "acierto": 0.4736,
+     "brier": 0.6216
+    },
+    "penaltyblog": {
+     "n": 2386,
+     "ll": 1.0545,
+     "acierto": 0.4573,
+     "brier": 0.635,
+     "n_o25": 2386,
+     "ll_o25": 0.6977
+    },
+    "mezcla": {
+     "n": 2386,
+     "ll": 1.0506,
+     "acierto": 0.4593,
+     "brier": 0.6327,
+     "n_o25": 2386,
+     "ll_o25": 0.6942
+    }
+   },
+   "Eredivisie": {
+    "modelo_propio": {
+     "n": 1322,
+     "ll": 0.945,
+     "acierto": 0.5454,
+     "brier": 0.5605,
+     "n_o25": 1322,
+     "ll_o25": 0.6706
+    },
+    "pinnacle": {
+     "n": 1322,
+     "ll": 0.9202,
+     "acierto": 0.5651,
+     "brier": 0.5448,
+     "n_o25": 1322,
+     "ll_o25": 0.6566
+    },
+    "bet365": {
+     "n": 1321,
+     "ll": 0.9243,
+     "acierto": 0.567,
+     "brier": 0.5468
+    },
+    "penaltyblog": {
+     "n": 1322,
+     "ll": 0.9521,
+     "acierto": 0.5386,
+     "brier": 0.565,
+     "n_o25": 1322,
+     "ll_o25": 0.6743
+    },
+    "mezcla": {
+     "n": 1322,
+     "ll": 0.9476,
+     "acierto": 0.5439,
+     "brier": 0.5623,
+     "n_o25": 1322,
+     "ll_o25": 0.6719
+    }
+   },
+   "Escocia": {
+    "modelo_propio": {
+     "n": 951,
+     "ll": 0.9482,
+     "acierto": 0.5521,
+     "brier": 0.5605,
+     "n_o25": 951,
+     "ll_o25": 0.6877
+    },
+    "pinnacle": {
+     "n": 951,
+     "ll": 0.9319,
+     "acierto": 0.5531,
+     "brier": 0.5495,
+     "n_o25": 951,
+     "ll_o25": 0.6749
+    },
+    "bet365": {
+     "n": 951,
+     "ll": 0.9326,
+     "acierto": 0.5563,
+     "brier": 0.5498
+    },
+    "penaltyblog": {
+     "n": 951,
+     "ll": 0.9512,
+     "acierto": 0.5457,
+     "brier": 0.5626,
+     "n_o25": 951,
+     "ll_o25": 0.6866
+    },
+    "mezcla": {
+     "n": 951,
+     "ll": 0.949,
+     "acierto": 0.5489,
+     "brier": 0.5612,
+     "n_o25": 951,
+     "ll_o25": 0.6867
+    }
+   },
+   "LaLiga": {
+    "modelo_propio": {
+     "n": 1661,
+     "ll": 0.9836,
+     "acierto": 0.5316,
+     "brier": 0.5858,
+     "n_o25": 1661,
+     "ll_o25": 0.6792
+    },
+    "pinnacle": {
+     "n": 1661,
+     "ll": 0.9636,
+     "acierto": 0.5449,
+     "brier": 0.5724,
+     "n_o25": 1658,
+     "ll_o25": 0.6668
+    },
+    "bet365": {
+     "n": 1661,
+     "ll": 0.9639,
+     "acierto": 0.5449,
+     "brier": 0.5724
+    },
+    "penaltyblog": {
+     "n": 1661,
+     "ll": 0.9861,
+     "acierto": 0.528,
+     "brier": 0.5871,
+     "n_o25": 1661,
+     "ll_o25": 0.6843
+    },
+    "mezcla": {
+     "n": 1661,
+     "ll": 0.9841,
+     "acierto": 0.5292,
+     "brier": 0.586,
+     "n_o25": 1661,
+     "ll_o25": 0.6811
+    }
+   },
+   "LaLiga 2": {
+    "modelo_propio": {
+     "n": 1932,
+     "ll": 1.054,
+     "acierto": 0.4534,
+     "brier": 0.6356,
+     "n_o25": 1932,
+     "ll_o25": 0.6803
+    },
+    "pinnacle": {
+     "n": 1932,
+     "ll": 1.0327,
+     "acierto": 0.471,
+     "brier": 0.6217,
+     "n_o25": 1932,
+     "ll_o25": 0.6683
+    },
+    "bet365": {
+     "n": 1932,
+     "ll": 1.0346,
+     "acierto": 0.4731,
+     "brier": 0.6229
+    },
+    "penaltyblog": {
+     "n": 1932,
+     "ll": 1.0598,
+     "acierto": 0.4555,
+     "brier": 0.6392,
+     "n_o25": 1932,
+     "ll_o25": 0.6907
+    },
+    "mezcla": {
+     "n": 1932,
+     "ll": 1.0562,
+     "acierto": 0.4513,
+     "brier": 0.637,
+     "n_o25": 1932,
+     "ll_o25": 0.6847
+    }
+   },
+   "Liga MX": {
+    "modelo_propio": {
+     "n": 1494,
+     "ll": 1.0201,
+     "acierto": 0.4967,
+     "brier": 0.6113,
+     "n_o25": 1494,
+     "ll_o25": 0.6912
+    },
+    "pinnacle": {
+     "n": 1494,
+     "ll": 1.0018,
+     "acierto": 0.5027,
+     "brier": 0.599
+    },
+    "penaltyblog": {
+     "n": 1494,
+     "ll": 1.0199,
+     "acierto": 0.498,
+     "brier": 0.6109,
+     "n_o25": 1494,
+     "ll_o25": 0.6917
+    },
+    "mezcla": {
+     "n": 1494,
+     "ll": 1.0197,
+     "acierto": 0.4993,
+     "brier": 0.6109,
+     "n_o25": 1494,
+     "ll_o25": 0.6912
+    },
+    "bet365": {
+     "n": 100,
+     "ll": 0.9723,
+     "acierto": 0.51,
+     "brier": 0.5784
+    }
+   },
+   "Ligue 1": {
+    "modelo_propio": {
+     "n": 1483,
+     "ll": 1.0022,
+     "acierto": 0.5152,
+     "brier": 0.5987,
+     "n_o25": 1483,
+     "ll_o25": 0.6944
+    },
+    "pinnacle": {
+     "n": 1483,
+     "ll": 0.9828,
+     "acierto": 0.5273,
+     "brier": 0.5858,
+     "n_o25": 1477,
+     "ll_o25": 0.674
+    },
+    "bet365": {
+     "n": 1483,
+     "ll": 0.9831,
+     "acierto": 0.5273,
+     "brier": 0.5862
+    },
+    "penaltyblog": {
+     "n": 1483,
+     "ll": 1.0071,
+     "acierto": 0.5185,
+     "brier": 0.6016,
+     "n_o25": 1483,
+     "ll_o25": 0.6965
+    },
+    "mezcla": {
+     "n": 1483,
+     "ll": 1.0037,
+     "acierto": 0.5185,
+     "brier": 0.5997,
+     "n_o25": 1483,
+     "ll_o25": 0.6949
+    }
+   },
+   "Ligue 2": {
+    "modelo_propio": {
+     "n": 1449,
+     "ll": 1.0644,
+     "acierto": 0.4562,
+     "brier": 0.6412,
+     "n_o25": 1449,
+     "ll_o25": 0.6971
+    },
+    "pinnacle": {
+     "n": 1449,
+     "ll": 1.0367,
+     "acierto": 0.472,
+     "brier": 0.6223,
+     "n_o25": 1449,
+     "ll_o25": 0.6757
+    },
+    "bet365": {
+     "n": 1449,
+     "ll": 1.0359,
+     "acierto": 0.4748,
+     "brier": 0.6219
+    },
+    "penaltyblog": {
+     "n": 1449,
+     "ll": 1.0736,
+     "acierto": 0.4507,
+     "brier": 0.646,
+     "n_o25": 1449,
+     "ll_o25": 0.7062
+    },
+    "mezcla": {
+     "n": 1449,
+     "ll": 1.0679,
+     "acierto": 0.4527,
+     "brier": 0.6432,
+     "n_o25": 1449,
+     "ll_o25": 0.7009
+    }
+   },
+   "MLS": {
+    "modelo_propio": {
+     "n": 2376,
+     "ll": 1.052,
+     "acierto": 0.4756,
+     "brier": 0.6331,
+     "n_o25": 2376,
+     "ll_o25": 0.6854
+    },
+    "pinnacle": {
+     "n": 2376,
+     "ll": 1.0272,
+     "acierto": 0.479,
+     "brier": 0.6168
+    },
+    "penaltyblog": {
+     "n": 2376,
+     "ll": 1.0539,
+     "acierto": 0.468,
+     "brier": 0.6342,
+     "n_o25": 2376,
+     "ll_o25": 0.6859
+    },
+    "mezcla": {
+     "n": 2376,
+     "ll": 1.0525,
+     "acierto": 0.4684,
+     "brier": 0.6334,
+     "n_o25": 2376,
+     "ll_o25": 0.6853
+    },
+    "bet365": {
+     "n": 147,
+     "ll": 1.0082,
+     "acierto": 0.5306,
+     "brier": 0.6032
+    }
+   },
+   "Premier League": {
+    "modelo_propio": {
+     "n": 1680,
+     "ll": 0.9715,
+     "acierto": 0.5435,
+     "brier": 0.5771,
+     "n_o25": 1680,
+     "ll_o25": 0.6794
+    },
+    "pinnacle": {
+     "n": 1680,
+     "ll": 0.9497,
+     "acierto": 0.5631,
+     "brier": 0.5629,
+     "n_o25": 1669,
+     "ll_o25": 0.6735
+    },
+    "bet365": {
+     "n": 1680,
+     "ll": 0.9489,
+     "acierto": 0.5679,
+     "brier": 0.5622
+    },
+    "penaltyblog": {
+     "n": 1680,
+     "ll": 0.9761,
+     "acierto": 0.544,
+     "brier": 0.5802,
+     "n_o25": 1680,
+     "ll_o25": 0.6843
+    },
+    "mezcla": {
+     "n": 1680,
+     "ll": 0.973,
+     "acierto": 0.5423,
+     "brier": 0.5782,
+     "n_o25": 1680,
+     "ll_o25": 0.6813
+    }
+   },
+   "Primeira Liga": {
+    "modelo_propio": {
+     "n": 1325,
+     "ll": 0.9241,
+     "acierto": 0.5577,
+     "brier": 0.5438,
+     "n_o25": 1325,
+     "ll_o25": 0.6808
+    },
+    "pinnacle": {
+     "n": 1325,
+     "ll": 0.8977,
+     "acierto": 0.5698,
+     "brier": 0.5285,
+     "n_o25": 1325,
+     "ll_o25": 0.6667
+    },
+    "bet365": {
+     "n": 1325,
+     "ll": 0.8997,
+     "acierto": 0.5758,
+     "brier": 0.5293
+    },
+    "penaltyblog": {
+     "n": 1325,
+     "ll": 0.9291,
+     "acierto": 0.5585,
+     "brier": 0.547,
+     "n_o25": 1325,
+     "ll_o25": 0.6889
+    },
+    "mezcla": {
+     "n": 1325,
+     "ll": 0.9257,
+     "acierto": 0.5608,
+     "brier": 0.5449,
+     "n_o25": 1325,
+     "ll_o25": 0.6839
+    }
+   },
+   "Serie A": {
+    "modelo_propio": {
+     "n": 1655,
+     "ll": 0.9882,
+     "acierto": 0.5335,
+     "brier": 0.5901,
+     "n_o25": 1655,
+     "ll_o25": 0.6905
+    },
+    "pinnacle": {
+     "n": 1655,
+     "ll": 0.9689,
+     "acierto": 0.5366,
+     "brier": 0.578,
+     "n_o25": 1655,
+     "ll_o25": 0.6792
+    },
+    "bet365": {
+     "n": 1655,
+     "ll": 0.9694,
+     "acierto": 0.5372,
+     "brier": 0.5783
+    },
+    "penaltyblog": {
+     "n": 1655,
+     "ll": 0.9918,
+     "acierto": 0.5275,
+     "brier": 0.5924,
+     "n_o25": 1655,
+     "ll_o25": 0.6949
+    },
+    "mezcla": {
+     "n": 1655,
+     "ll": 0.9892,
+     "acierto": 0.5299,
+     "brier": 0.5907,
+     "n_o25": 1655,
+     "ll_o25": 0.6922
+    }
+   },
+   "Serie B": {
+    "modelo_propio": {
+     "n": 1470,
+     "ll": 1.073,
+     "acierto": 0.4082,
+     "brier": 0.6484,
+     "n_o25": 1470,
+     "ll_o25": 0.7038
+    },
+    "pinnacle": {
+     "n": 1470,
+     "ll": 1.0475,
+     "acierto": 0.4469,
+     "brier": 0.631,
+     "n_o25": 1470,
+     "ll_o25": 0.686
+    },
+    "bet365": {
+     "n": 1470,
+     "ll": 1.0502,
+     "acierto": 0.4442,
+     "brier": 0.6327
+    },
+    "penaltyblog": {
+     "n": 1470,
+     "ll": 1.0806,
+     "acierto": 0.4129,
+     "brier": 0.6528,
+     "n_o25": 1470,
+     "ll_o25": 0.7133
+    },
+    "mezcla": {
+     "n": 1470,
+     "ll": 1.0758,
+     "acierto": 0.4102,
+     "brier": 0.6501,
+     "n_o25": 1470,
+     "ll_o25": 0.7078
+    }
+   }
+  }
+ },
+ "segunda_opinion": {
+  "usar_mezcla": false,
+  "temporadas_que_mejora": []
+ }
+}
