@@ -218,7 +218,7 @@
      "lado": "A",
      "prob": 0.7737,
      "cuota": 1.263,
-     "cierre": 1.312,
+     "cierre": 1.323,
      "res": null,
      "hg": null,
      "ag": null
@@ -263,7 +263,7 @@
      "lado": "D",
      "prob": 0.4101,
      "cuota": 3.6,
-     "cierre": 3.45,
+     "cierre": 3.55,
      "res": null,
      "hg": null,
      "ag": null,
@@ -315,5 +315,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-10-30T10:55Z"
+ "actualizado": "2026-10-30T13:06Z"
 }
