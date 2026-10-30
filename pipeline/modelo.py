@@ -15,6 +15,8 @@ import pandas as pd
 from scipy.optimize import least_squares, minimize, minimize_scalar
 from scipy.stats import poisson
 
+import margen
+
 XI = 0.003
 ALPHA = 0.3
 L2 = 1.0
@@ -144,15 +146,14 @@ def p_over(m, line):
 
 def sin_margen(cuotas):
     """Probabilidades 1X2 y de más/menos sin el margen de la casa."""
-    try:
-        inv = np.array([1 / float(cuotas["h"]), 1 / float(cuotas["d"]), 1 / float(cuotas["a"])])
-    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+    # el método para repartir el margen lo elige el backtest histórico (pipeline/margen.py)
+    q = margen.quitar([cuotas.get("h"), cuotas.get("d"), cuotas.get("a")]) if isinstance(cuotas, dict) else None
+    if q is None:
         return None, None
-    q = inv / inv.sum()
     qo = None
     if cuotas.get("linea") is not None and cuotas.get("over") and cuotas.get("under"):
-        io, iu = 1 / float(cuotas["over"]), 1 / float(cuotas["under"])
-        qo = io / (io + iu)
+        x = margen.quitar([cuotas["over"], cuotas["under"]])
+        qo = float(x[0]) if x is not None else None
     return q, qo
 
 

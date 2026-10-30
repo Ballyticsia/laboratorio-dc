@@ -1683,3 +1683,8 @@ body.ia-open #iafab{display:none}
 .car-dots button[aria-pressed="true"]{width:34px;background:none}
 .car-dots button[aria-pressed="true"]::before{width:22px;background:var(--pitch)}
 .hero .car-dots{left:16px;bottom:10px}
+/* segunda opinión (penaltyblog) y prueba histórica */
+.vm-t tr.vm-s td{color:var(--muted)}
+.vm-t tr.vm-s td:first-child{color:var(--away)}
+.t tr.vm-b td{font-weight:700;color:var(--ink)}
+.t tr.vm-m td:first-child{font-weight:700}

@@ -1,0 +1,50 @@
+name: Backtest histórico (Football-Data.co.uk)
+
+# 5 temporadas de resultados y cuotas de cierre: elige cómo quitar el margen a las cuotas y compara
+# el modelo propio con la segunda opinión (penaltyblog) y con Pinnacle. Una vez al mes y a mano.
+on:
+  schedule:
+    - cron: "23 7 5 * *"     # día 5 de cada mes, 07:23 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: actualizar          # misma fila que el robot principal, para no chocar al guardar
+  cancel-in-progress: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar librerías
+        run: |
+          pip install -r requirements.txt
+          pip install --no-deps penaltyblog==1.13.1 && pip install -r requirements-penaltyblog.txt
+      - name: Correr el backtest
+        run: python pipeline/backtest_historico.py
+      - name: Guardar el resultado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/backtest_historico.json
+          if git diff --cached --quiet; then
+            echo "Sin cambios"
+          else
+            git commit -m "Backtest histórico $(date -u +'%Y-%m-%d')"
+            for i in 1 2 3; do
+              git pull --rebase -X theirs origin main && git push origin HEAD:main && exit 0
+              git rebase --abort 2>/dev/null || true
+              sleep $((i * 10))
+            done
+            exit 1
+          fi

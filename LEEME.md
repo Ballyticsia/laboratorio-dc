@@ -152,6 +152,11 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - **Código achicado al publicar:** el robot pasa `app.js` (terser) y `app.css` (lightningcss) por `tests/minificar.js` justo antes de la prueba de humo; en el repositorio quedan legibles.
 - **Contraste:** los botones llenos usan `--pitch-fill` (#2563eb), que con letra blanca cumple el mínimo de lectura (4,5:1); `--pitch` queda para barras y detalles.
 
+## Segunda opinión y prueba en 5 temporadas (penaltyblog + Football-Data.co.uk)
+- **Segunda opinión:** el robot ajusta además el Dixon-Coles de la librería [penaltyblog](https://pypi.org/project/penaltyblog/) (MIT) con los mismos partidos y lo guarda en `p.pb`. El partido lo muestra en Mercados y avisa si los dos modelos difieren 6 puntos o más. Se instala sin sus extras (`requirements-penaltyblog.txt`); si falla la instalación, el robot sigue sin ella.
+- **Prueba histórica:** `pipeline/backtest_historico.py` (workflow "Backtest histórico", día 5 de cada mes o a mano) baja 5 temporadas de resultados, tiros y cuotas de cierre de Football-Data.co.uk (18 ligas) y compara, semana a semana y sobre los mismos partidos, el modelo propio, la segunda opinión, el promedio de ambos, Bet365 y Pinnacle. Resultado en `data/backtest_historico.json`, visible en "Cómo funciona".
+- **Margen de las cuotas:** la misma prueba compara 5 formas de quitarle el margen a la cuota (`pipeline/margen.py`: multiplicativo, aditivo, potencia, Shin y razón de chances; las fórmulas se comparan con las de penaltyblog). El robot usa la que gana (`metodo_margen`).
+
 ## Seguridad
 - **Claves:** solo en los secretos de GitHub (API_FOOTBALL_KEY, ODDS_API_KEY, GEMINI_API_KEY, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID) y en Cloudflare. Nunca en el código ni en el sitio; GitHub tiene activado el escaneo de secretos y el bloqueo al subir uno por error.
 - **Sitio:** HTTPS de GitHub Pages y una política de contenido (`Content-Security-Policy` en `index.html`): solo corren scripts del propio sitio y solo se habla con ESPN y el servidor de Ballytics. Si cambia la dirección de `site/avisos.json`, hay que actualizar `connect-src`. Todo lo que viene de afuera (ESPN, la IA, apodos del prode) se escapa antes de mostrarlo y los enlaces externos solo pueden ser `http(s)`.

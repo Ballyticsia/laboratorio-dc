@@ -18,6 +18,7 @@ from calendar import monthrange
 from datetime import datetime, timedelta, timezone
 
 import lesiones
+import margen
 
 BASE = "https://api.the-odds-api.com/v4"
 CARPETA = os.path.join(os.path.dirname(__file__), "..", "data", "odds_api")
@@ -67,11 +68,8 @@ def _iso(dt):
 
 
 def _sin_margen(precios):
-    inv = [1 / p for p in precios if p and p > 1]
-    if len(inv) != len(precios):
-        return None
-    s = sum(inv)
-    return [x / s for x in inv]
+    q = margen.quitar(precios)   # método elegido por el backtest histórico
+    return [float(x) for x in q] if q is not None else None
 
 
 def resumir(ev):

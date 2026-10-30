@@ -31,6 +31,30 @@ import cuotas  # noqa: E402
 import lesiones  # noqa: E402
 import xg  # noqa: E402
 from modelo import XI, ALPHA, calibrar, fit, markets, mercado_q, score_matrix  # noqa: E402
+import margen  # noqa: E402
+
+# segunda opinión: el Dixon-Coles de la librería penaltyblog (opcional: si no está instalada, el robot sigue igual)
+try:
+    import penaltyblog as pb
+except Exception as _e:   # noqa: BLE001
+    print("penaltyblog no disponible, sin segunda opinión:", _e)
+    pb = None
+
+
+def segunda_opinion(played, today):
+    """Ajusta el Dixon-Coles de penaltyblog con los mismos partidos que el modelo propio."""
+    if pb is None or len(played) < 60:
+        return None
+    try:
+        d = played[pd.to_datetime(played["date"]) >= pd.Timestamp(today) - pd.Timedelta(days=730)]
+        w = pb.models.dixon_coles_weights(pd.to_datetime(d["date"]), 0.0018, pd.Timestamp(today))
+        m = pb.models.DixonColesGoalModel(d["hg"].astype(int), d["ag"].astype(int), d["home"], d["away"], w)
+        m.fit()
+        cnt = pd.concat([d["home"], d["away"]]).value_counts()
+        return m, cnt
+    except Exception as e:   # noqa: BLE001
+        print("  segunda opinión falló:", e)
+        return None
 
 RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SALIDA = os.path.join(RAIZ, "site", "data")
@@ -692,6 +716,19 @@ def season_bounds(L, today):
     return date(sy - (TEMPORADAS - 1), 7, 1), pd.Timestamp(sy, 7, 1), date(sy + 1, 6, 30)
 
 
+def backtest_historico_resumen():
+    """Lo que muestra el sitio de la prueba con 5 temporadas de Football-Data.co.uk (pipeline/backtest_historico.py)."""
+    try:
+        with open(os.path.join(RAIZ, "data", "backtest_historico.json"), encoding="utf-8") as f:
+            b = json.load(f)
+    except (OSError, ValueError):
+        return None
+    M = b.get("modelos") or {}
+    return dict(actualizado=b.get("actualizado"), ligas=b.get("ligas"), temporadas=b.get("temporadas"), metodo_margen=b.get("metodo_margen"),
+                margen=(b.get("margen") or {}).get("log_loss"), margen_n=(b.get("margen") or {}).get("partidos"),
+                total=M.get("total"), temporada=M.get("temporada"), segunda_opinion=b.get("segunda_opinion"))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--debug", action="store_true")
@@ -753,6 +790,7 @@ def main():
         else:
             model = fit(played, today, home_l2=HOME_L2)
         mc, mt = side_model(played, today, "corners"), side_model(played, today, "tarjetas")
+        so = segunda_opinion(played, today)
 
         cur = d1[d1.date >= cur_start]
         jug = cur[(cur.estado == "jugado") & cur.hg.notna()]
@@ -798,6 +836,13 @@ def main():
                         pO25=r(mk["O25"]), pBTTS=r(mk["BTTS"]), top=mk["top"])
             p = dict(id=x.id or f"{x.kickoff}-{x.home}", liga=L["id"], kickoff=x.kickoff, home=x.home, away=x.away,
                      estado=x.estado, **solo)
+            if so and so[1].get(x.home, 0) >= 5 and so[1].get(x.away, 0) >= 5:   # solo con equipos conocidos
+                try:
+                    g = so[0].predict(x.home, x.away)
+                    hda = g.home_draw_away
+                    p["pb"] = dict(pH=r(hda[0]), pD=r(hda[1]), pA=r(hda[2]), pO25=r(float(g.total_goals("over", 2.5))))
+                except Exception:   # noqa: BLE001
+                    pass
             lam = None
             od = getattr(x, "odds", None)
             od = od if isinstance(od, dict) else None
@@ -1047,7 +1092,9 @@ def main():
                 bt_mercado = json.load(fb)
         except (OSError, ValueError):
             bt_mercado = None
-        json.dump(clean(dict(actualizado=now.isoformat(timespec="minutes"), xi=XI, alpha=ALPHA, ligas=indice, portada=portada, backtest_mercado=bt_mercado,
+        bt_hist = backtest_historico_resumen()
+        json.dump(clean(dict(actualizado=now.isoformat(timespec="minutes"), xi=XI, alpha=ALPHA, ligas=indice, portada=portada, backtest_mercado=bt_mercado, backtest_historico=bt_hist,
+                             metodo_margen=margen.metodo_elegido(), segunda_opinion=pb is not None,
                              api_football=dict(activa=lesiones.ESTADO["activa"], bajas=len(bajas), restantes=lesiones.ESTADO["restantes"]),
                              odds_api=dict(activa=cuotas.ESTADO["activa"], partidos=cuotas.ESTADO["partidos_con_cuota"], restantes=cuotas.ESTADO["restantes"]))),
                   f, ensure_ascii=False, separators=(",", ":"))

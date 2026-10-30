@@ -1673,6 +1673,33 @@ function btMercado() {
     </tbody></table></div>
     <div class="panel verdict">La cuota de cierre fue más precisa que el modelo propio en el resultado, y mezclar ambos no mejoró. Pero usar los goles que implica la cuota mejoró el marcador exacto y "ambos marcan", mercados donde la casa no siempre publica cuota. Por eso Ballytics parte de la cuota cuando existe y usa el modelo propio cuando no.</div>`;
 }
+const MARGEN_N = { multiplicativo: "Multiplicativo (el simple)", aditivo: "Aditivo", potencia: "Potencia", shin: "Shin", odds_ratio: "Razón de chances", diferencial: "Margen diferencial", logaritmico: "Logarítmico" };
+function btHistorico() {
+  const B = D.indice && D.indice.backtest_historico; if (!B || !B.total || !B.total.modelo_propio) return "";
+  const T = B.total, n = T.modelo_propio.n, temps = B.temporadas || [];
+  const fila = (k, nom) => { const x = T[k]; return x ? `<tr${k === "modelo_propio" ? ` class="vm-m"` : ""}><td>${nom}</td><td class="n">${dec(x.ll, 4)}</td><td class="n">${pct(x.acierto, 1)}</td><td class="n hide-m">${x.ll_o25 != null ? dec(x.ll_o25, 4) : "—"}</td></tr>` : ""; };
+  const porT = temps.map(t => { const v = (B.temporada || {})[t] || {}; const c = k => v[k] ? dec(v[k].ll, 4) : "—";
+    return `<tr><td>${esc(t)}</td><td class="n">${c("modelo_propio")}</td><td class="n">${c("penaltyblog")}</td><td class="n">${c("mezcla")}</td><td class="n">${c("pinnacle")}</td><td class="n">${v.modelo_propio ? v.modelo_propio.n.toLocaleString("es-CL") : "—"}</td></tr>`; }).join("");
+  const casas = Object.keys(B.margen_n || {});
+  const met = Object.entries(B.margen || {}).sort((a, b) => (a[1][casas[0]] ?? 9) - (b[1][casas[0]] ?? 9));
+  const mejorM = c => Math.min(...met.map(([, v]) => v[c] ?? 9));
+  const tMargen = met.length ? `<div class="panel flush scroll"><table class="t"><thead><tr><th>Cómo quitar el margen</th>${casas.map(c => `<th class="n">${esc(c)}</th>`).join("")}</tr></thead><tbody>
+    ${met.map(([m, v]) => `<tr${m === B.metodo_margen ? ` class="vm-b"` : ""}><td>${esc(MARGEN_N[m] || m)}${m === B.metodo_margen ? " <small>(el que usa Ballytics)</small>" : ""}</td>${casas.map(c => `<td class="n">${v[c] != null ? (v[c] === mejorM(c) ? `<b>${dec(v[c], 4)}</b>` : dec(v[c], 4)) : "—"}</td>`).join("")}</tr>`).join("")}
+    </tbody></table></div><p class="note">Log-loss de la probabilidad que queda al sacar el margen a las cuotas de cierre (${casas.map(c => `${esc(c)}: ${(B.margen_n[c] || 0).toLocaleString("es-CL")} partidos`).join(" · ")}). Menos es mejor.</p>` : "";
+  const so = B.segunda_opinion || {}, m = T.modelo_propio, sp = T.penaltyblog, mz = T.mezcla, pin = T.pinnacle;
+  const veredicto = [
+    sp ? (sp.ll < m.ll ? `La segunda opinión (penaltyblog) fue algo más precisa que el modelo propio (${dec(sp.ll, 4)} contra ${dec(m.ll, 4)}).` : `El modelo propio fue más preciso que la segunda opinión (${dec(m.ll, 4)} contra ${dec(sp.ll, 4)}).`) : "",
+    mz ? (so.usar_mezcla ? `Promediar los dos modelos mejoró en casi todas las temporadas.` : `Promediar los dos modelos no mejoró de forma pareja en todas las temporadas, así que el modelo propio sigue solo y la segunda opinión se muestra aparte.`) : "",
+    pin ? `La cuota de cierre de Pinnacle sigue siendo la más precisa (${dec(pin.ll, 4)}), por eso la probabilidad Ballytics parte de la cuota cuando existe.` : ""].filter(Boolean).join(" ");
+  return `<h2>Prueba en ${temps.length} temporadas</h2>
+    <p class="muted">Con resultados, tiros al arco y cuotas de cierre de Football-Data.co.uk (${(B.ligas || []).length} ligas: ${esc((B.ligas || []).join(", "))}). Semana a semana se reajustó cada modelo solo con los partidos anteriores y se predijeron los de esa semana: ${n.toLocaleString("es-CL")} partidos, los mismos para todos. Se repite cada mes.</p>
+    <div class="panel flush scroll"><table class="t"><thead><tr><th>Resultado 1X2</th><th class="n">Log-loss</th><th class="n">Acierto</th><th class="n hide-m">Log-loss +2,5</th></tr></thead><tbody>
+      ${fila("modelo_propio", "Modelo propio")}${fila("penaltyblog", "Segunda opinión (penaltyblog)")}${fila("mezcla", "Promedio de los dos")}${fila("bet365", "Bet365, sin margen")}${fila("pinnacle", "Pinnacle, sin margen")}
+    </tbody></table></div>
+    ${veredicto ? `<div class="panel verdict">${veredicto}</div>` : ""}
+    ${porT ? `<div class="panel flush scroll"><table class="t"><thead><tr><th>Temporada</th><th class="n">Propio</th><th class="n">2.ª opinión</th><th class="n">Promedio</th><th class="n">Pinnacle</th><th class="n">Partidos</th></tr></thead><tbody>${porT}</tbody></table></div>` : ""}
+    ${tMargen}`;
+}
 function vMetodo() {
   const B = D.metodo;
   const curve = () => {
@@ -1698,6 +1725,7 @@ function vMetodo() {
       <p class="muted">Lo que el modelo propio no sabe: alineaciones, fichajes, rotaciones ni motivación. Por eso las casas de apuestas, que sí incorporan esa información, predicen mejor el resultado, y por eso la probabilidad Ballytics parte de la cuota.</p>
     </div>
     ${btMercado()}
+    ${btHistorico()}
     ${B ? `<h2>¿Le gana al mercado?</h2>
     <p class="muted">Backtest de la temporada 2025-26 en las cinco grandes ligas: cada semana se reajustó el modelo solo con partidos anteriores y se comparó con las cuotas de Bet365 (${(B.n_test || 0).toLocaleString("es-CL")} partidos).</p>
     <div class="kpis">${kpi("m", "Log-loss modelo", dec(B.logloss.modelo, 4), "menos es mejor")}${kpi("k", "Log-loss mercado", dec(B.logloss.mercado, 4), "cuotas sin margen")}${kpi("", "Log-loss ingenuo", dec(B.logloss.ingenuo, 4), "% histórico L/E/V")}</div>
@@ -1720,6 +1748,7 @@ const TIPS = {
   atq: "Ataque: goles que marca frente a una defensa promedio, comparado con el promedio de la liga (1,00). Más es mejor.",
   def: "Defensa: goles que recibe frente a un ataque promedio, comparado con el promedio de la liga (1,00). Menos es mejor.",
   cal: "Calibración: si el modelo dice 40 %, eso debería pasar cerca del 40 % de las veces. Puntos sobre la diagonal = bien calibrado.",
+  segunda: "Segunda opinión: el modelo Dixon-Coles de la librería abierta penaltyblog, ajustado con los mismos partidos pero con sus propias opciones (sin tiros al arco y con su peso por antigüedad). Si los dos modelos coinciden, la estimación es más sólida; si difieren mucho, hay más incertidumbre.",
   ballytics: "Probabilidad Ballytics: cuando hay cuota de una casa de apuestas, los goles esperados se ajustan a esa cuota (1X2 y más/menos, sin margen) y de ahí salen todos los mercados. Cuando no hay cuota, es el modelo propio. En el backtest fue más precisa que el modelo solo.",
   pick: "Pick: el resultado más probable según el modelo (1 local, X empate, 2 visita) y el marcador exacto más probable.",
   proy: "Proyección: se simula 10.000 veces el resto de la temporada con las probabilidades del modelo y se cuenta en cuántas simulaciones pasa cada cosa.",
@@ -1960,6 +1989,7 @@ function vsMercado(L, p, k) {
   if (p.calib) rows.push(["b", `Ballytics ${help(TIPS.ballytics)}`, [k.H, k.D, k.A], k.O25]);
   rows.push(["m", p.calib ? "Modelo propio" : `Modelo propio ${help(TIPS.ballytics)}`, [own.pH, own.pD, own.pA], own.pO25]);
   if (p.ajuste) rows.push(["j", `Modelo con bajas ${help("El modelo propio descontando a los goleadores lesionados o suspendidos. La cuota de la casa ya considera las bajas conocidas.")}`, [p.ajuste.pH, p.ajuste.pD, p.ajuste.pA], p.ajuste.pO25]);
+  if (p.pb) rows.push(["s", `Segunda opinión ${help(TIPS.segunda)}`, [p.pb.pH, p.pb.pD, p.pb.pA], p.pb.pO25]);
   if (q) rows.push(["k", `Mercado <small>${esc(q.casa)}, sin margen</small>`, q.p, q.o]);
   if (rows.length < 2) return "";
   const head = `<tr><th></th><th class="n"><span class="lg">${esc(H)}</span><span class="sh">1</span></th><th class="n"><span class="lg">Empate</span><span class="sh">X</span></th><th class="n"><span class="lg">${esc(A)}</span><span class="sh">2</span></th><th class="n hide-m">+2,5</th></tr>`;
@@ -1970,6 +2000,11 @@ function vsMercado(L, p, k) {
     const pp = Math.round(Math.abs(d[1]) * 100);
     msg = pp >= 5 ? `<p class="vm-diff"><b>Diferencia grande:</b> el modelo propio le da a ${esc(names[d[0]])} <b>${pp} puntos ${d[1] > 0 ? "más" : "menos"}</b> que ${/^promedio/.test(q.casa) ? "el " : ""}${esc(q.casa)} (${pct(own[["pH", "pD", "pA"][d[0]]])} contra ${pct(q.p[d[0]])}).</p>`
       : `<p class="vm-diff ok">Modelo propio y mercado coinciden: la mayor diferencia es de ${pp} ${pp === 1 ? "punto" : "puntos"}.</p>`;
+  }
+  if (p.pb) {
+    const dd = Math.round(100 * Math.max(...["pH", "pD", "pA"].map(c => Math.abs(own[c] - p.pb[c]))));
+    msg += dd >= 6 ? `<p class="vm-diff"><b>Los dos modelos no coinciden:</b> hay ${dd} puntos de diferencia entre el modelo propio y la segunda opinión. Conviene tomar este partido con más cuidado.</p>`
+      : `<p class="vm-diff ok">El modelo propio y la segunda opinión coinciden (diferencia máxima de ${dd} ${dd === 1 ? "punto" : "puntos"}).</p>`;
   }
   return `<div class="vm"><div class="scroll"><table class="t vm-t">${head}${body}</table></div>${msg}
     <p class="note">${p.calib ? "La probabilidad Ballytics ajusta los goles esperados a la cuota, porque en el backtest la cuota fue más precisa que el modelo solo." : q ? "No se pudo ajustar a la cuota; se muestra el modelo propio." : "Sin cuota publicada para este partido: la probabilidad es la del modelo propio."} Una diferencia no es una recomendación de apuesta.</p></div>`;

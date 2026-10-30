@@ -36,7 +36,10 @@ jobs:
           cache: pip
 
       - name: Instalar librerías
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          # segunda opinión (penaltyblog): si no se puede instalar, el robot sigue sin ella
+          (pip install --no-deps penaltyblog==1.13.1 && pip install -r requirements-penaltyblog.txt) || echo "::warning::No se pudo instalar penaltyblog; sin segunda opinión"
 
       - name: Bajar datos y reajustar el modelo
         env:
