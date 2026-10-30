@@ -1694,7 +1694,7 @@ function btHistorico() {
   return `<h2>Prueba en ${temps.length} temporadas</h2>
     <p class="muted">Con resultados, tiros al arco y cuotas de cierre de Football-Data.co.uk (${(B.ligas || []).length} ligas: ${esc((B.ligas || []).join(", "))}). Semana a semana se reajustó cada modelo solo con los partidos anteriores y se predijeron los de esa semana: ${n.toLocaleString("es-CL")} partidos, los mismos para todos. Se repite cada mes.</p>
     <div class="panel flush scroll"><table class="t"><thead><tr><th>Resultado 1X2</th><th class="n">Log-loss</th><th class="n">Acierto</th><th class="n hide-m">Log-loss +2,5</th></tr></thead><tbody>
-      ${fila("modelo_propio", "Modelo propio")}${fila("penaltyblog", "Segunda opinión (penaltyblog)")}${fila("mezcla", "Promedio de los dos")}${fila("bet365", "Bet365, sin margen")}${fila("pinnacle", "Pinnacle, sin margen")}
+      ${fila("modelo_propio", "Modelo propio")}${fila("penaltyblog", "Segunda opinión (penaltyblog)")}${fila("mezcla", "Promedio de los dos")}${fila("pinnacle", "Pinnacle, sin margen")}
     </tbody></table></div>
     ${veredicto ? `<div class="panel verdict">${veredicto}</div>` : ""}
     ${porT ? `<div class="panel flush scroll"><table class="t"><thead><tr><th>Temporada</th><th class="n">Propio</th><th class="n">2.ª opinión</th><th class="n">Promedio</th><th class="n">Pinnacle</th><th class="n">Partidos</th></tr></thead><tbody>${porT}</tbody></table></div>` : ""}

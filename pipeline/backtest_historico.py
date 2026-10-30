@@ -207,8 +207,7 @@ def cerrar(m):
     return out
 
 
-def probar_modelos(d, metodo):
-    temps_eval = sorted(d.temp.unique())[1:]   # la primera solo entrena
+def probar_modelos(d, metodo, temps_eval):
     agg = {"total": {}, "temporada": {}, "liga": {}}
     t0 = time.time()
     for liga, dl in d.groupby("liga"):
@@ -250,9 +249,9 @@ def probar_modelos(d, metodo):
                 pm, pmo = [mk["H"], mk["D"], mk["A"]], mk["O25"]
                 q = margen.quitar([x.pin_H, x.pin_D, x.pin_A], metodo)
                 qo = margen.quitar([x.pin_o, x.pin_u], metodo) if not (np.isnan(x.pin_o) or np.isnan(x.pin_u)) else None
-                qb = margen.quitar([x.b365_H, x.b365_D, x.b365_A], metodo) if not np.isnan(x.b365_H) else None
-                filas = [("modelo_propio", pm, pmo), ("pinnacle", list(q) if q is not None else None, qo[0] if qo is not None else None),
-                         ("bet365", list(qb) if qb is not None else None, None)]
+                if q is None:
+                    continue
+                filas = [("modelo_propio", pm, pmo), ("pinnacle", list(q), qo[0] if qo is not None else None)]
                 if pbm is not None:
                     try:
                         g = pbm.predict(x.home, x.away)
@@ -280,7 +279,9 @@ def main():
     print(f"{len(d)} partidos, {d.liga.nunique()} ligas, temporadas {sorted(d.temp.unique())}")
     mg, elegido = probar_margen(d)
     print("método de margen elegido:", elegido, json.dumps(mg["log_loss"], ensure_ascii=False))
-    mods = probar_modelos(d, elegido)
+    # se califican las últimas N_TEMP temporadas; la anterior solo entrena
+    temps_eval = [f"{y0}-{y1 % 100:02d}" for y0, y1 in temporadas(hoy)[1:]]
+    mods = probar_modelos(d, elegido, temps_eval)
     T = mods["total"]
     # ¿la mezcla con penaltyblog mejora al modelo propio de forma pareja (en casi todas las temporadas)?
     mejor_temp = [t for t, v in mods["temporada"].items() if v.get("mezcla") and v.get("modelo_propio") and v["mezcla"]["ll"] < v["modelo_propio"]["ll"]]
