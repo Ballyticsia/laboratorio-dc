@@ -724,9 +724,10 @@ def backtest_historico_resumen():
     except (OSError, ValueError):
         return None
     M = b.get("modelos") or {}
-    return dict(actualizado=b.get("actualizado"), ligas=b.get("ligas"), temporadas=b.get("temporadas"), metodo_margen=b.get("metodo_margen"),
+    temp = {t: v for t, v in (M.get("temporada") or {}).items() if (v.get("modelo_propio") or {}).get("n", 0) >= 500}
+    return dict(actualizado=b.get("actualizado"), ligas=b.get("ligas"), temporadas=sorted(temp), metodo_margen=b.get("metodo_margen"),
                 margen=(b.get("margen") or {}).get("log_loss"), margen_n=(b.get("margen") or {}).get("partidos"),
-                total=M.get("total"), temporada=M.get("temporada"), segunda_opinion=b.get("segunda_opinion"))
+                total=M.get("total"), temporada=temp, segunda_opinion=b.get("segunda_opinion"))
 
 
 def main():

@@ -221,7 +221,7 @@ def probar_modelos(d, metodo, temps_eval):
             ini = w.start_time
             fin = w.end_time
             tr = dl[(dl.date < ini) & (dl.date >= ini - pd.Timedelta(days=VENTANA))]
-            te = dl[(dl.date >= ini) & (dl.date <= fin)]
+            te = dl[(dl.date >= ini) & (dl.date <= fin) & dl.temp.isin(temps_eval)]
             if len(tr) < 100 or te.empty:
                 continue
             cnt = pd.concat([tr.home, tr.away]).value_counts()
