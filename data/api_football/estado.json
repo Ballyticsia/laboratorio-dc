@@ -1,23 +1,23 @@
 {
  "activa": true,
- "consultas": 0,
- "restantes": null,
+ "consultas": 21,
+ "restantes": 7363,
  "errores": [],
  "fechas": {
   "2026-10-31": {
    "filas": 1066,
-   "desde_cache": true
+   "desde_cache": false
   },
   "2026-11-01": {
    "filas": 698,
-   "desde_cache": true
+   "desde_cache": false
   },
   "2026-11-02": {
    "filas": 208,
-   "desde_cache": true
+   "desde_cache": false
   }
  },
- "partidos_con_bajas": 83,
- "partidos_ajustados": 63,
- "actualizado": "2026-10-31T14:50+00:00"
+ "partidos_con_bajas": 75,
+ "partidos_ajustados": 56,
+ "actualizado": "2026-10-31T16:51+00:00"
 }
