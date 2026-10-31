@@ -1,19 +1,19 @@
 {
  "activa": true,
  "creditos_usados": 6,
- "restantes": 270,
+ "restantes": 264,
  "consultas": {
-  "soccer_epl": "actualizada",
+  "soccer_epl": "copia",
   "soccer_spain_la_liga": "copia",
   "soccer_italy_serie_a": "copia",
   "soccer_germany_bundesliga": "copia",
-  "soccer_france_ligue_one": "copia",
+  "soccer_france_ligue_one": "actualizada",
   "soccer_efl_champ": "copia",
   "soccer_portugal_primeira_liga": "copia",
-  "soccer_netherlands_eredivisie": "copia",
+  "soccer_netherlands_eredivisie": "actualizada",
   "soccer_chile_campeonato": "copia",
   "soccer_argentina_primera_division": "copia",
-  "soccer_brazil_campeonato": "actualizada",
+  "soccer_brazil_campeonato": "copia",
   "soccer_usa_mls": "copia",
   "soccer_uefa_champs_league": "sin partidos cerca",
   "soccer_conmebol_copa_libertadores": "sin partidos cerca",
@@ -21,12 +21,12 @@
   "soccer_uefa_europa_conference_league": "sin partidos cerca",
   "soccer_conmebol_copa_sudamericana": "sin partidos cerca",
   "soccer_mexico_ligamx": "copia",
-  "soccer_turkey_super_league": "actualizada",
-  "soccer_spl": "copia",
+  "soccer_turkey_super_league": "copia",
+  "soccer_spl": "actualizada",
   "soccer_belgium_first_div": "copia"
  },
  "errores": [],
  "ligas": {},
- "partidos_con_cuota": 131,
- "actualizado": "2026-10-30T22:52+00:00"
+ "partidos_con_cuota": 126,
+ "actualizado": "2026-10-31T01:14+00:00"
 }
