@@ -336,9 +336,9 @@
      "prob": 0.8977,
      "cuota": 1.111,
      "cierre": 1.111,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 6,
+     "ag": 1
     },
     {
      "id": "401875564",
@@ -400,11 +400,113 @@
      "prob": 0.2828,
      "cuota": 5.0,
      "cierre": 4.7,
+     "res": "P",
+     "hg": 4,
+     "ag": 1,
+     "mercado": 0.1787,
+     "ev": 0.414
+    }
+   ]
+  },
+  "2026-11-01": {
+   "fijado": "2026-10-31T22:44Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401882819",
+     "liga": "laliga",
+     "kickoff": "2026-11-01T15:15Z",
+     "home": "Racing Santander",
+     "away": "Real Madrid",
+     "est": "seguro",
+     "lado": "A",
+     "prob": 0.8056,
+     "cuota": 1.222,
+     "cierre": 1.222,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401888374",
+     "liga": "turquia",
+     "kickoff": "2026-11-01T10:30Z",
+     "home": "Amed SFK",
+     "away": "Eyupspor",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.7771,
+     "cuota": 1.25,
+     "cierre": 1.25,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401888263",
+     "liga": "turquia",
+     "kickoff": "2026-11-01T13:00Z",
+     "home": "Trabzonspor",
+     "away": "Gaziantep FK",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.7586,
+     "cuota": 1.294,
+     "cierre": 1.294,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401878954",
+     "liga": "belgica",
+     "kickoff": "2026-11-01T17:30Z",
+     "home": "Lommel SK",
+     "away": "KAA Gent",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.3461,
+     "cuota": 4.5,
+     "cierre": 4.5,
      "res": null,
      "hg": null,
      "ag": null,
-     "mercado": 0.1787,
-     "ev": 0.414
+     "mercado": 0.2057,
+     "ev": 0.5575
+    },
+    {
+     "id": "401885409",
+     "liga": "portugal",
+     "kickoff": "2026-11-01T20:30Z",
+     "home": "Braga",
+     "away": "FC Famalicao",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.299,
+     "cuota": 5.0,
+     "cierre": 5.0,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1903,
+     "ev": 0.495
+    },
+    {
+     "id": "401888262",
+     "liga": "turquia",
+     "kickoff": "2026-11-01T16:00Z",
+     "home": "Kasimpasa",
+     "away": "Besiktas",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.2745,
+     "cuota": 5.25,
+     "cierre": 5.25,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1666,
+     "ev": 0.4411
     }
    ]
   }
@@ -417,5 +519,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-10-31T20:45Z"
+ "actualizado": "2026-10-31T22:44Z"
 }
