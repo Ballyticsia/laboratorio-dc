@@ -1,7 +1,7 @@
 {
  "activa": true,
- "consultas": 21,
- "restantes": 7363,
+ "consultas": 46,
+ "restantes": 7309,
  "errores": [],
  "fechas": {
   "2026-10-31": {
@@ -17,7 +17,7 @@
    "desde_cache": false
   }
  },
- "partidos_con_bajas": 75,
- "partidos_ajustados": 56,
- "actualizado": "2026-10-31T16:51+00:00"
+ "partidos_con_bajas": 58,
+ "partidos_ajustados": 43,
+ "actualizado": "2026-10-31T18:59+00:00"
 }
