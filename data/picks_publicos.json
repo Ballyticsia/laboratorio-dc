@@ -485,9 +485,9 @@
      "prob": 0.299,
      "cuota": 5.0,
      "cierre": 5.25,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 3,
+     "ag": 0,
      "mercado": 0.1903,
      "ev": 0.495
     },
@@ -509,6 +509,108 @@
      "ev": 0.4411
     }
    ]
+  },
+  "2026-11-02": {
+   "fijado": "2026-11-01T22:46Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401885403",
+     "liga": "portugal",
+     "kickoff": "2026-11-02T20:15Z",
+     "home": "Benfica",
+     "away": "Alverca",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8617,
+     "cuota": 1.174,
+     "cierre": 1.174,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401886125",
+     "liga": "peru",
+     "kickoff": "2026-11-02T20:30Z",
+     "home": "Sporting Cristal",
+     "away": "FC Cajamarca",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.7934,
+     "cuota": 1.222,
+     "cierre": 1.222,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401874971",
+     "liga": "seriea",
+     "kickoff": "2026-11-02T19:45Z",
+     "home": "Atalanta",
+     "away": "Parma",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.6416,
+     "cuota": 1.488,
+     "cierre": 1.488,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401885407",
+     "liga": "portugal",
+     "kickoff": "2026-11-02T20:15Z",
+     "home": "Gil Vicente",
+     "away": "Vitória de Guimaraes",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.4368,
+     "cuota": 2.85,
+     "cierre": 2.85,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.3305,
+     "ev": 0.2449
+    },
+    {
+     "id": "401876419",
+     "liga": "ligue1",
+     "kickoff": "2026-11-02T19:45Z",
+     "home": "Lorient",
+     "away": "Brest",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.4856,
+     "cuota": 2.5,
+     "cierre": 2.5,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.3864,
+     "ev": 0.214
+    },
+    {
+     "id": "401841649",
+     "liga": "argentina",
+     "kickoff": "2026-11-02T22:00Z",
+     "home": "Platense",
+     "away": "Central Córdoba (Santiago del Estero)",
+     "est": "valor",
+     "lado": "D",
+     "prob": 0.309,
+     "cuota": 3.9,
+     "cierre": 3.9,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2343,
+     "ev": 0.2051
+    }
+   ]
   }
  },
  "reglas": {
@@ -519,5 +621,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-01T20:47Z"
+ "actualizado": "2026-11-01T22:46Z"
 }
