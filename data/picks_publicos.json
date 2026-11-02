@@ -525,9 +525,9 @@
      "prob": 0.8617,
      "cuota": 1.174,
      "cierre": 1.125,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 1,
+     "ag": 0
     },
     {
      "id": "401886125",
@@ -540,9 +540,9 @@
      "prob": 0.7934,
      "cuota": 1.222,
      "cierre": 1.222,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 5,
+     "ag": 0
     },
     {
      "id": "401874971",
@@ -555,9 +555,9 @@
      "prob": 0.6416,
      "cuota": 1.488,
      "cierre": 1.4,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "P",
+     "hg": 0,
+     "ag": 3
     },
     {
      "id": "401885407",
@@ -570,9 +570,9 @@
      "prob": 0.4368,
      "cuota": 2.85,
      "cierre": 2.95,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 0,
+     "ag": 0,
      "mercado": 0.3305,
      "ev": 0.2449
     },
@@ -587,9 +587,9 @@
      "prob": 0.4856,
      "cuota": 2.5,
      "cierre": 2.5,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 0,
+     "ag": 2,
      "mercado": 0.3864,
      "ev": 0.214
     },
@@ -611,6 +611,108 @@
      "ev": 0.2051
     }
    ]
+  },
+  "2026-11-03": {
+   "fijado": "2026-11-02T22:51Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401915387",
+     "liga": "champions",
+     "kickoff": "2026-11-03T20:00Z",
+     "home": "Barcelona",
+     "away": "Aston Villa",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.7886,
+     "cuota": 1.256,
+     "cierre": 1.256,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401888569",
+     "liga": "paraguay",
+     "kickoff": "2026-11-03T22:30Z",
+     "home": "Nacional Asunción",
+     "away": "Sportivo San Lorenzo",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.7641,
+     "cuota": 1.256,
+     "cierre": 1.256,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401886148",
+     "liga": "peru",
+     "kickoff": "2026-11-04T01:00Z",
+     "home": "Alianza Lima",
+     "away": "Cienciano del Cusco",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.7014,
+     "cuota": 1.377,
+     "cierre": 1.377,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401877912",
+     "liga": "colombia",
+     "kickoff": "2026-11-03T20:30Z",
+     "home": "Deportivo Pereira",
+     "away": "Deportes Tolima",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.238,
+     "cuota": 5.5,
+     "cierre": 5.5,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1488,
+     "ev": 0.309
+    },
+    {
+     "id": "401915384",
+     "liga": "champions",
+     "kickoff": "2026-11-03T20:00Z",
+     "home": "Bodo/Glimt",
+     "away": "Lille",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.3267,
+     "cuota": 3.9,
+     "cierre": 3.9,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2393,
+     "ev": 0.2741
+    },
+    {
+     "id": "401915309",
+     "liga": "champions",
+     "kickoff": "2026-11-03T20:00Z",
+     "home": "Villarreal",
+     "away": "Paris Saint-Germain",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.2523,
+     "cuota": 4.7,
+     "cierre": 4.7,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1862,
+     "ev": 0.1858
+    }
+   ]
   }
  },
  "reglas": {
@@ -621,5 +723,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-02T20:53Z"
+ "actualizado": "2026-11-02T22:51Z"
 }
