@@ -3572,6 +3572,22 @@ document.addEventListener("click", async e => {
 /* ---------- ficha de jugador (cualquier jugador de ESPN) ---------- */
 const ESPN_C = "https://site.api.espn.com/apis/common/v3/sports/soccer";
 const POS_ES = { Forward: "Delantero", Midfielder: "Mediocampista", Defender: "Defensa", Goalkeeper: "Arquero", "Attacking Midfielder": "Volante ofensivo", "Defensive Midfielder": "Volante defensivo", "Center Back": "Defensa central", "Left Back": "Lateral izquierdo", "Right Back": "Lateral derecho", Striker: "Centrodelantero", Winger: "Extremo" };
+/* posición de ESPN en español, también las compuestas ("Right Forward", "Center Left Defender", "Left Wing Back"…) */
+function posEs(n) {
+  n = String(n || "").trim(); if (!n) return ""; if (POS_ES[n]) return POS_ES[n];
+  const w = n.toLowerCase(), lado = /\bleft\b/.test(w) ? "izquierdo" : /\bright\b/.test(w) ? "derecho" : "", cen = /\bcent(er|re)\b/.test(w) && !lado;
+  const conLado = (base, f) => lado ? `${base} ${f ? lado.replace(/o$/, "a") : lado}` : cen ? `${base} central` : base;
+  if (/goal ?keeper/.test(w)) return "Arquero";
+  if (/wing ?back/.test(w)) return conLado("Carrilero");
+  if (/winger|\bwing\b/.test(w)) return conLado("Extremo");
+  if (/forward|striker/.test(w)) return lado ? `Delantero por ${lado === "izquierdo" ? "izquierda" : "derecha"}` : "Centrodelantero";
+  if (/attacking midfield/.test(w)) return conLado("Volante ofensivo");
+  if (/defensive midfield/.test(w)) return conLado("Volante defensivo");
+  if (/midfield/.test(w)) return lado ? `Volante por ${lado === "izquierdo" ? "izquierda" : "derecha"}` : "Mediocampista central";
+  if (/\bback\b/.test(w) && lado && !/cent(er|re)/.test(w)) return `Lateral ${lado}`;
+  if (/defender|\bback\b/.test(w)) return /cent(er|re)/.test(w) && lado ? `Defensa central (${lado === "izquierdo" ? "izquierda" : "derecha"})` : conLado("Defensa", true);
+  return n;
+}
 const toM = s => { const m = String(s || "").match(/(\d+)'\s*(\d+)/); return m ? ((+m[1] * 12 + +m[2]) * 0.0254).toFixed(2).replace(".", ",") + " m" : s || ""; };
 const toKg = s => { const m = String(s || "").match(/(\d+)/); return m ? Math.round(+m[1] * 0.4536) + " kg" : s || ""; };
 const ficha = (id, html) => /^\d+$/.test(String(id || "")) ? `<button class="link flink" data-go="ficha" data-id="${esc(id)}">${html}</button>` : html;
@@ -3589,7 +3605,7 @@ async function vFillFicha(id) {
   const splits = (st.splits || []), dom = splits.find(s => s.leagueSlug && !/fifa|uefa\.nations|uefa\.euro|conmebol\.america|friendly|charity/.test(s.leagueSlug));
   const tslug = (dom && dom.leagueSlug) || (t.slug || "").split(".").slice(0, 2).join(".");
   const tlogo = ((t.logos || [])[0] || {}).href || (t.id ? `https://a.espncdn.com/i/teamlogos/soccer/500/${t.id}.png` : "");
-  const pos = POS_ES[(A.position || {}).displayName] || (A.position || {}).displayName || "";
+  const pos = posEs((A.position || {}).displayName);
   const idx = k => names.indexOf(k), gv = (s, k) => idx(k) >= 0 ? s.stats[idx(k)] : "—";
   const sum = k => splits.filter(s => !/charity|friendly/.test(s.leagueSlug || "")).reduce((x, s) => x + (+gv(s, k) || 0), 0);
   const Lf = { equipos: { [t.displayName || ""]: { color: t.color, logo: tlogo } } };
@@ -3831,9 +3847,9 @@ function pmModal(pid, mid) {
   const ev = (j.keyEvents || []).filter(e => ((e.participants || [])[0] || {}).athlete && String(e.participants[0].athlete.id) === String(pid));
   const fmt = (n, d) => n == null ? "—" : d != null && d !== "" ? `${n}<small> / ${d}</small>` : String(n);
   const sec = (t, rows) => { const R0 = rows.filter(r => r[1] !== "—"); return R0.length ? `<div class="pms"><h4>${t}</h4>${R0.map(([l, val]) => `<div class="pmr"><span>${l}</span><b class="num">${val}</b></div>`).join("")}</div>` : ""; };
-  const min = af && af.min != null ? af.min : null, pos = POS_ES[(x.position || {}).displayName] || (x.position || {}).displayName || "";
+  const min = af && af.min != null ? af.min : null, pos = posEs((x.position || {}).displayName);
   const body = (isGk ? sec("Arco", [["Atajadas", fmt(v("sv", "saves"))], ["Goles recibidos", fmt(v("gc", "goalsConceded"))]]) : "")
-    + sec("Ataque", [["Goles", fmt(v("g", "totalGoals"))], ["Asistencias", fmt(v("as", "goalAssists"))], ["Tiros (al arco)", v("sh", "totalShots") == null ? "—" : `${v("sh", "totalShots")}<small> (${v("sot", "shotsOnTarget") ?? 0})</small>`],
+    + sec("Ataque", [["Goles", fmt(v("g", "totalGoals"))], ["Asistencias", fmt(v("as", "goalAssists"))], ["Remates totales", fmt(v("sh", "totalShots"))], ["Remates al arco", v("sh", "totalShots") == null && v("sot", "shotsOnTarget") == null ? "—" : fmt(v("sot", "shotsOnTarget") ?? 0)],
         ["Regates exitosos", af && af.dr != null ? fmt(af.drs ?? 0, af.dr) : "—"], ["Fueras de juego", fmt(v("off", "offsides"))], ["Penales", af && (af.ps || af.pm) ? `${af.ps || 0} convertido${af.ps === 1 ? "" : "s"}${af.pm ? ` · ${af.pm} errado${af.pm === 1 ? "" : "s"}` : ""}` : "—"]])
     + sec("Pases", [["Pases", fmt(af ? af.pas : null)], ["Pases precisos", af && af.acc != null && af.pas ? (af.acc <= af.pas ? `${af.acc}<small> (${Math.round(100 * af.acc / af.pas)}%)</small>` : `${af.acc}%`) : "—"], ["Pases clave", fmt(af ? af.kp : null)]])
     + sec("Defensa", [["Quites", fmt(af ? af.tk : null)], ["Intercepciones", fmt(af ? af.int : null)], ["Tiros bloqueados", fmt(af ? af.blk : null)], ["Duelos ganados", af && af.du ? fmt(af.duw ?? 0, af.du) : "—"]])
