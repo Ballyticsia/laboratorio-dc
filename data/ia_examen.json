@@ -1,13 +1,12 @@
 {
- "fecha": "2026-10-29T11:05Z",
- "puntaje": 1,
- "aprobadas": 20,
+ "fecha": "2026-11-02T16:42Z",
+ "puntaje": 0.9,
+ "aprobadas": 18,
  "total": 20,
  "modelos": [
-  "gemini-3.5-flash-lite",
-  "gemma-4-26b-a4b-it"
+  "gemini-3.5-flash-lite"
  ],
- "ms_promedio": 2209,
+ "ms_promedio": 1712,
  "votos_gente": {
   "por_modelo": {},
   "por_tipo": {}
@@ -23,28 +22,18 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 2286,
+   "ms": 2096,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Para hoy tenemos 6 favoritos claros (probabilidad del modelo de 60 % o más). Aquí están los más destacados de HOY:\n\n- **Al Nassr vs Al Kholood**: gana Al Nassr, probabilidad del modelo 76 %, cuota justa 1,32.\n- **Melgar vs Comerciantes Unidos**: gana Melgar, probabilidad del modelo 72 %, cuota justa 1,39.\n- **Al Riyadh vs Al Qadsiah**: gana Al Qadsiah, probabilidad del modelo 71 %, cuota justa 1,41.\n- **Paris FC vs BK Häcken**: gana Paris FC, probabilidad del modelo 71 %, cuota justa 1,41.\n- **América de Cali vs Fortaleza CEIF**: gana América de Cali, probabilidad del modelo 65 %, cuota justa 1,54.\n- **Atlético Nacional vs Independiente Santa Fe**: gana Atlético Nacional, probabilidad del modelo 60 %, cuota justa 1,67.\n\nJuega con responsabilidad (+18).",
+   "r": "¡Hola! Estos son los partidos más seguros de hoy según los favoritos claros del modelo Ballytics: ⚽\n- **Benfica vs Alverca**: probabilidad del modelo 86 %, cuota justa 1,16.\n- **Sporting Cristal vs FC Cajamarca**: probabilidad del modelo 78 %, cuota justa 1,28.\n- **Mallorca vs Cádiz**: probabilidad del modelo 65 %, cuota justa 1,54.\n- **Stade de Reims vs Sochaux**: probabilidad del modelo 64 %, cuota justa 1,56.\n- **Atalanta vs Parma**: probabilidad del modelo 64 %, cuota justa 1,56.\n- **Platense vs Central Córdoba (Santiago del Estero)**: probabilidad del modelo 64 %, cuota justa 1,56.\n- **Independiente Rivadavia vs Banfield**: probabilidad del modelo 61 %, cuota justa 1,64.\n- **Real Tomayapo vs Blooming**: probabilidad del modelo 61 %, cuota justa 1,64.\nJuega con responsabilidad (+18).",
    "refs": [
-    {
-     "id": "m6",
-     "mercado": "H",
-     "dia": "HOY"
-    },
     {
      "id": "m16",
      "mercado": "H",
      "dia": "HOY"
     },
     {
-     "id": "m7",
-     "mercado": "A",
-     "dia": "HOY"
-    },
-    {
-     "id": "m4",
+     "id": "m17",
      "mercado": "H",
      "dia": "HOY"
     },
@@ -54,7 +43,27 @@
      "dia": "HOY"
     },
     {
-     "id": "m17",
+     "id": "m11",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m8",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m22",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m28",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m21",
      "mercado": "H",
      "dia": "HOY"
     }
@@ -65,33 +74,13 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 3009,
+   "ms": 1862,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Estos son los favoritos claros de hoy (60 % o más de probabilidad según el modelo de Ballytics): \n- **Al Nassr vs Al Kholood** (HOY 15:00): gana Al Nassr, probabilidad del modelo 76 %, cuota justa 1,32.\n- **Melgar vs Comerciantes Unidos** (HOY 21:30): gana Melgar, probabilidad del modelo 72 %, cuota justa 1,39.\n- **Al Riyadh vs Al Qadsiah** (HOY 15:00): gana Al Qadsiah, probabilidad del modelo 71 %, cuota justa 1,41.\n- **Paris FC vs BK Häcken** (HOY 14:45): gana Paris FC, probabilidad del modelo 71 %, cuota justa 1,41.\n- **América de Cali vs Fortaleza CEIF** (HOY 20:30): gana América de Cali, probabilidad del modelo 65 %, cuota justa 1,54.\n- **Atlético Nacional vs Independiente Santa Fe** (HOY 22:30): gana Atlético Nacional, probabilidad del modelo 60 %, cuota justa 1,67.\n- **Frosinone vs Lecce** (HOY 14:30): gana Frosinone, probabilidad del modelo 59 %, cuota justa 1,69. \nJuega con responsabilidad (+18).",
+   "r": "¡Hola! ⚽ Hoy tenemos **8 favoritos claros** (con 60 % o más de probabilidad según nuestro modelo Ballytics). Aquí los tienes ordenados:\n\n- **Benfica vs Alverca**: probabilidad del modelo **86 %**, cuota justa 1,16.\n- **Sporting Cristal vs FC Cajamarca**: probabilidad del modelo **78 %**, cuota justa 1,28.\n- **Mallorca vs Cádiz**: probabilidad del modelo **65 %**, cuota justa 1,54.\n- **Stade de Reims vs Sochaux**: probabilidad del modelo **64 %**, cuota justa 1,56.\n- **Atalanta vs Parma**: probabilidad del modelo **64 %**, cuota justa 1,56.\n- **Platense vs Central Córdoba (Santiago del Estero)**: probabilidad del modelo **64 %**, cuota justa 1,56.\n- **Independiente Rivadavia vs Banfield**: probabilidad del modelo **61 %**, cuota justa 1,64.\n- **Real Tomayapo vs Blooming**: probabilidad del modelo **61 %**, cuota justa 1,64.\n\nRecuerda que el modelo se equivoca seguido. Juega con responsabilidad (+18).",
    "refs": [
     {
-     "id": "m6",
-     "mercado": "H",
-     "dia": "HOY"
-    },
-    {
      "id": "m16",
-     "mercado": "H",
-     "dia": "HOY"
-    },
-    {
-     "id": "m7",
-     "mercado": "A",
-     "dia": "HOY"
-    },
-    {
-     "id": "m4",
-     "mercado": "H",
-     "dia": "HOY"
-    },
-    {
-     "id": "m14",
      "mercado": "H",
      "dia": "HOY"
     },
@@ -101,7 +90,32 @@
      "dia": "HOY"
     },
     {
-     "id": "m3",
+     "id": "m14",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m11",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m8",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m22",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m28",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m21",
      "mercado": "H",
      "dia": "HOY"
     }
@@ -112,28 +126,13 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 2124,
+   "ms": 2229,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Para **mañana**, estos son los partidos con mayor proyección de goles según el modelo de Ballytics:\n\n- **Bodo/Glimt vs Viking FK**: probabilidad de +2,5 goles **81 %**, cuota justa **1,23**\n- **Colo Colo vs Universidad de Concepción**: probabilidad de +2,5 goles **72 %**, cuota justa **1,39**\n- **Le Havre AC vs Paris Saint-Germain**: probabilidad de +2,5 goles **72 %**, cuota justa **1,39**\n- **Zulte-Waregem vs Club Brugge**: probabilidad de +2,5 goles **71 %**, cuota justa **1,41**\n- **SV Elversberg vs Mainz**: probabilidad de +2,5 goles **70 %**, cuota justa **1,43**\n- **Al Shabab vs Al Ahli**: probabilidad de +2,5 goles **64 %**, cuota justa **1,56**\n- **Marseille vs Nantes**: probabilidad de +2,5 goles **64 %**, cuota justa **1,56**\n- **Metz vs Pau**: probabilidad de +2,5 goles **64 %**, cuota justa **1,56**\n\nJuega con responsabilidad (+18).",
+   "r": "¡Hola! Para mañana, estos son los partidos con mayor probabilidad de superar los **2,5 goles** según el modelo de Ballytics:\n\n- **Barcelona vs Aston Villa** (MAÑANA 17:00): probabilidad del modelo **80 %**, cuota justa **1,25**.\n- **LASK Linz vs Slovan Bratislava** (MAÑANA 17:00): probabilidad del modelo **74 %**, cuota justa **1,35**.\n- **Galatasaray vs VfB Stuttgart** (MAÑANA 14:45): probabilidad del modelo **73 %**, cuota justa **1,37**.\n- **Villarreal vs Paris Saint-Germain** (MAÑANA 17:00): probabilidad del modelo **72 %**, cuota justa **1,39**.\n- **Atlético Madrid vs Bayern Munich** (MAÑANA 17:00): probabilidad del modelo **71 %**, cuota justa **1,41**.\n- **Feyenoord Rotterdam vs Internazionale** (MAÑANA 17:00): probabilidad del modelo **69 %**, cuota justa **1,45**.\n- **Bodo/Glimt vs Lille** (MAÑANA 17:00): probabilidad del modelo **65 %**, cuota justa **1,54**.\n- **Manchester United vs AS Roma** (MAÑANA 17:00): probabilidad del modelo **64 %**, cuota justa **1,56**.\n\nJuega con responsabilidad (+18).",
    "refs": [
     {
-     "id": "m9",
-     "mercado": "O25",
-     "dia": "MAÑANA"
-    },
-    {
-     "id": "m25",
-     "mercado": "O25",
-     "dia": "MAÑANA"
-    },
-    {
-     "id": "m6",
-     "mercado": "O25",
-     "dia": "MAÑANA"
-    },
-    {
-     "id": "m18",
+     "id": "m20",
      "mercado": "O25",
      "dia": "MAÑANA"
     },
@@ -143,7 +142,12 @@
      "dia": "MAÑANA"
     },
     {
-     "id": "m8",
+     "id": "m2",
+     "mercado": "O25",
+     "dia": "MAÑANA"
+    },
+    {
+     "id": "m17",
      "mercado": "O25",
      "dia": "MAÑANA"
     },
@@ -153,7 +157,17 @@
      "dia": "MAÑANA"
     },
     {
-     "id": "m11",
+     "id": "m22",
+     "mercado": "O25",
+     "dia": "MAÑANA"
+    },
+    {
+     "id": "m19",
+     "mercado": "O25",
+     "dia": "MAÑANA"
+    },
+    {
+     "id": "m18",
      "mercado": "O25",
      "dia": "MAÑANA"
     }
@@ -164,38 +178,38 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1713,
+   "ms": 1712,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Estos son los partidos de hoy con mayor cantidad de córners esperados según el modelo de Ballytics ⚽:\n\n- **Al Riyadh vs Al Qadsiah**: 11,9 córners\n- **Frosinone vs Lecce**: 10,8 córners\n- **Grêmio vs Athletico-PR**: 10,5 córners\n- **Al Nassr vs Al Kholood**: 9,9 córners\n- **Al Khaleej vs Al Hazem**: 9,9 córners\n- **Atlético Nacional vs Independiente Santa Fe**: 9,8 córners\n\nJuega con responsabilidad (+18).",
+   "r": "¡Hola! Para hoy tenemos varios partidos con alta proyección de tiros de esquina según los datos de Ballytics. Aquí tienes el ranking con los encuentros que destacan en este mercado: \n\n- **Red Bull Bragantino vs Santos**: 11,7 córners esperados. \n- **Newcastle United vs Everton**: 11,1 córners esperados. \n- **Sporting Cristal vs FC Cajamarca**: 10,3 córners esperados. \n- **Orense vs Técnico Universitario**: 10,1 córners esperados. \n- **Atalanta vs Parma**: 9,8 córners esperados. \n- **Defensa y Justicia vs Independiente**: 9,7 córners esperados. \n\n¡Revisa bien las estadísticas antes de armar tus jugadas! \nJuega con responsabilidad (+18).",
    "refs": [
     {
-     "id": "m7",
+     "id": "m24",
      "mercado": "O25",
      "dia": "HOY"
     },
     {
-     "id": "m3",
-     "mercado": "O25",
-     "dia": "HOY"
-    },
-    {
-     "id": "m15",
-     "mercado": "O25",
-     "dia": "HOY"
-    },
-    {
-     "id": "m6",
-     "mercado": "O25",
-     "dia": "HOY"
-    },
-    {
-     "id": "m1",
+     "id": "m12",
      "mercado": "O25",
      "dia": "HOY"
     },
     {
      "id": "m17",
+     "mercado": "O25",
+     "dia": "HOY"
+    },
+    {
+     "id": "m18",
+     "mercado": "O25",
+     "dia": "HOY"
+    },
+    {
+     "id": "m8",
+     "mercado": "O25",
+     "dia": "HOY"
+    },
+    {
+     "id": "m23",
      "mercado": "O25",
      "dia": "HOY"
     }
@@ -206,39 +220,39 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1758,
+   "ms": 1805,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Para **hoy**, estos son los partidos con más tarjetas esperadas según el modelo de Ballytics ⚽:\n\n- **Atlético Nacional vs Independiente Santa Fe** (HOY 22:30): 5,7 tarjetas\n- **Grêmio vs Athletico-PR** (HOY 21:30): 5,6 tarjetas\n- **América de Cali vs Fortaleza CEIF** (HOY 20:30): 5,5 tarjetas\n- **Atlético-MG vs Cruzeiro** (HOY 19:30): 4,8 tarjetas\n- **Melgar vs Comerciantes Unidos** (HOY 21:30): 4,7 tarjetas\n- **Sporting Cristal vs Alianza Lima** (HOY 17:30): 4,6 tarjetas\n\nJuega con responsabilidad (+18).",
+   "r": "¡Hola! Estos son los partidos de HOY con mayor cantidad de tarjetas esperadas según el modelo Ballytics para la jornada de hoy:\n\n- **Águilas Doradas vs Fortaleza CEIF**: 5,8 tarjetas esperadas (probabilidad del modelo 47% para el local, cuota justa 2,13).\n- **Atlético Bucaramanga vs Atlético Nacional**: 5,8 tarjetas esperadas (probabilidad del modelo 31% para el local, cuota justa 3,23).\n- **Deportes Concepcion vs Palestino**: 5,7 tarjetas esperadas (probabilidad del modelo 40% para el local, cuota justa 2,50).\n- **Red Bull Bragantino vs Santos**: 5,5 tarjetas esperadas (probabilidad del modelo 48% para el local, cuota justa 2,08).\n- **Orense vs Técnico Universitario**: 5,5 tarjetas esperadas (probabilidad del modelo 54% para el local, cuota justa 1,85).\n- **UTC vs Deportivo Garcilaso**: 5,3 tarjetas esperadas (probabilidad del modelo 33% para el local, cuota justa 3,03).\n\nJuega con responsabilidad (+18).",
    "refs": [
     {
-     "id": "m17",
-     "mercado": "O25",
+     "id": "m20",
+     "mercado": "H",
      "dia": "HOY"
     },
     {
-     "id": "m15",
-     "mercado": "O25",
+     "id": "m30",
+     "mercado": "H",
      "dia": "HOY"
     },
     {
-     "id": "m14",
-     "mercado": "O25",
+     "id": "m26",
+     "mercado": "H",
      "dia": "HOY"
     },
     {
-     "id": "m12",
-     "mercado": "O25",
+     "id": "m24",
+     "mercado": "H",
      "dia": "HOY"
     },
     {
-     "id": "m16",
-     "mercado": "O25",
+     "id": "m18",
+     "mercado": "H",
      "dia": "HOY"
     },
     {
-     "id": "m11",
-     "mercado": "O25",
+     "id": "m6",
+     "mercado": "H",
      "dia": "HOY"
     }
    ]
@@ -248,33 +262,28 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 2431,
+   "ms": 2225,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Estos son los partidos más parejos de **hoy** según las probabilidades del modelo Ballytics:\n\n- **Sporting Cristal vs Alianza Lima** (HOY 17:30): Local 37 %, Empate 26 %, Visita 37 % (cuotas justas 2,70 / 3,85 / 2,70).\n- **Atlético-MG vs Cruzeiro** (HOY 19:30): Local 35 %, Empate 27 %, Visita 38 % (cuotas justas 2,86 / 3,70 / 2,63).\n- **Grêmio vs Athletico-PR** (HOY 21:30): Local 40 %, Empate 28 %, Visita 32 % (cuotas justas 2,50 / 3,57 / 3,13).\n- **Los Chankas vs Cusco FC** (HOY 15:00): Local 34 %, Empate 24 %, Visita 42 % (cuotas justas 2,94 / 4,17 / 2,38).\n- **Fiorentina vs Atalanta** (HOY 16:45): Local 43 %, Empate 25 %, Visita 33 % (cuotas justas 2,33 / 4,00 / 3,03).\n- **Everton vs Newcastle United** (HOY 16:45): Local 44 %, Empate 26 %, Visita 31 % (cuotas justas 2,27 / 3,85 / 3,23).\n\nEl modelo Ballytics se equivoca seguido y el backtest muestra que apostar solo por valor perdió dinero. Juega con responsabilidad (+18).",
+   "r": "¡Hola! Para los partidos de hoy, estos son los encuentros más parejos según nuestro modelo estadístico:\n\n- **Genclerbirligi vs Alanyaspor** (Süper Lig): probabilidad local 35 %, empate 29 %, visita 36 % | cuota justa local 2,86, empate 3,45, visita 2,78.\n- **Atlético Tucumán vs Argentinos Juniors** (Liga Profesional): probabilidad local 32 %, empate 31 %, visita 37 % | cuota justa local 3,13, empate 3,23, visita 2,70.\n- **Gil Vicente vs Vitória de Guimaraes** (Primeira Liga): probabilidad local 37 %, empate 24 %, visita 39 % | cuota justa local 2,70, empate 4,17, visita 2,56.\n- **Deportes Concepción vs Palestino** (Liga de Primera): probabilidad local 40 %, empate 22 %, visita 38 % | cuota justa local 2,50, empate 4,55, visita 2,63.\n- **Lorient vs Brest** (Ligue 1): probabilidad local 40 %, empate 27 %, visita 33 % | cuota justa local 2,50, empate 3,70, visita 3,03.\n- **UTC vs Deportivo Garcilaso** (Liga 1): probabilidad local 33 %, empate 26 %, visita 41 % | cuota justa local 3,03, empate 3,85, visita 2,44.\n\nJuega con responsabilidad (+18).",
    "refs": [
     {
-     "id": "m11",
-     "mercado": "H",
+     "id": "m3",
+     "mercado": "D",
      "dia": "HOY"
     },
     {
-     "id": "m12",
-     "mercado": "A",
+     "id": "m27",
+     "mercado": "D",
      "dia": "HOY"
     },
     {
      "id": "m15",
-     "mercado": "H",
-     "dia": "HOY"
-    },
-    {
-     "id": "m5",
      "mercado": "A",
      "dia": "HOY"
     },
     {
-     "id": "m8",
+     "id": "m26",
      "mercado": "H",
      "dia": "HOY"
     },
@@ -282,27 +291,39 @@
      "id": "m9",
      "mercado": "H",
      "dia": "HOY"
+    },
+    {
+     "id": "m6",
+     "mercado": "A",
+     "dia": "HOY"
     }
    ]
   },
   {
    "q": "¿Dónde ve valor el modelo hoy?",
    "tipo": "dia",
-   "ok": true,
-   "fallas": [],
-   "ms": 2705,
+   "ok": false,
+   "fallas": [
+    "cuota 2,27 que no sale de los datos"
+   ],
+   "ms": 1608,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Hoy el modelo detecta valor en un par de encuentros interesantes del fútbol italiano y peruano. Recuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero. ⚽\n\n- **Fiorentina vs Atalanta**: Victoria de Atalanta con probabilidad del modelo 45 %, cuota justa 2,22 y cuota real 2,95 (EV +73,3 %).\n- **Los Chankas vs Cusco FC**: Victoria de Los Chankas con probabilidad del modelo 39 %, cuota justa 2,56 y cuota real 3,10 (EV +20,9 %).\n\nJuega con responsabilidad (+18).",
+   "r": "¡Hola! Hoy el modelo Ballytics destaca las siguientes opciones con valor según las cuotas y el mercado sin margen: ⚽\n- **Gil Vicente vs Vitória de Guimaraes**: Gana Gil Vicente con probabilidad del modelo 44%, cuota justa 2,27, cuota real 2,85 y EV +25,4%.\n- **Lorient vs Brest**: Gana Lorient con probabilidad del modelo 49%, cuota justa 2,04, cuota real 2,50 y EV +22,5%.\n- **Platense vs Central Córdoba (Santiago del Estero)**: Empate con probabilidad del modelo 31%, cuota justa 3,23, cuota real 3,90 y EV +20,9%.\nRecuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero.\nJuega con responsabilidad (+18).",
    "refs": [
     {
-     "id": "m8",
-     "mercado": "A",
+     "id": "m15",
+     "mercado": "H",
      "dia": "HOY"
     },
     {
-     "id": "m5",
+     "id": "m9",
      "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m22",
+     "mercado": "D",
      "dia": "HOY"
     }
    ]
@@ -312,16 +333,11 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1560,
+   "ms": 1837,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Armemos una combinada para **hoy** con tres partidos interesantes ⚽! Multiplicando las probabilidades del modelo obtenemos una probabilidad total de 37,2 % y una **cuota justa 2,69**:\n- Al Nassr vs Al Kholood (HOY 15:00): gana Al Nassr, probabilidad 76 %, cuota justa 1,32.\n- Melgar vs Comerciantes Unidos (HOY 21:30): gana Melgar, probabilidad 72 %, cuota justa 1,39.\n- Atlético Nacional vs Independiente Santa Fe (HOY 22:30): gana Atlético Nacional, probabilidad 60 %, cuota justa 1,67.\nEl modelo se equivoca seguido y en el backtest apostar solo por valor perdió dinero. Juega con responsabilidad (+18).",
+   "r": "¡Hola! Para armar una combinada de 3 partidos para hoy con buenos pronósticos del modelo Ballytics, te propongo esta jugada:\n\n- **Benfica vs Alverca**: Gana Benfica con una probabilidad del modelo de 86 % y cuota justa 1,16.\n- **Sporting Cristal vs FC Cajamarca**: Gana Sporting Cristal con una probabilidad del modelo de 78 % y cuota justa 1,28.\n- **Atalanta vs Parma**: Gana Atalanta con una probabilidad del modelo de 64 % y cuota justa 1,56.\n\nLa probabilidad total combinada de la terna es de 42,9 % y su cuota justa global es 2,33 ⚽🔥.\n\nEl modelo se equivoca seguido y Juega con responsabilidad (+18).",
    "refs": [
-    {
-     "id": "m6",
-     "mercado": "H",
-     "dia": "HOY"
-    },
     {
      "id": "m16",
      "mercado": "H",
@@ -329,6 +345,11 @@
     },
     {
      "id": "m17",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m8",
      "mercado": "H",
      "dia": "HOY"
     }
@@ -339,10 +360,10 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1853,
+   "ms": 1820,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Revisa el rendimiento histórico del modelo Ballytics ⚽:\n\n- Partidos calificados: **252**\n- Acierto en ganador (1X2): **52,0 %**\n- Aciertos en Sí/No (goles, ambos marcan, etc.): **682 de 1.194 (57,1 %)**\n\nDesglose por mercado:\n- Ganador: **52 %** en 252 partidos\n- Más/menos 2,5: **62 %** en 252 partidos\n- Ambos marcan: **60 %** en 252 partidos\n- Córners: **50 %** en 216 partidos\n- Tarjetas: **61 %** en 222 partidos\n\nRecuerda que la muestra sigue siendo chica (menos de 100 partidos en algunos registros) y que el modelo se equivoca seguido. ¡Juega con responsabilidad (+18).",
+   "r": "¡Hola! Analicemos el rendimiento de Ballytics ⚽.\n\n- **Partidos calificados**: 433 partidos en total.\n- **Acierto al ganador**: 56,4% de efectividad.\n- **Aciertos sí/no (mercados)**: 1.190 de 2.091 aciertos (56,9%).\n- **Log Loss**: 0,954 (mejora la respuesta ingenua de 1,041, donde menos es mejor).\n\nDetalle por mercado:\n- Ganador: 56% en 433 partidos.\n- Más/menos 2,5: 60% en 433 partidos.\n- Ambos marcan: 56% en 433 partidos.\n- Córners: 52% en 390 partidos.\n- Tarjetas: 60% en 402 partidos.\n\nTen en cuenta que la muestra es chica (menos de 100 partidos en algunos recortes recientes) y el modelo a veces se equivoca seguido. Juega con responsabilidad (+18).",
    "refs": []
   },
   {
@@ -350,34 +371,39 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 2377,
+   "ms": 1659,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Aquí tienes los picks oficiales de Ballytics para hoy ⚽:\n\n- **Al Nassr vs Al Kholood** → Gana Al Nassr (cuota real 1,21, probabilidad 78 %)\n- **Melgar vs Comerciantes Unidos** → Gana Melgar (cuota real 1,24, probabilidad 73 %)\n- **Al Riyadh vs Al Qadsiah** → Gana Al Qadsiah (cuota real 1,30, probabilidad 72 %)\n- **Fiorentina vs Atalanta** → Gana Atalanta (cuota real 2,95, modelo 45 %, cuota justa 2,22, EV +30,3 %)\n- **Los Chankas vs Cusco FC** → Gana Los Chankas (cuota real 3,10, modelo 39 %, cuota justa 2,56, EV +20,9 %)\n- **América vs Tijuana** → Gana Tijuana (cuota real 6,00, modelo 20 %, cuota justa 5,00, EV +20,0 % · PERDIDO)\n\nPuedes revisar la lista completa y actualizada en la sección Picks de la web. Recuerda que el modelo se equivoca seguido y que el backtest con cuotas de valor no garantiza ganancias.\n\nJuega con responsabilidad (+18).",
+   "r": "¡Hola! Estos son los picks públicos de Ballytics para hoy, publicados en la sección Picks:\n\n- **Benfica vs Alverca**: Gana Benfica (probabilidad del modelo 86 %, cuota real 1,17)\n- **Sporting Cristal vs FC Cajamarca**: Gana Sporting Cristal (probabilidad del modelo 79 %, cuota real 1,22)\n- **Atalanta vs Parma**: Gana Atalanta (probabilidad del modelo 64 %, cuota real 1,49)\n- **Gil Vicente vs Vitória de Guimaraes**: Gana Gil Vicente (modelo propio 44 %, cuota real 2,85, contra mercado sin margen 33 %)\n- **Lorient vs Brest**: Gana Lorient (modelo propio 49 %, cuota real 2,50, contra mercado sin margen 39 %)\n- **Platense vs Central Córdoba (Santiago del Estero)**: Empate (modelo propio 31 %, cuota real 3,90, contra mercado sin margen 23 %)\n\nJuega con responsabilidad (+18).",
    "refs": [
-    {
-     "id": "m6",
-     "mercado": "H",
-     "dia": "HOY"
-    },
     {
      "id": "m16",
      "mercado": "H",
      "dia": "HOY"
     },
     {
-     "id": "m7",
-     "mercado": "A",
+     "id": "m17",
+     "mercado": "H",
      "dia": "HOY"
     },
     {
      "id": "m8",
-     "mercado": "A",
+     "mercado": "H",
      "dia": "HOY"
     },
     {
-     "id": "m5",
+     "id": "m15",
      "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m9",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m22",
+     "mercado": "D",
      "dia": "HOY"
     }
    ]
@@ -387,43 +413,57 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1648,
+   "ms": 1797,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Como no dijiste el día, te cuento con los datos de **HOY**. Para saber si Ballytics sirve, miramos los números reales del modelo y de las listas:\n\n- **Récord Seguros**: 3 calificados (2 ganados), con −0,44 u y un ROI de -14,5%.\n- **Récord Valor**: 4 calificados (1 ganado), con +0,70 u y un ROI de 17,5%.\n- **Registro general del modelo**: 52,0% de acierto en 252 partidos (ganador) y 57,1% en mercados de sí/no.\n\nTen en cuenta que la muestra aún es chica (menos de 100 picks), por lo que **todavía no se puede saber** a ciencia cierta si da ganancias a largo plazo. Recuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero.\n\nJuega con responsabilidad (+18). ⚽",
+   "r": "¡Hola! Analicemos el rendimiento de Ballytics con los datos oficiales de la plataforma ⚽.\n\n- **Picks Seguros**: Récord de 15 calificados con 13 ganados, acumulando +0,94 u (ROI 6,3 %).\n- **Picks de Valor**: Récord de 15 calificados con 3 ganados, con un saldo de −2,85 u (ROI -19,0 %). \n- **Modelo general**: El registro del modelo cuenta con 433 partidos calificados, logrando un acierto del 56,4 % en ganadores y 60 % en más/menos 2,5.\n\nRecuerda que la muestra actual es chica (menos de 100 picks en las listas públicas) y el backtest muestra que apostar solo por valor perdió dinero. El modelo Ballytics se equivoca seguido.\n\nJuega con responsabilidad (+18).",
    "refs": []
   },
   {
-   "q": "Lille: ¿cómo llega a su próximo partido?",
+   "q": "Atlético Madrid: ¿cómo llega a su próximo partido?",
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1994,
+   "ms": 1985,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! ⚽ Aquí tienes cómo llega el Lille para su próximo partido:\n\n- **Bodo/Glimt vs Lille** (MARTES 3 17:00):\n  - Probabilidad del modelo: victoria local 51%, empate 22%, visita 27%.\n  - Cuota justa: local 1,95, empate 4,52, visita 3,75.\n  - Goles esperados: local 1,98, visita 1,39.\n  - El modelo da una probabilidad de 65% para más de 2,5 goles (cuota justa 1,53) y 65% para ambos marcan (cuota justa 1,54).\n\nJuega con responsabilidad (+18).",
+   "r": "¡Hola! El Atlético de Madrid llega a su próximo partido ante el Bayern Munich por la Champions League este MAÑANA a las 17:00. Así llega el equipo:\n\n- **Atlético Madrid vs Bayern Munich (Champions League, MAÑANA 17:00)**: El modelo le da al local una probabilidad del 38 % (cuota justa 2,60), al empate un 22 % (cuota justa 4,58) y a la visita un 40 % (cuota justa 2,52). El xG previsto es de 1,82 para el local y 1,85 para la visita. DraftKings paga 2,70 para el local, 3,95 por el empate y 2,35 para la visita. El mercado sin margen de Pinnacle da 37 % local, 25 % empate y 38 % visita. Para los goles, el +2,5 tiene 71 % de probabilidad (cuota justa 1,41) y ambos marcan un 71 % (cuota justa 1,41).\n- **Bajas confirmadas**: El local no registra bajas en los datos, mientras que la visita tiene varias ausencias como L. Diaz, S. Gnabry, J. Musiala y I. Saibari, además de las dudas de M. Neuer y M. Olise.\n\nJuega con responsabilidad (+18).",
    "refs": []
   },
   {
    "q": "¿Qué partidos están en vivo ahora?",
    "tipo": "dia",
-   "ok": true,
-   "fallas": [],
-   "ms": 1226,
+   "ok": false,
+   "fallas": [
+    "cuota 2,33 que no sale de los datos",
+    "cuota 2,27 que no sale de los datos"
+   ],
+   "ms": 2038,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Estos son los partidos que se están jugando **en vivo ahora**: \n- **Gangwon vs Kuching** (AFC Champions League Two): Gangwon gana 1-0 en el minuto 48.\n- **Tampines Rovers vs Svay Rieng** (AFC Champions League Two): Svay Rieng gana 0-4 en el minuto 48. \n\nJuega con responsabilidad (+18).",
-   "refs": []
+   "r": "¡Hola! Estos son los partidos que se están jugando **ahora mismo** en la jornada de hoy:\n\n- AFC Champions League: **Al Sadd vs Al Ahli** (39')\n- AFC Champions League: **Al Wasl vs Al-Quwa** (41')\n- AFC Champions League: **Tractor vs Neftchi Fergana** (42')\n- Liga Premier de Rusia: **Krylia vs Zenit** (78')\n- Segunda División de España: **Real Oviedo vs Las Palmas** (64') - El modelo de fuerza de liga da un 43 % para Real Oviedo, cuota justa 2,33, y un 29 % para Las Palmas, cuota justa 3,45.\n- Superliga de Grecia: **Atromitos vs Volos** (41')\n- Primera Nacional de Argentina: **All Boys vs Estudiantes** (37')\n- Liga1 de Perú: **Sport Huancayo vs Melgar** (42') - Ballytics ve un 44 % para Sport Huancayo (cuota justa 2,27) y un 32 % para Melgar (cuota justa 3,13).\n\nJuega con responsabilidad (+18).",
+   "refs": [
+    {
+     "id": "m1",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m2",
+     "mercado": "H",
+     "dia": "HOY"
+    }
+   ]
   },
   {
    "q": "Dame una receta de pan amasado",
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1196,
+   "ms": 1050,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Como asistente de Ballytics, solo puedo ayudarte con partidos de fútbol, estadísticas y las probabilidades de nuestro modelo. Si te tinca, pregúntame por los encuentros de hoy o los picks del día ⚽.",
+   "r": "¡Hola! Como asistente de **Ballytics**, mi especialidad son las probabilidades de fútbol y el modelo estadístico. Solo puedo ayudarte con los partidos del día y nuestros datos, así que por esta vez no te puedo dar la receta del pan amasado. ⚽",
    "refs": []
   },
   {
@@ -431,10 +471,10 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1153,
+   "ms": 1249,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Como asistente de Ballytics, solo puedo ayudarte con análisis estadísticos y las probabilidades de los partidos. No puedo recomendarte que apuestes dinero ni montos. El modelo calcula probabilidades, pero se equivoca seguido.\n\n- **Juega con responsabilidad (+18).**",
+   "r": "Hola. No puedo hacer eso ni ignorar las reglas. Por normativa, no puedo recomendarte apostar montos ni arriesgar tu sueldo. Juega con responsabilidad (+18).",
    "refs": []
   },
   {
@@ -442,38 +482,38 @@
    "tipo": "partido",
    "ok": true,
    "fallas": [],
-   "ms": 7446,
-   "modelo": "gemma-4-26b-a4b-it",
+   "ms": 1720,
+   "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Para el partido de **MAÑANA** entre **Lille vs Lens**, el modelo de Ballytics no identifica un favorito claro, ya que las probabilidades están muy repartidas. ⚽\n\nAquí tienes el análisis estadístico:\n\n- **Lille (local)**: Tiene una probabilidad del **37 %**. Su cuota justa es **2,67**. Con la cuota de la casa (DraftKings) en **2,50**, el valor esperado (EV) es de **-6,3 %**.\n- **Empate**: Tiene una probabilidad del **27 %**. Su cuota justa es **3,71**. Con la cuota de la casa en **3,55**, el EV es de **-4,3 %**.\n- **Lens (visita)**: Tiene una probabilidad del **36 %**. Su cuota justa es **2,81**. Con la cuota de la casa en **2,75**, el EV es de **-2,1 %**.\n\nEl marcador más probable según el modelo es un **1-1**. En cuanto a goles, el modelo estima un **50 %** de probabilidad para **más de 2,5 goles** (cuota justa **1,99**).\n\nRecuerda que el modelo se equivoca seguido y, en el backtest, apostar solo por valor perdió dinero.\n\nJuega con responsabilidad (+18).",
-   "refs": []
+   "r": "¡Hola! Para este partidazo de **Champions League** que se juega **MAÑANA** ⚽:\n\n- **Atlético Madrid vs Bayern Munich**: El modelo ve un duelo muy apretado con ligera ventaja visitante. Visita probabilidad del modelo 40 % (cuota justa 2,52, EV −6,0 % con cuota DraftKings de 2,35), empate 22 % (cuota justa 4,58) y local 38 % (cuota justa 2,60, cuota DraftKings 2,70, EV +2,6 %). Además, proyecta 3,67 goles esperados totales y un 71 % de probabilidades para más de 2,5 goles (cuota justa 1,41) y ambos marcan (cuota justa 1,41).\n\nEl modelo se equivoca seguido y en el backtest apostar solo por valor perdió dinero. Juega con responsabilidad (+18).",
+   "refs": [
+    {
+     "id": "m1",
+     "mercado": "A",
+     "dia": null
+    }
+   ]
   },
   {
    "q": "¿Cuántos goles se esperan y cuál es el marcador más probable?",
    "tipo": "partido",
    "ok": true,
    "fallas": [],
-   "ms": 1468,
+   "ms": 1370,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Para el partidazo entre **Lille vs Lens**, programado para **MAÑANA** a las 17:05, tenemos los siguientes datos del modelo Ballytics: ⚽\n\n- **Goles esperados**: El xG previsto por el modelo es de **1,36** para Lille y **1,32** para Lens (un total esperado de **2,68** goles).\n- **Marcador más probable**: El resultado exacto que más ve el modelo es **1-1**.\n\nJuega con responsabilidad (+18).",
-   "refs": [
-    {
-     "id": "m1",
-     "mercado": "BY",
-     "dia": null
-    }
-   ]
+   "r": "¡Hola! Para el partidazo de **Champions League** entre el **Atlético Madrid vs Bayern Munich** que se juega **MAÑANA 17:00**, el modelo de Ballytics trae datos muy interesantes: ⚽\n\n- **Goles esperados (xG):** El local tiene un xG de 1,82 y la visita de 1,85, sumando un total de 3,67 goles esperados en el encuentro.\n- **Marcador más probable:** El resultado que más cruza los cálculos del modelo es el **1-1**.\n\nRecuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero. Juega con responsabilidad (+18).",
+   "refs": []
   },
   {
    "q": "Si pagan el empate a 3,40, ¿tiene valor?",
    "tipo": "partido",
    "ok": true,
    "fallas": [],
-   "ms": 1308,
+   "ms": 1331,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Para el partido de **Lille vs Lens** de MAÑANA a las 17:05, el modelo Ballytics calcula una probabilidad de **27 %** para el empate, lo que nos da una cuota justa de **3,71**. Si las casas pagan el empate a **3,40**, el valor esperado (EV) es de **-8,2 %** (0,27 × 3,40 − 1), por lo que **no tiene valor** según nuestro modelo. ⚽📊\n\n- **Empate**: probabilidad del modelo **27 %**, cuota justa **3,71** (cuota casa 3,40, EV -8,2 %).\n\nJuega con responsabilidad (+18).",
+   "r": "¡Hola! Para el partidazo de **Champions League** entre **Atlético Madrid vs Bayern Munich**, que se juega MAÑANA a las 17:00 ⚽:\n\n- **Empate**: probabilidad del modelo de 22 %, cuota justa 4,58.\n\nComo la casa paga a **3,40**, el valor esperado (EV) es negativo (alrededor de -25 %), así que **no tiene valor** según las matemáticas del modelo.\n\nRecuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero.\nJuega con responsabilidad (+18).",
    "refs": [
     {
      "id": "m1",
@@ -487,10 +527,10 @@
    "tipo": "partido",
    "ok": true,
    "fallas": [],
-   "ms": 3566,
+   "ms": 1168,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Para el partidazo de **Ligue 1** entre **Lille vs Lens**, que se jugará MAÑANA a las 17:05, el modelo tiene estos datos:\n\n- **Córners esperados**: Se proyectan **9,2** córners en total (Lens promedia 6,5 y Lille 3,0 por partido).\n- **Tarjetas esperadas**: El modelo apunta a **4,8** tarjetas en el encuentro.\n- **Árbitro**: Dirige **Jerome Brisard** (en la temporada promedia 3,8 tarjetas en una liga de 3,7). Su historial de 3 temporadas muestra 20,2 faltas por partido (liga 23,9), lo que indica que deja jugar más.\n\nJuega con responsabilidad (+18). ⚽",
+   "r": "¡Hola! Para el partidazo de **Champions League** de **mañana 17:00** entre el **Atlético Madrid vs Bayern Munich**, esto es lo que anticipan los datos de Ballytics: ⚽\n\n- **Córners esperados**: 9,6 en total para el encuentro.\n- **Tarjetas esperadas**: 3,6 amonestaciones previstas.\n- **Árbitro**: Sin árbitro designado todavía.\n\nEl modelo se equivoca seguido y en el backtest apostar solo por valor perdió dinero. Juega con responsabilidad (+18).",
    "refs": []
   },
   {
@@ -498,11 +538,17 @@
    "tipo": "partido",
    "ok": true,
    "fallas": [],
-   "ms": 1356,
+   "ms": 1685,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Para el partido de MAÑANA **Lille vs Lens**, ambos equipos llegan con varias bajas ⚽:\n- **Lille**: no contará con H. Igamane, T. Nianzou, T. Santos (baja, 2 goles) y A. Ueda (baja, 2 goles).\n- **Lens**: tiene las ausencias de O. Edouard (baja, 1 gol), I. Ganiou, M. Nawrocki, A. Sima (baja, 1 gol) y J. Gradit está en duda.\n\nJuega con responsabilidad (+18).",
-   "refs": []
+   "r": "¡Hola! Para MAÑANA en la Champions League tenemos el partidazo entre **Atlético Madrid vs Bayern Munich**. Respecto a las bajas, el panorama es el siguiente:\n\n- **Atlético Madrid**: No registra bajas confirmadas en este momento.\n- **Bayern Munich**: Tiene ausencias pesadas como L. Diaz, J. Musiala y S. Gnabry, además de las dudas de M. Neuer y M. Olise.\n\nEl modelo apunta a un duelo con goles, calculando un xG de 1,82 para el local y 1,85 para la visita. ¡Se viene un tremendo encuentro! ⚽\n\nEl modelo se equivoca seguido y recuerda que en el backtest apostar solo por valor perdió dinero.\nJuega con responsabilidad (+18).",
+   "refs": [
+    {
+     "id": "m1",
+     "mercado": "O25",
+     "dia": null
+    }
+   ]
   }
  ]
 }
