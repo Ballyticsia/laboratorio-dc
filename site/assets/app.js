@@ -3681,16 +3681,26 @@ function lCopa(L) {
 /* ---------- prode ---------- */
 const myProdes = () => lsGet("bt_prodes", []);
 function saveProde(code, nombre) { const l = myProdes().filter(x => x.code !== code); l.unshift({ code, nombre }); lsSet("bt_prodes", l.slice(0, 20)); }
+/* iniciales y color fijo por apodo, para los avatares del prode */
+const prIni = n => { const w = String(n || "?").trim().split(/\s+/).filter(Boolean); return ((w[0] || "?")[0] + (w.length > 1 ? w[w.length - 1][0] : (w[0] || "").slice(1, 2))).toUpperCase(); };
+const prNom = r => r && r.bot ? "Ballytics" : (r && r.alias) || "";
+const prAvatar = (r, cls = "") => r && r.bot ? `<span class="pav bot ${cls}" aria-hidden="true">✦</span>` : `<span class="pav ${cls}" style="--c:${hashColor(String((r && r.alias) || "?"))}" aria-hidden="true">${esc(prIni(r && r.alias))}</span>`;
+const PR_TROFEO = `<svg viewBox="0 0 120 120" aria-hidden="true"><defs><linearGradient id="prg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd36b"/><stop offset="1" stop-color="#f29a1f"/></linearGradient></defs><path d="M38 18h44v22c0 14-9 26-22 26S38 54 38 40z" fill="url(#prg)"/><path d="M38 26H24c0 14 6 22 16 24M82 26h14c0 14-6 22-16 24" fill="none" stroke="#ffc24a" stroke-width="6" stroke-linecap="round"/><rect x="54" y="64" width="12" height="18" rx="3" fill="#f2a52b"/><rect x="40" y="82" width="40" height="12" rx="4" fill="#ffc24a"/><rect x="34" y="94" width="52" height="10" rx="4" fill="#d9871a"/><path d="M60 28l3.6 7.3 8 1.2-5.8 5.7 1.4 8L60 46.4l-7.2 3.8 1.4-8-5.8-5.7 8-1.2z" fill="#fff8e6"/></svg>`;
 function vProde() {
   const code = (R.id || "").toUpperCase();
   setTimeout(() => code ? vFillProde(code) : null, 0);
-  if (code) return `<section class="view"><button class="back" data-go="prode">← Mis prodes</button><div id="pr-box">${skelRows(3)}</div></section>`;
+  if (code) return `<section class="view prode"><button class="back" data-go="prode">← Mis prodes</button><div id="pr-box">${skelRows(3)}</div></section>`;
   const L = myProdes(), alias = lsGet("bt_alias", "");
-  return `<section class="view" aria-labelledby="h-prode"><h1 id="h-prode">Prode</h1>${vHub("prode")}
-    <div class="panel prode-hero"><div><h2>Juega a pronosticar con tus amigos</h2><p class="muted">Crea un prode, comparte el código y pronostiquen los marcadores. <b>3 puntos</b> por marcador exacto y <b>1</b> por acertar el ganador o el empate. Los pronósticos de los demás se ven cuando empieza cada partido.</p><p class="muted"><b>Desafía a Ballytics:</b> el modelo también juega en tu prode con el marcador que ve más probable. ¿Le ganan tus amigos?</p></div></div>
-    ${L.length ? `<div class="panel stack"><h3>Mis prodes</h3><div class="slist">${L.map(p => `<button class="srow" data-go="prode" data-id="${esc(p.code)}"><span class="pcode num">${esc(p.code)}</span><span><b>${esc(p.nombre)}</b><small>Toca para pronosticar y ver el ranking</small></span><span class="sn">→</span></button>`).join("")}</div></div>` : ""}
-    <div class="grid2"><form class="panel stack" id="pr-new" novalidate><h3>Crear un prode</h3><label class="f"><span class="lbl">Nombre del prode</span><input name="nombre" maxlength="40" placeholder="Los del curso" required></label><label class="f"><span class="lbl">Tu apodo</span><input name="alias" maxlength="24" value="${esc(alias)}" placeholder="Benja" required></label><button class="btn">Crear</button></form>
-      <form class="panel stack" id="pr-join" novalidate><h3>Unirme con un código</h3><label class="f"><span class="lbl">Código</span><input name="code" maxlength="6" placeholder="ABC234" style="text-transform:uppercase" required></label><label class="f"><span class="lbl">Tu apodo</span><input name="alias" maxlength="24" value="${esc(alias)}" required></label><button class="btn">Unirme</button></form></div></section>`;
+  const pasos = [["1", "Crea tu prode", "Ponle nombre y elige tu apodo."], ["2", "Invita a tus amigos", "Comparte el código o el enlace por WhatsApp."], ["3", "Pronostica y compite", "Marcadores de los partidos de la semana; el ranking se actualiza solo."]];
+  return `<section class="view prode" aria-labelledby="h-prode"><h1 id="h-prode">Prode</h1>${vHub("prode")}
+    <div class="pr-hero"><div class="pr-hero-txt"><span class="pr-kick">Prode Ballytics</span><h2>Pronostica con tus amigos y desafía al modelo</h2>
+      <p>Marcador exacto: <b>3 puntos</b>. Ganador o empate: <b>1 punto</b>. Los pronósticos de los demás se ven cuando empieza cada partido.</p>
+      <div class="pr-pts"><span><b class="num">3</b>exacto</span><span><b class="num">1</b>resultado</span><span class="ia"><b>✦</b>Ballytics juega contigo</span></div></div>
+      <div class="pr-trofeo">${PR_TROFEO}</div></div>
+    ${L.length ? `<h2 class="pr-h">Mis prodes</h2><div class="pr-mine">${L.map(p => `<button class="pr-card" data-go="prode" data-id="${esc(p.code)}"><span class="pr-card-ic">${PR_TROFEO}</span><span class="pr-card-t"><b>${esc(p.nombre)}</b><small>Código <span class="num">${esc(p.code)}</span></small></span><span class="pr-card-go" aria-hidden="true">→</span></button>`).join("")}</div>` : ""}
+    <div class="pr-steps">${pasos.map(([n, t, d]) => `<div class="pr-step"><span class="num">${n}</span><b>${t}</b><small>${d}</small></div>`).join("")}</div>
+    <div class="grid2"><form class="panel stack pr-form" id="pr-new" novalidate><h3>Crear un prode</h3><label class="f"><span class="lbl">Nombre del prode</span><input name="nombre" maxlength="40" placeholder="Los del curso" required></label><label class="f"><span class="lbl">Tu apodo</span><input name="alias" maxlength="24" value="${esc(alias)}" placeholder="Benja" required></label><button class="btn">Crear prode</button></form>
+      <form class="panel stack pr-form" id="pr-join" novalidate><h3>Unirme con un código</h3><label class="f"><span class="lbl">Código</span><input name="code" maxlength="6" placeholder="ABC234" style="text-transform:uppercase" required></label><label class="f"><span class="lbl">Tu apodo</span><input name="alias" maxlength="24" value="${esc(alias)}" required></label><button class="btn">Unirme</button></form></div></section>`;
 }
 document.addEventListener("submit", async e => {
   const f = e.target; if (!["pr-new", "pr-join", "pr-join2"].includes(f.id)) return;
@@ -3722,6 +3732,7 @@ async function prodeFixtures() {
   return out.filter(e => e.state === "pre" && new Date(e.date).getTime() > Date.now() && (fav.includes(e.slug) || (VV.byId[e.lid] && VV.byId[e.lid].o < 25)))
     .sort((a, b) => a.date.localeCompare(b.date)).slice(0, 80);
 }
+function prFalta(ms) { if (ms <= 0) return "ya empezó"; const m = Math.round(ms / 60000), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60); return d ? `${d}d ${h}h` : h ? `${h}h ${String(m % 60).padStart(2, "0")}m` : `${m} min`; }
 async function vFillProde(code) {
   const box = document.getElementById("pr-box"), url = await pushCfg(); if (!box) return;
   if (!url) { box.innerHTML = `<div class="panel empty">El servidor del prode no está disponible.</div>`; return; }
@@ -3731,48 +3742,76 @@ async function vFillProde(code) {
   if (!g.ok) { box.innerHTML = `<div class="panel empty">${esc(g.error || "No existe ese prode.")}</div>`; return; }
   saveProde(code, g.nombre);
   const link = `${BASE_URL}#/prode/${code}`;
-  if (!g.miembro) { box.innerHTML = `<div class="panel prode-hero"><div><span class="lbl">Te invitaron a</span><h2>${esc(g.nombre)}</h2><p class="muted">${g.tabla.length} participantes.</p></div></div>
-    <form class="panel stack" id="pr-join2" data-code="${esc(code)}" data-nombre="${esc(g.nombre)}"><h3>Unirme</h3><label class="f"><span class="lbl">Tu apodo</span><input name="alias" maxlength="24" value="${esc(lsGet("bt_alias", ""))}" required></label><button class="btn">Unirme al prode</button></form>`; return; }
+  if (!g.miembro) { box.innerHTML = `<div class="pr-hero"><div class="pr-hero-txt"><span class="pr-kick">Te invitaron a</span><h2>${esc(g.nombre)}</h2><div class="pr-avs">${g.tabla.slice(0, 6).map(r => prAvatar(r)).join("")}<small>${g.tabla.length} participantes</small></div></div><div class="pr-trofeo">${PR_TROFEO}</div></div>
+    <form class="panel stack pr-form" id="pr-join2" data-code="${esc(code)}" data-nombre="${esc(g.nombre)}"><h3>Unirme</h3><label class="f"><span class="lbl">Tu apodo</span><input name="alias" maxlength="24" value="${esc(lsGet("bt_alias", ""))}" required></label><button class="btn">Unirme al prode</button></form>`; return; }
   const tab = ["pronosticar", "ranking", "resultados"].includes(R.tab) ? R.tab : "pronosticar";
-  const head = `<div class="panel prode-hero"><div><span class="lbl">Prode</span><h2>${esc(g.nombre)}</h2><p class="muted">Código <b class="num pcode">${esc(code)}</b> · ${g.tabla.length} participantes</p></div><button class="btn ghost sm" data-copy="${esc(link)}">Copiar invitación</button></div>
-    <div class="mtabs vtabs" role="tablist">${[["pronosticar", "Pronosticar"], ["ranking", "Ranking"], ["resultados", "Resultados"]].map(([k, n]) => `<button role="tab" data-go="prode" data-id="${esc(code)}" data-tab="${k}" data-keep aria-selected="${k === tab}">${n}</button>`).join("")}</div>`;
+  const yoI = g.tabla.findIndex(r => r.yo), me = g.tabla[yoI] || { pts: 0, exactos: 0, aciertos: 0 }, bot = g.tabla.find(r => r.bot);
+  const prox = g.eventos.filter(e => new Date(e.k).getTime() > Date.now()).sort((a, b) => String(a.k).localeCompare(String(b.k)))[0];
+  const head = `<div class="pr-hero pr-club"><div class="pr-hero-txt"><span class="pr-kick">Prode · ${g.tabla.filter(r => !r.bot).length} participantes</span><h2>${esc(g.nombre)}</h2>
+      <div class="pr-avs">${g.tabla.slice(0, 7).map(r => prAvatar(r)).join("")}<button class="pr-inv" data-copy="${esc(link)}">+ Invitar</button><span class="pr-code" title="Código del prode">${esc(code)}</span></div></div>
+      <div class="pr-stats"><div><small>Tus puntos</small><b class="num">${me.pts}</b></div><div><small>Posición</small><b class="num">${yoI >= 0 ? yoI + 1 : "—"}<i>/${g.tabla.length}</i></b></div><div><small>Cierra en</small><b class="num" id="pr-next">${prox ? prFalta(new Date(prox.k) - Date.now()) : "—"}</b></div></div></div>
+    <div class="pr-seg" role="tablist">${[["pronosticar", "Pronosticar"], ["ranking", "Ranking"], ["resultados", "Resultados"]].map(([k, n]) => `<button role="tab" data-go="prode" data-id="${esc(code)}" data-tab="${k}" data-keep aria-selected="${k === tab}">${n}</button>`).join("")}</div>`;
   if (tab === "ranking") {
-    const bot = g.tabla.find(r => r.bot), me = g.tabla.find(r => r.yo);
-    const duelo = bot && me && bot.jugados ? `<div class="panel note-panel">${me.pts > bot.pts ? `<b>Le vas ganando a Ballytics</b> por ${me.pts - bot.pts} ${me.pts - bot.pts === 1 ? "punto" : "puntos"}.` : me.pts === bot.pts ? `<b>Vas empatado con Ballytics</b> (${me.pts} pts).` : `<b>Ballytics te gana</b> por ${bot.pts - me.pts} ${bot.pts - me.pts === 1 ? "punto" : "puntos"}.`} El modelo juega con el marcador más probable de cada partido que tenga probabilidades.</div>` : "";
-    box.innerHTML = head + duelo + `<div class="panel flush scroll"><table class="t"><thead><tr><th>#</th><th>Jugador</th><th class="n">Pts</th><th class="n">Exactos</th><th class="n">Aciertos</th><th class="n hide-m">Jugados</th></tr></thead><tbody>${g.tabla.map((r, i) => `<tr class="${r.yo ? "hl" : ""}${r.bot ? " botrow" : ""}"><td><span class="pos ${i === 0 && r.pts ? "gold" : ""}">${i + 1}</span></td><td><b>${esc(r.alias)}</b>${r.yo ? ' <span class="tag">tú</span>' : ""}${r.bot ? ' <span class="tag bot" title="Pronostica el marcador más probable del modelo">IA</span>' : ""}</td><td class="n"><b>${r.pts}</b></td><td class="n">${r.exactos}</td><td class="n">${r.aciertos}</td><td class="n hide-m">${r.jugados}</td></tr>`).join("")}</tbody></table></div>`;
+    const duelo = bot && yoI >= 0 ? (() => { const t = Math.max(1, me.pts + bot.pts), w = 100 * me.pts / t;
+      return `<div class="pr-duel"><div class="pr-duel-s">${prAvatar(me)}<span><small>Tú</small><b class="num">${me.pts}</b></span></div><div class="pr-duel-m"><span class="pr-duel-t">${me.pts > bot.pts ? "Le vas ganando a Ballytics" : me.pts === bot.pts ? "Empatado con Ballytics" : "Ballytics va adelante"}</span><div class="pr-duel-bar"><i style="width:${me.pts + bot.pts ? w : 50}%"></i></div></div><div class="pr-duel-s r"><span><small>Ballytics</small><b class="num">${bot.pts}</b></span>${prAvatar(bot)}</div></div>`; })() : "";
+    const T = g.tabla, pod = [T[1], T[0], T[2]].map((r, k) => r ? `<div class="pr-pod pod${[2, 1, 3][k]}${r.yo ? " yo" : ""}">${prAvatar(r, "lg")}<b>${esc(prNom(r))}</b><span class="num pr-podpts">${r.pts} pts</span><div class="pr-pod-b"><span class="num">${[2, 1, 3][k]}</span></div></div>` : `<div class="pr-pod vacio"></div>`).join("");
+    const resto = T.slice(3).map((r, i) => `<div class="pr-row${r.yo ? " yo" : ""}${r.bot ? " bot" : ""}"><span class="pr-pos num">${i + 4}</span>${prAvatar(r)}<span class="pr-nm"><b>${esc(prNom(r))}${r.yo ? ' <span class="tag">tú</span>' : ""}</b><small>${r.exactos} exactos · ${r.aciertos} aciertos · ${r.jugados} jugados</small></span><span class="pr-score num">${r.pts}</span></div>`).join("");
+    box.innerHTML = head + duelo + `<div class="pr-podio">${pod}</div>` + (resto ? `<div class="panel flush pr-list">${resto}</div>` : "")
+      + `<p class="note">3 puntos por marcador exacto y 1 por acertar ganador o empate. Ballytics juega con el marcador más probable del modelo en cada partido que tenga probabilidades.</p>`;
     return;
   }
   if (tab === "resultados") {
     const done = g.eventos.filter(e => e.otros).reverse();
-    const pts = (p, r) => { if (!p || !r) return ""; const [a, b] = p.split("-").map(Number), [c, d] = r.split("-").map(Number); return a === c && b === d ? "3" : Math.sign(a - b) === Math.sign(c - d) ? "1" : "0"; };
-    box.innerHTML = head + (done.length ? done.map(e => `<div class="panel stack pres"><div class="row" style="justify-content:space-between"><b>${esc(e.h)} ${e.res ? `<span class="num">${esc(e.res)}</span>` : "vs"} ${esc(e.a)}</b><span class="note">${esc(e.comp || "")} · ${esc(cuando(e.k))}</span></div>
-      <div class="ppicks">${e.otros.map(o => `<span class="pp p${pts(o.pick, e.res)}${o.bot ? " bot" : ""}"><b>${esc(o.alias)}</b> ${esc(o.pick)}${e.res ? ` · ${pts(o.pick, e.res)} ${pts(o.pick, e.res) === "1" ? "pt" : "pts"}` : ""}</span>`).join("")}</div></div>`).join("") : `<div class="panel empty">Aún no empieza ningún partido pronosticado.</div>`);
+    const pts = (p, r) => { if (!p || !r) return null; const [a, b] = p.split("-").map(Number), [c, d] = r.split("-").map(Number); return a === c && b === d ? 3 : Math.sign(a - b) === Math.sign(c - d) ? 1 : 0; };
+    box.innerHTML = head + (done.length ? `<div class="pr-res">${done.map(e => `<div class="pr-rcard"><div class="pr-rtop"><small>${esc(e.comp || "")}</small><small>${esc(cuando(e.k))}</small></div>
+      <div class="pr-rsc"><b>${esc(e.h)}</b><span class="num">${e.res ? esc(e.res).replace("-", " – ") : "vs"}</span><b>${esc(e.a)}</b></div>
+      <div class="pr-chips">${e.otros.map(o => { const q = pts(o.pick, e.res); return `<span class="pr-chip${q != null ? " pc" + q : ""}${o.bot ? " bot" : ""}">${prAvatar(o, "xs")}<b>${esc(prNom(o))}</b><span class="num">${esc(o.pick)}</span>${q != null ? `<i class="num">+${q}</i>` : ""}</span>`; }).join("")}</div></div>`).join("")}</div>`
+      : `<div class="panel empty">Todavía no empieza ningún partido que hayan pronosticado.</div>`);
     return;
   }
-  box.innerHTML = head + `<div id="pr-fx"><div class="panel empty">Buscando partidos de los próximos 7 días…</div></div>`;
+  box.innerHTML = head + `<div id="pr-fx">${skelRows(5)}</div>`;
   const fx = await prodeFixtures(); if (R.v !== "prode") return;
   const mine = Object.fromEntries(g.eventos.filter(e => e.mio).map(e => [e.id, e.mio]));
   const byDay = {}; fx.forEach(e => (byDay[localDay(e.date)] ||= []).push(e));
+  const nx = document.getElementById("pr-next"); if (nx && fx[0]) nx.textContent = prFalta(new Date(fx[0].date) - Date.now());
   const el = document.getElementById("pr-fx"); if (!el) return;
-  el.innerHTML = fx.length ? Object.keys(byDay).map(k => `<div class="panel flush vcomp"><div class="vch"><b>${esc(fromYmd(k).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))}</b></div>${byDay[k].map(e => { const [a, b] = (mine[e.id] || "-").split("-");
-      return `<div class="prow" data-pid="${esc(e.id)}" data-k="${esc(e.date)}" data-slug="${esc(e.slug || "all")}" data-h="${esc(e.h.name)}" data-a="${esc(e.a.name)}" data-comp="${esc(e.comp)}"><span class="ptime num">${hhmm(e.date)}</span>
-        <span class="pteam r">${esc(e.h.name)}${e.h.logo ? `<img${isrc(e.h.logo, 22)} alt="" loading="lazy" referrerpolicy="no-referrer" data-n="${esc(e.h.name)}" onerror="bfb(this)">` : ""}</span>
-        <input class="pin" inputmode="numeric" maxlength="2" value="${esc(a || "")}" aria-label="Goles de ${esc(e.h.name)}"><span class="faint">–</span><input class="pin" inputmode="numeric" maxlength="2" value="${esc(b || "")}" aria-label="Goles de ${esc(e.a.name)}">
-        <span class="pteam">${e.a.logo ? `<img${isrc(e.a.logo, 22)} alt="" loading="lazy" referrerpolicy="no-referrer" data-n="${esc(e.a.name)}" onerror="bfb(this)">` : ""}${esc(e.a.name)}</span><span class="pok">${mine[e.id] ? "✓" : ""}</span><small class="pcomp">${esc(e.comp)}</small></div>`; }).join("")}</div>`).join("")
-    : `<div class="panel empty">No hay partidos de las competiciones principales en los próximos 7 días. Marca competiciones con ⭐ para incluirlas.</div>`;
+  const logo = t => t.logo ? `<img${isrc(t.logo, 32)} alt="" loading="lazy" referrerpolicy="no-referrer" data-n="${esc(t.name)}" onerror="bfb(this)">` : `<span class="pr-nologo">${esc(prIni(t.name))}</span>`;
+  const step = (v, team) => `<span class="pr-step-c"><button type="button" class="pr-mn" aria-label="Un gol menos para ${esc(team)}">−</button><input class="pin" inputmode="numeric" maxlength="2" value="${esc(v)}" placeholder="–" aria-label="Goles de ${esc(team)}"><button type="button" class="pr-pl" aria-label="Un gol más para ${esc(team)}">+</button></span>`;
+  el.innerHTML = fx.length ? Object.keys(byDay).map(k => { const n = byDay[k].length, hechos = byDay[k].filter(e => mine[e.id]).length;
+    return `<div class="pr-day"><div class="pr-dayh"><b>${esc(fromYmd(k).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))}</b><span class="pr-prog"><i style="width:${100 * hechos / n}%"></i></span><small class="num">${hechos}/${n}</small></div>
+    <div class="pr-grid">${byDay[k].map(e => { const [a, b] = (mine[e.id] || "-").split("-"), m = vModel(e.id), top = m && m.p && m.p.top;
+      return `<div class="prow pr-match${mine[e.id] ? " ok" : ""}" data-pid="${esc(e.id)}" data-k="${esc(e.date)}" data-slug="${esc(e.slug || "all")}" data-h="${esc(e.h.name)}" data-a="${esc(e.a.name)}" data-comp="${esc(e.comp)}">
+        <div class="pr-mtop"><small>${esc(e.comp)}</small><small class="num">${hhmm(e.date)}</small></div>
+        <div class="pr-team">${logo(e.h)}<b>${esc(e.h.name)}</b>${step(a || "", e.h.name)}</div>
+        <div class="pr-team">${logo(e.a)}<b>${esc(e.a.name)}</b>${step(b || "", e.a.name)}</div>
+        <div class="pr-mbot"><span class="pok">${mine[e.id] ? "Guardado" : "Sin pronóstico"}</span>${top ? `<button type="button" class="pr-sug" data-sug="${esc(top)}" title="El marcador más probable según el modelo">✦ Ballytics ve ${esc(top)}</button>` : ""}</div></div>`; }).join("")}</div></div>`; }).join("")
+    : `<div class="panel empty">No hay partidos de las competiciones principales en los próximos 7 días. Marca competiciones con ⭐ en En vivo para incluirlas.</div>`;
 }
+/* botones − y + del marcador, y "usar el marcador de Ballytics" */
+document.addEventListener("click", e => {
+  const pm = e.target.closest(".pr-mn,.pr-pl"), sg = e.target.closest("[data-sug]");
+  if (!pm && !sg) return;
+  const row = e.target.closest(".prow"); if (!row) return;
+  const ins = row.querySelectorAll(".pin");
+  if (sg) { const [a, b] = sg.dataset.sug.split("-"); ins[0].value = a; ins[1].value = b; ins[1].dispatchEvent(new Event("input", { bubbles: true })); return; }
+  const inp = pm.parentNode.querySelector(".pin"), v = inp.value === "" ? (pm.classList.contains("pr-pl") ? -1 : 0) : +inp.value;
+  inp.value = Math.max(0, Math.min(20, v + (pm.classList.contains("pr-pl") ? 1 : -1)));
+  inp.dispatchEvent(new Event("input", { bubbles: true }));
+});
 document.addEventListener("input", e => {
   if (!e.target.classList || !e.target.classList.contains("pin")) return;
   e.target.value = e.target.value.replace(/\D/g, "").slice(0, 2);
   const row = e.target.closest(".prow"), ins = row.querySelectorAll(".pin");
-  if (ins[0].value === "" || ins[1].value === "") return;
+  const ok = row.querySelector(".pok");
+  if (ins[0].value === "" || ins[1].value === "") { if (ok) ok.textContent = "Falta el otro marcador"; return; }
   clearTimeout(row._t);
+  if (ok) ok.textContent = "Guardando…";
   row._t = setTimeout(async () => {
-    const url = await pushCfg(); const ok = row.querySelector(".pok"); ok.textContent = "…";
+    const url = await pushCfg(); ok.textContent = "Guardando…";
     try {
       const r = await (await fetch(url + "/prode/pick", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code: (R.id || "").toUpperCase(), uid: myUid(), id: row.dataset.pid, pick: `${+ins[0].value}-${+ins[1].value}`, k: row.dataset.k, slug: row.dataset.slug, h: row.dataset.h, a: row.dataset.a, comp: row.dataset.comp }) })).json();
-      ok.textContent = r.ok ? "✓" : "✕"; if (!r.ok) toast(r.error || "No se pudo guardar.");
-    } catch (x) { ok.textContent = "✕"; toast("No se pudo guardar. Revisa tu conexión."); }
+      ok.textContent = r.ok ? "Guardado" : "No se guardó"; row.classList.toggle("ok", !!r.ok); if (!r.ok) toast(r.error || "No se pudo guardar.");
+    } catch (x) { ok.textContent = "No se guardó"; row.classList.remove("ok"); toast("No se pudo guardar. Revisa tu conexión."); }
   }, 500);
 });
 document.addEventListener("click", async e => {
