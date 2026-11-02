@@ -1,6 +1,6 @@
 {
  "activa": true,
- "creditos_usados": 2,
+ "creditos_usados": 0,
  "restantes": 458,
  "consultas": {
   "soccer_epl": "copia",
@@ -8,7 +8,7 @@
   "soccer_italy_serie_a": "copia",
   "soccer_germany_bundesliga": "sin partidos cerca",
   "soccer_france_ligue_one": "copia",
-  "soccer_efl_champ": "actualizada",
+  "soccer_efl_champ": "copia",
   "soccer_portugal_primeira_liga": "copia",
   "soccer_netherlands_eredivisie": "sin partidos cerca",
   "soccer_chile_campeonato": "copia",
@@ -28,5 +28,5 @@
  "errores": [],
  "ligas": {},
  "partidos_con_cuota": 45,
- "actualizado": "2026-11-02T09:21+00:00"
+ "actualizado": "2026-11-02T11:13+00:00"
 }
