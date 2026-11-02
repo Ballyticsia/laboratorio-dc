@@ -442,6 +442,7 @@ function render() {
   if (["registro", "metodo", "partido", "picks"].includes(R.v)) loadExtras();
   if (["partido", "jugador", "equipo", "envivo", "arbitro", "liga"].includes(R.v)) loadFotos();
   centrarActivos();
+  arbLlenar();
 }
 /* en las barras que se deslizan de lado, deja a la vista la opción elegida (p. ej. "Árbitros" en el teléfono) */
 function centrarActivos() {
@@ -2063,7 +2064,7 @@ function arbEquipo(L, e, team, datos) {
     ${arbUlt(L, e.ultimos, team)}</div>`;
 }
 function arbPanel(L, p) {
-  const a = p.arbitro; if (!a || !a.n) return "";
+  const a = p.arbitro; if (!a || !a.n) return arbSlot(L.id, p.home, p.away, "");
   const lg = L.arbitros_liga || {}, H3 = a.h3;
   const link = a.slug ? `<button class="link arb-n" data-go="arbitro" data-liga="${L.id}" data-id="${esc(a.slug)}">${esc(a.n)} →</button>` : `<b class="arb-n">${esc(a.n)}</b>`;
   const head = `<div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px"><h3>Árbitro ${help(ARB_TIP)}</h3>${link}</div>`;
@@ -2131,6 +2132,76 @@ function vArbitro() {
       ${r.partidos.length > lim ? `<button class="vmore" id="arb-more">Ver más partidos (${r.partidos.length - lim} restantes)</button>` : ""}</div>
     <p class="note">Árbitro según API-Football; resultados, tarjetas, faltas y goles de penal según ESPN. Actualizado ${esc(fecha(H.actualizado))}.</p>
   </section>`;
+}
+/* ---------- historial del árbitro en cualquier partido (también En vivo) ---------- */
+// <div class="arb-slot"> se llena después con el historial de 3 temporadas (data/arbitros/<liga>.json)
+const arbSlot = (liga, home, away, ref) => liga ? `<div class="arb-slot" data-liga="${esc(liga)}" data-h="${esc(home || "")}" data-a="${esc(away || "")}" data-ref="${esc(ref || "")}"></div>` : "";
+function arbHist(liga) {
+  if (D.arbH[liga]) return Promise.resolve(D.arbH[liga]);
+  if (D.arbH[liga] === false) return Promise.resolve(null);
+  return (D.arbHP = D.arbHP || {})[liga] || (D.arbHP[liga] = getJSON(`data/arbitros/${liga}.json`).then(x => (D.arbH[liga] = x)).catch(() => { D.arbH[liga] = false; return null; }));
+}
+const arbNorm = n => String(n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+function arbBuscar(H, nombre) {
+  const n = arbNorm(nombre); if (!n) return null;
+  const R0 = Object.values(H.refs || {}), ex = R0.find(r => arbNorm(r.n) === n); if (ex) return ex;
+  const w = n.split(" "), ap = w[w.length - 1];   // mismo apellido y misma inicial del nombre
+  const c = R0.filter(r => { const x = arbNorm(r.n).split(" "); return x[x.length - 1] === ap && x[0][0] === w[0][0]; });
+  return c.length === 1 ? c[0] : null;
+}
+function arbEqDe(r, team) {
+  // mismo nombre; si no, todas las palabras del nombre más corto en el otro ("Sparta Rotterdam" no es "Feyenoord Rotterdam")
+  const tk = n => arbTok(n), cubre = (a, b) => { const A = tk(a), B = tk(b), [c, l] = A.length <= B.length ? [A, B] : [B, A]; return c.length > 0 && c.every(w => l.some(x => x === w || (w.length > 3 && (x.startsWith(w) || w.startsWith(x))))); };
+  const E = r.equipos || [], e = E.find(x => x.t === team) || E.find(x => arbNorm(x.t) === arbNorm(team)) || E.find(x => cubre(x.t, team));
+  if (!e) return null;
+  const ult = (r.partidos || []).filter(x => x[1] === e.t || x[2] === e.t).slice(0, 6);
+  return { ...e, ultimos: ult };
+}
+function arbHistPanel(Lx, H, r, home, away, liga) {
+  const B = H.base || {}, dt = H.datos || {}, etq = H.etiquetas || {}, nT = Object.keys(r.temps || {}).length;
+  const eh = arbEqDe(r, home), ea = arbEqDe(r, away);
+  const ks = [kpi("m", nT > 1 ? `Partidos en ${nT} temporadas` : "Partidos dirigidos", r.pj, arbTemps(r.temps, etq))];
+  if (dt.tarjetas) ks.push(kpi("", "Tarjetas por partido", arbCmp(r.tpp, B.tpp, v => dec(v, 1)), r.rpp != null ? `rojas ${dec(r.rpp, 2)} (liga ${dec(B.rpp, 2)})` : ""));
+  if (dt.faltas) ks.push(kpi("", "Faltas cobradas por partido", arbCmp(r.fpp, B.fpp, v => dec(v, 1), .08), "menos faltas = deja jugar más"));
+  if (dt.penales) ks.push(kpi("", "Goles de penal por partido", arbCmp(r.penpp, B.penpp, v => dec(v, 2), .25), ""));
+  ks.push(kpi("", "Gana el local", arbCmp(r.local, B.local, v => pct(v, 0), .1), `empate ${pct(r.empate, 0)}`));
+  return `<div class="panel stack arbp"><div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px"><h3>Árbitro ${help(ARB_TIP)}</h3><button class="link arb-n" data-go="arbitro" data-liga="${esc(liga)}" data-id="${esc(r.slug)}">${esc(r.n)} →</button></div>
+    ${(r.perfil || []).length ? `<div class="arb-chips">${arbChips(r.perfil)}</div>` : `<p class="note">Con ${r.pj} partidos todavía no alcanza para un perfil confiable.</p>`}
+    <div class="kpis">${ks.join("")}</div>
+    <h4 class="arb-sub">Con estos equipos</h4>
+    <div class="arb-eqs">${arbEquipo(Lx, eh, eh ? eh.t : home, dt)}${arbEquipo(Lx, ea, ea ? ea.t : away, dt)}</div>
+    ${arbAzar(H.azar, H.nombre || "")}
+    <p class="note">${ARB_NOTA}</p>
+    <button class="btn ghost sm" data-go="arbitro" data-liga="${esc(liga)}" data-id="${esc(r.slug)}">Ficha completa de ${esc(r.n)}</button></div>`;
+}
+// sin árbitro designado todavía: los que más han dirigido a estos dos equipos
+function arbCandidatos(Lx, H, home, away, liga) {
+  const B = H.base || {}, dt = H.datos || {};
+  const filas = Object.values(H.refs || {}).map(r => { const eh = arbEqDe(r, home), ea = arbEqDe(r, away); return { r, eh, ea, n: (eh ? eh.pj : 0) + (ea ? ea.pj : 0) }; })
+    .filter(x => x.eh && x.ea).sort((a, b) => b.n - a.n || b.r.pj - a.r.pj).slice(0, 5);
+  const rec = e => e ? `<span class="num">${e.pj} PJ · ${e.g}-${e.e}-${e.p}</span>` : `<span class="faint">—</span>`;
+  return `<div class="panel stack arbp"><h3>Árbitro ${help(ARB_TIP)}</h3>
+    <p class="note">Todavía no se conoce el árbitro de este partido: la designación suele salir entre 2 y 4 días antes. Mientras, estos son los árbitros que más han dirigido a ${esc(corto(Lx, home))} y a ${esc(corto(Lx, away))} en ${Object.keys(H.etiquetas || {}).length || 3} temporadas.</p>
+    ${filas.length ? `<div class="scroll"><table class="t arb-t"><thead><tr><th>Árbitro</th><th>${esc(corto(Lx, home))}</th><th>${esc(corto(Lx, away))}</th>${dt.tarjetas ? `<th class="n hide-m">Tarjetas/PJ</th>` : ""}</tr></thead><tbody>${filas.map(({ r, eh, ea }) => `<tr class="click" data-go="arbitro" data-liga="${esc(liga)}" data-id="${esc(r.slug)}"><td><b>${esc(r.n)}</b>${(r.perfil || []).filter(k => !/normal/.test(k)).length ? `<div class="arb-chips sm">${arbChips(r.perfil)}</div>` : ""}</td><td>${rec(eh)}</td><td>${rec(ea)}</td>${dt.tarjetas ? `<td class="n hide-m">${dec(r.tpp, 1)}<small class="faint"> liga ${dec(B.tpp, 1)}</small></td>` : ""}</tr>`).join("")}</tbody></table></div>`
+      : `<p class="note">Ningún árbitro de la liga ha dirigido a los dos equipos en estas temporadas.</p>`}
+    <button class="btn ghost sm" data-go="liga" data-liga="${esc(liga)}" data-tab="arbitros">Todos los árbitros de ${esc(H.nombre || "la liga")}</button></div>`;
+}
+async function arbLlenar() {
+  for (const el of document.querySelectorAll(".arb-slot:not([data-ok])")) {
+    el.dataset.ok = "1";
+    const liga = el.dataset.liga, H = await arbHist(liga); if (!H || !el.isConnected) continue;
+    const Lx = D.ligas[liga] && !D.ligas[liga].lite ? D.ligas[liga] : { id: liga, nombre: H.nombre, equipos: (D.ligas[liga] || {}).equipos || {} };
+    const r = el.dataset.ref ? arbBuscar(H, el.dataset.ref) : null;
+    el.innerHTML = r ? arbHistPanel(Lx, H, r, el.dataset.h, el.dataset.a, liga)
+      : el.dataset.ref ? `<div class="panel stack arbp"><h3>Árbitro</h3><p class="note"><b>${esc(el.dataset.ref)}</b> no ha dirigido partidos de ${esc(H.nombre || "esta liga")} en las temporadas con datos, así que todavía no hay historial para mostrar.</p></div>`
+      : arbCandidatos(Lx, H, el.dataset.h, el.dataset.a, liga);
+  }
+}
+// liga de Ballytics de un partido de ESPN (por el partido del modelo o por el código de la liga)
+function ligaDeEvento(H, m) {
+  if (m && m.L) return m.L.id;
+  const l = (D.indice && D.indice.ligas || []).find(x => x.slug && x.slug === H.slug);
+  return l ? l.id : null;
 }
 document.addEventListener("click", e => { if (e.target.id === "arb-more") { VV.arbLim = (VV.arbLim || 15) + 30; go({ v: "arbitro", liga: R.liga, id: R.id, keepScroll: true }); } });
 
@@ -3272,12 +3343,12 @@ async function vFillMatch(force) {
       ${tl(H.a, "a")}</div>
     <div class="row" style="justify-content:center;margin-top:10px;gap:8px">${H.state !== "post" ? `<button class="btn ghost sm vbell2${f ? " on" : ""}" data-follow="${esc(id)}">${f ? `${ICO.bell} Siguiendo` : `${ICO.belloff} Avisarme de goles`}</button>` : ""}${m ? `<button class="btn ghost sm" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">Análisis de Ballytics →</button>` : ""}</div>`;
   const tab = R.tab || "resumen";
-  if (tab === "resumen") { body.innerHTML = videosHtml(j) + vShootout(j, H) + (pens && H.state === "in" ? "" : vCurvePanel(j, H, evs, m)) + (H.state !== "post" || true ? voteBox(id, H.date, H.h.short, H.a.short, m ? [m.p.pH, m.p.pD, m.p.pA] : null) : "") + vKeyStats(j, H) + vTimeline(evs, H) + vInfo(j, H, m); hydrateVotes(); }
+  if (tab === "resumen") { body.innerHTML = videosHtml(j) + vShootout(j, H) + (pens && H.state === "in" ? "" : vCurvePanel(j, H, evs, m)) + (H.state !== "post" || true ? voteBox(id, H.date, H.h.short, H.a.short, m ? [m.p.pH, m.p.pD, m.p.pA] : null) : "") + vKeyStats(j, H) + vTimeline(evs, H) + vInfo(j, H, m) + vArbEnVivo(j, H, m); hydrateVotes(); arbLlenar(); }
   const hasXI = (j.rosters || []).some(t => (t.roster || []).some(x => x.starter));
   if (tab === "alineaciones" && !hasXI && m && m.p.xi_prob) { VV.lastPitch = null; body.innerHTML = vPitch({ rosters: xiRosters(m.p.xi_prob), keyEvents: [] }, H, null).replace("<h3>Alineaciones", "<h3>Alineación probable") + `<div class="panel stack">${xiProbNote(m.p.xi_prob, m.p.bajas, k => k === "h" ? H.h.short : H.a.short)}</div>`; }
   else if (tab === "alineaciones") { body.innerHTML = vPitch(j, H, id); loadMatchPlayers(id, H, j).then(ch => { if (ch && R.v === "envivo" && R.id === id && (R.tab || "resumen") === "alineaciones") body.innerHTML = vPitch(j, H, id); }); }
   if (tab === "estadisticas") body.innerHTML = vStats(j, H, m);
-  if (tab === "previa") body.innerHTML = vPrevia(j, H, m);
+  if (tab === "previa") { body.innerHTML = vPrevia(j, H, m) + vArbEnVivo(j, H, m); arbLlenar(); }
   if (tab === "tabla") { const g = ((j.standings || {}).groups || []).map(x => ({ name: x.header, standings: x.standings }));
     const lives = H.state === "in" ? [{ hId: H.h.id, aId: H.a.id, hs: +H.h.score || 0, as: +H.a.score || 0 }] : [];
     body.innerHTML = !g.length ? `<div class="panel empty">Sin tabla para esta competición.</div>` : lives.length ? liveTableHtml(g, lives, H.slug, [H.h.id, H.a.id]) : stTable(g, [H.h.id, H.a.id], H.slug); }
@@ -3325,6 +3396,12 @@ function vInfo(j, H, m) {
   const arbLink = m && m.p.arbitro && m.p.arbitro.pj ? ` <button class="link" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">ver su análisis →</button>` : "";
   const items = [v.fullName ? `Estadio: <b>${esc(v.fullName)}</b>${v.address && v.address.city ? ` (${esc(v.address.city)})` : ""}` : "", arb ? `Árbitro: <b>${esc(arb)}</b>${arbLink}` : "", gi.attendance ? `Público: <b>${Number(gi.attendance).toLocaleString("es-CL")}</b>` : ""].filter(Boolean);
   return items.length ? `<div class="panel stack"><h3>Información</h3><p class="note" style="font-size:14px">${items.join(" · ")}</p></div>` : "";
+}
+function vArbEnVivo(j, H, m) {
+  const liga = ligaDeEvento(H, m); if (!liga) return "";
+  const gi = j.gameInfo || {}, ref = (gi.officials || [])[0];
+  const arb = ref ? (ref.displayName || ref.fullName || "") : (m && m.p.arbitro && m.p.arbitro.n) || arbDeEvento(H) || "";
+  return arbSlot(liga, m ? m.p.home : H.h.name, m ? m.p.away : H.a.name, arb);
 }
 function vPrevia(j, H, m) {
   const L5 = j.lastFiveGames || [];
