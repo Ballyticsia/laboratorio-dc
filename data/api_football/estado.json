@@ -1,11 +1,11 @@
 {
  "activa": true,
  "consultas": 9,
- "restantes": 7428,
+ "restantes": 7417,
  "errores": [],
  "fechas": {
   "2026-11-02": {
-   "filas": 210,
+   "filas": 208,
    "desde_cache": false
   },
   "2026-11-03": {
@@ -19,5 +19,5 @@
  },
  "partidos_con_bajas": 40,
  "partidos_ajustados": 28,
- "actualizado": "2026-11-02T11:13+00:00"
+ "actualizado": "2026-11-02T13:25+00:00"
 }
