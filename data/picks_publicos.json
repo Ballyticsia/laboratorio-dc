@@ -627,9 +627,9 @@
      "prob": 0.7886,
      "cuota": 1.256,
      "cierre": 1.286,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 3,
+     "ag": 0
     },
     {
      "id": "401888569",
@@ -656,7 +656,7 @@
      "lado": "H",
      "prob": 0.7014,
      "cuota": 1.377,
-     "cierre": 1.385,
+     "cierre": 1.392,
      "res": null,
      "hg": null,
      "ag": null
@@ -672,9 +672,9 @@
      "prob": 0.238,
      "cuota": 5.5,
      "cierre": 5.0,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 1,
+     "ag": 3,
      "mercado": 0.1488,
      "ev": 0.309
     },
@@ -689,9 +689,9 @@
      "prob": 0.3267,
      "cuota": 3.9,
      "cierre": 5.25,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 0,
+     "ag": 0,
      "mercado": 0.2393,
      "ev": 0.2741
     },
@@ -706,11 +706,113 @@
      "prob": 0.2523,
      "cuota": 4.7,
      "cierre": 4.5,
+     "res": "P",
+     "hg": 0,
+     "ag": 6,
+     "mercado": 0.1862,
+     "ev": 0.1858
+    }
+   ]
+  },
+  "2026-11-04": {
+   "fijado": "2026-11-03T22:55Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401841307",
+     "liga": "brasil",
+     "kickoff": "2026-11-04T22:30Z",
+     "home": "Flamengo",
+     "away": "Grêmio",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8398,
+     "cuota": 1.167,
+     "cierre": 1.167,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401915383",
+     "liga": "champions",
+     "kickoff": "2026-11-04T17:45Z",
+     "home": "AEK Athens",
+     "away": "Real Madrid",
+     "est": "seguro",
+     "lado": "A",
+     "prob": 0.7943,
+     "cuota": 1.222,
+     "cierre": 1.222,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401915381",
+     "liga": "champions",
+     "kickoff": "2026-11-04T20:00Z",
+     "home": "Slavia Prague",
+     "away": "Arsenal",
+     "est": "seguro",
+     "lado": "A",
+     "prob": 0.782,
+     "cuota": 1.256,
+     "cierre": 1.256,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401915306",
+     "liga": "champions",
+     "kickoff": "2026-11-04T20:00Z",
+     "home": "RB Leipzig",
+     "away": "Manchester City",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.249,
+     "cuota": 5.25,
+     "cierre": 5.25,
      "res": null,
      "hg": null,
      "ag": null,
-     "mercado": 0.1862,
-     "ev": 0.1858
+     "mercado": 0.1743,
+     "ev": 0.3073
+    },
+    {
+     "id": "401841305",
+     "liga": "brasil",
+     "kickoff": "2026-11-05T00:30Z",
+     "home": "Botafogo",
+     "away": "Atlético-MG",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.2617,
+     "cuota": 4.8,
+     "cierre": 4.8,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1859,
+     "ev": 0.2562
+    },
+    {
+     "id": "401880173",
+     "liga": "championship",
+     "kickoff": "2026-11-04T19:45Z",
+     "home": "Wrexham",
+     "away": "Middlesbrough",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.2816,
+     "cuota": 4.2,
+     "cierre": 4.2,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2207,
+     "ev": 0.1827
     }
    ]
   }
@@ -723,5 +825,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-03T20:57Z"
+ "actualizado": "2026-11-03T22:55Z"
 }
