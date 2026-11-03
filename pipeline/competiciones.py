@@ -24,15 +24,15 @@ ESPN = "https://site.api.espn.com/apis/site/v2/sports/soccer"
 
 
 def pedir(url):
-    for i in range(3):
+    for i in range(2):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 Ballytics"})
-            with urllib.request.urlopen(req, timeout=40) as r:
+            with urllib.request.urlopen(req, timeout=20) as r:
                 return json.loads(r.read().decode("utf-8"))
         except Exception as e:   # noqa: BLE001
-            if i == 2:
-                print("  falló", url, e)
-            time.sleep(2 * (i + 1))
+            if i == 1:
+                print("  falló", url.split("soccer/")[-1], e, flush=True)
+            time.sleep(2)
     return None
 
 
@@ -109,10 +109,12 @@ def grilla(comps):
 def main():
     hoy = date.today()
     comps = json.load(open(ARCH, encoding="utf-8"))
-    cambios = 0
-    for c in comps:
-        r = revisar(c, hoy)
-        time.sleep(0.25)
+    cambios, t0 = 0, time.time()
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=6) as ex:   # varias a la vez: con una por una no alcanzaba la media hora
+        res = list(ex.map(lambda c: revisar(c, hoy), comps))
+    print(f"revisadas en {time.time() - t0:.0f} s", flush=True)
+    for c, r in zip(comps, res):
         if r is None:
             print("sin respuesta:", c["s"])
             continue
