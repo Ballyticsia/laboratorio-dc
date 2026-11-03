@@ -160,7 +160,7 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 ## Estadísticas de equipo y mercados de estadísticas
 - `pipeline/caja.py` baja una vez el resumen de ESPN de cada partido jugado y guarda en `data/cache_espn/caja_<liga>.json` amarillas, rojas, fueras de juego, atajadas, pases, entradas, intercepciones, centros, despejes y remates bloqueados (hasta 400 partidos nuevos por liga en cada corrida).
 - La página de equipo muestra promedios por partido en total, de local y de visita, comparados con el promedio de la liga.
-- En la pestaña Mercados de cada partido: remates, remates al arco, córners, faltas, amarillas, fueras de juego y entradas por equipo y en total. Esperado = lo que hace el equipo × lo que concede el rival ÷ promedio de la liga (con 3 partidos "promedio" sumados para no exagerar); remates y al arco se mezclan mitad y mitad con los goles esperados. Probabilidades con binomial negativa (dispersión medida en la liga).
+- En la pestaña Mercados de cada partido: remates, remates al arco, córners, faltas, tarjetas y entradas por equipo y en total (amarillas sueltas y fueras de juego no, porque en el backtest de 1.900 partidos no mejoraron al promedio de la liga). Esperado = lo que hace el equipo × lo que concede el rival ÷ promedio de la liga (con 3 partidos "promedio" sumados para no exagerar); remates y al arco se mezclan mitad y mitad con los goles esperados. Probabilidades con binomial negativa (dispersión medida en la liga).
 - ESPN no publica saques de banda ni saques de meta.
 
 ## Catálogo de competiciones
