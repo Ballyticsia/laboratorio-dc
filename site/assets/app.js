@@ -1491,7 +1491,8 @@ function eqGrid(L, d, liga, modo) {
       const v = eqVal(d, k); if (v == null) return "";
       const lv = liga[k], extra = k === "ro" && d.ro_t != null ? `${d.ro_t} en total` : k === "va" || k === "sm" ? `de ${d.pj} partido${d.pj === 1 ? "" : "s"}` : det;
       let cmp = "";
-      if (lv != null && !["va", "sm"].includes(k)) {
+      if (lv != null && k === "ro") cmp = `<span class="eqs-c n">Liga ${eqFmt(lv, f)}</span>`;   // con números tan chicos el % engaña
+      else if (lv != null && !["va", "sm"].includes(k)) {
         const dif = lv ? (v - lv) / Math.abs(lv) : 0, cls = !mejor || Math.abs(dif) < .05 ? "n" : (dif > 0) === (mejor === "+") ? "b" : "w";
         cmp = `<span class="eqs-c ${cls}" title="Promedio de la liga: ${eqFmt(lv, f)}">Liga ${eqFmt(lv, f)}${Math.abs(dif) >= .05 ? ` <i>${dif > 0 ? "▲" : "▼"} ${Math.round(Math.abs(dif) * 100)}%</i>` : ""}</span>`;
       }
