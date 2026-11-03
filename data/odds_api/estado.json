@@ -4,15 +4,15 @@
  "restantes": 432,
  "consultas": {
   "soccer_epl": "sin partidos cerca",
-  "soccer_spain_la_liga": "copia",
+  "soccer_spain_la_liga": "sin partidos cerca",
   "soccer_italy_serie_a": "sin partidos cerca",
   "soccer_germany_bundesliga": "sin partidos cerca",
   "soccer_france_ligue_one": "sin partidos cerca",
   "soccer_efl_champ": "copia",
-  "soccer_portugal_primeira_liga": "copia",
+  "soccer_portugal_primeira_liga": "sin partidos cerca",
   "soccer_netherlands_eredivisie": "sin partidos cerca",
-  "soccer_chile_campeonato": "copia",
-  "soccer_argentina_primera_division": "copia",
+  "soccer_chile_campeonato": "sin partidos cerca",
+  "soccer_argentina_primera_division": "sin partidos cerca",
   "soccer_brazil_campeonato": "copia",
   "soccer_usa_mls": "sin partidos cerca",
   "soccer_uefa_champs_league": "copia",
@@ -28,5 +28,5 @@
  "errores": [],
  "ligas": {},
  "partidos_con_cuota": 51,
- "actualizado": "2026-11-03T15:04+00:00"
+ "actualizado": "2026-11-03T17:11+00:00"
 }
