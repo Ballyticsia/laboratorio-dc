@@ -276,6 +276,16 @@ def team_stats(df, teams):
 
         side = lambda m: "h" if m["local"] else "a"
         opp = lambda m: "a" if m["local"] else "h"
+
+        def faltas_de(lado, cond):
+            """Promedio de faltas (cometidas o recibidas) en los partidos que cumplen cond, y en cuántos hay dato."""
+            v = [stat(m["x"], lado(m), "foulsCommitted") for m in ms if cond(m)]
+            v = [a for a in v if a == a]
+            return (r(sum(v) / len(v), 2) if v else None), len(v)
+        fl, nfl = faltas_de(side, lambda m: m["local"])
+        fv, nfv = faltas_de(side, lambda m: not m["local"])
+        frl, _ = faltas_de(opp, lambda m: m["local"])
+        frv, _ = faltas_de(opp, lambda m: not m["local"])
         out.append(dict(
             equipo=t, pj=n,
             gf=r(sum(m["gf"] for m in ms) / n, 2), gc=r(sum(m["gc"] for m in ms) / n, 2),
@@ -286,6 +296,10 @@ def team_stats(df, teams):
             corners_rival=avg(lambda m: stat(m["x"], opp(m), "wonCorners")),
             posesion=avg(lambda m: stat(m["x"], side(m), "possessionPct")),
             faltas=avg(lambda m: stat(m["x"], side(m), "foulsCommitted")),
+            # faltas cometidas de local y de visita, y las que le hacen los rivales (recibidas)
+            faltas_local=fl, faltas_visita=fv, faltas_pj_local=nfl, faltas_pj_visita=nfv,
+            faltas_rival=avg(lambda m: stat(m["x"], opp(m), "foulsCommitted")),
+            faltas_rival_local=frl, faltas_rival_visita=frv,
             tarjetas=avg(lambda m: cards(m["x"], side(m))),
             ambos=r(sum(1 for m in ms if m["gf"] > 0 and m["gc"] > 0) / n, 3),
             over25=r(sum(1 for m in ms if m["gf"] + m["gc"] > 2.5) / n, 3),

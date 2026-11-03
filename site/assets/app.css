@@ -1880,3 +1880,12 @@ h1,h2{letter-spacing:.02em}
 @media (max-width:560px){.pp-f{grid-template-columns:auto minmax(0,1fr);grid-auto-flow:column}.pp-f .pp-n small{display:none}}
 .pp-kt>div{display:flex;flex-direction:column;gap:4px;min-width:0}
 .pp-kt .pp-kh{display:block}
+
+/* ficha del equipo: faltas de local, de visita y recibidas */
+.fx-g{display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px;align-items:start}
+.fx-g + .fx-g{border-top:1px solid var(--line);padding-top:12px}
+.fx-h{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-top:4px}
+.fx-g .sgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.fx-g .sgrid small{display:block;font-size:11px;line-height:1.3}
+.fx-t{font-weight:700;margin-top:2px}.fx-t.up{color:var(--card)}.fx-t.dn{color:var(--pitch)}
+@media (max-width:520px){.fx-g{grid-template-columns:minmax(0,1fr);gap:6px}}

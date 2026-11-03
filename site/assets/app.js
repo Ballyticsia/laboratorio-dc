@@ -1288,9 +1288,9 @@ function lCorners(L) {
       <td class="n">${dec(c, 1)}</td><td class="n">${c != null ? pct(poisOver(9.5, c)) : "—"}</td><td class="n">${dec(t, 1)}</td><td class="n">${t != null ? pct(poisOver(4.5, t)) : "—"}</td></tr>`;
   }).join("");
   return `<div class="panel flush scroll"><div class="ph"><h3>Próximos partidos</h3></div><table class="t"><thead><tr><th>Fecha</th><th>Partido</th><th class="n">Córners esp.</th><th class="n">+9,5 córners</th><th class="n">Tarjetas esp.</th><th class="n">+4,5 tarjetas</th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="empty">Sin datos de córners o tarjetas para esta liga.</td></tr>`}</tbody></table></div>
-    <div class="panel flush scroll"><div class="ph"><h3>Promedios por equipo</h3></div><table class="t"><thead><tr><th>Equipo</th><th class="n">Córners a favor</th><th class="n">Córners en contra</th><th class="n">Tarjetas</th><th class="n">Faltas</th></tr></thead><tbody>` +
-    st.map(s => `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}"><td class="team">${badge(L, s.equipo)}${esc(corto(L, s.equipo))}</td><td class="n">${dec(s.corners, 1)}</td><td class="n">${dec(s.corners_rival, 1)}</td><td class="n">${dec(s.tarjetas, 1)}</td><td class="n">${dec(s.faltas, 1)}</td></tr>`).join("") +
-    `</tbody></table></div><p class="note">Córners y tarjetas usan el mismo modelo de ataque y defensa que los goles. No consideran al árbitro, que influye mucho en las tarjetas.</p>`;
+    <div class="panel flush scroll"><div class="ph"><h3>Promedios por equipo</h3></div><table class="t"><thead><tr><th>Equipo</th><th class="n">Córners a favor</th><th class="n">Córners en contra</th><th class="n">Tarjetas</th><th class="n">Faltas</th><th class="n">De local</th><th class="n">De visita</th><th class="n">Recibidas</th></tr></thead><tbody>` +
+    st.map(s => `<tr class="click" data-go="equipo" data-liga="${L.id}" data-team="${esc(s.equipo)}"><td class="team">${badge(L, s.equipo)}${esc(corto(L, s.equipo))}</td><td class="n">${dec(s.corners, 1)}</td><td class="n">${dec(s.corners_rival, 1)}</td><td class="n">${dec(s.tarjetas, 1)}</td><td class="n">${dec(s.faltas, 1)}</td><td class="n">${dec(s.faltas_local, 1)}</td><td class="n">${dec(s.faltas_visita, 1)}</td><td class="n">${dec(s.faltas_rival, 1)}</td></tr>`).join("") +
+    `</tbody></table></div><p class="note">Córners y tarjetas usan el mismo modelo de ataque y defensa que los goles. No consideran al árbitro, que influye mucho en las tarjetas. Faltas: cometidas por partido en total, de local y de visita, y las que le hacen sus rivales (recibidas).</p>`;
 }
 function lProy(L) {
   const t = [...L.tabla].sort((a, b) => (b.pts_esp ?? 0) - (a.pts_esp ?? 0));
@@ -1391,7 +1391,7 @@ function vPartido() {
     ${iaTeaser(p)}
     <div class="grid2">
       <div class="panel stack"><h3>Marcador exacto</h3><div class="scroll"><table class="heat">${heat}</table></div><p class="note">Filas: goles de ${esc(H)}. Columnas: goles de ${esc(A)}.</p></div>
-      ${cmp ? `<div class="panel stack"><h3>Comparación de la temporada</h3><div class="cmph"><span>${badge(L, p.home)} ${esc(H)}</span><span>${esc(A)} ${badge(L, p.away)}</span></div>${cmp}</div>` : ""}
+      ${cmp ? `<div class="panel stack"><h3>Comparación de la temporada</h3><div class="cmph"><span>${badge(L, p.home)} ${esc(H)}</span><span>${esc(A)} ${badge(L, p.away)}</span></div>${cmp}${/Faltas casa/.test(cmp) ? `<p class="note">Faltas casa · fuera: las que comete ${esc(H)} cuando juega de local y las que comete ${esc(A)} cuando juega de visita, como en este partido.</p>` : ""}</div>` : ""}
     </div>
     <div class="grid2">
       <div class="panel stack"><h3>Goles totales</h3>${goalsDist(m)}</div>
@@ -1463,6 +1463,7 @@ function vEquipo() {
       ${[["Goles/PJ", dec(st.gf)], ["Recibe/PJ", dec(st.gc)], ["Tiros/PJ", dec(st.tiros, 1)], ["Al arco/PJ", dec(st.tiros_arco, 1)], ["Córners/PJ", dec(st.corners, 1)], ["Posesión", st.posesion != null ? dec(st.posesion, 0) + "%" : "—"],
          ["Tarjetas/PJ", dec(st.tarjetas, 1)], ["Faltas/PJ", dec(st.faltas, 1)], ["Ambos marcan", pct(st.ambos)], ["+2,5 goles", pct(st.over25)], ["Vallas invictas", st.vallas], ["Sin marcar", st.sin_marcar]]
         .map(([n, v]) => `<div><span class="lbl">${n}</span><b class="num">${v}</b></div>`).join("")}</div></div>` : ""}
+    ${faltasPanel(L, st)}
     <div class="grid2">
       ${L.tabla_ok ? `<div class="panel stack"><h3>Posición en la tabla</h3>${posChart(L, t)}</div>` : ""}
       <div class="panel stack"><h3>Goles por partido</h3>${goalsChart(L, t)}</div>
@@ -3508,11 +3509,23 @@ function vStatRows(j, H, only) {
   }).join("");
 }
 function vKeyStats(j, H) { const r = vStatRows(j, H, KEY); return r ? `<div class="panel stack"><h3>Estadísticas importantes</h3><div data-xg="${esc(R.id)}">${xgRow(R.id)}</div>${r}<button class="link" data-go="envivo" data-id="${esc(R.id)}" data-tab="estadisticas" data-keep>Todas las estadísticas →</button></div>` : ""; }
+/* faltas del equipo: las que comete y las que le hacen, de local y de visita, contra el promedio de la liga */
+function faltasPanel(L, st) {
+  if (!st || st.faltas_local == null && st.faltas_visita == null) return "";
+  const ls = (L.stats || []).filter(x => x.pj), prom = k => { const v = ls.map(x => x[k]).filter(v => v != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const pj = n => n ? `${n} ${n === 1 ? "partido" : "partidos"}` : "sin datos";
+  const celda = (n, v, k, sub) => { const m = prom(k), d = v != null && m ? v / m - 1 : null;
+    const tag = d == null || Math.abs(d) < .08 ? "" : `<small class="fx-t ${d > 0 ? "up" : "dn"}">${d > 0 ? "más" : "menos"} que la liga</small>`;
+    return `<div><span class="lbl">${n}</span><b class="num">${dec(v, 1)}</b><small class="muted">${sub}${m ? ` · liga ${dec(m, 1)}` : ""}</small>${tag}</div>`; };
+  return `<div class="panel stack"><h3>Faltas por partido ${help("Faltas que cobró el árbitro, según las estadísticas de ESPN de cada partido de la temporada. Las recibidas son las que le hicieron los rivales. La liga es el promedio de todos sus equipos.")}</h3>
+    <div class="fx-g"><span class="fx-h">Comete</span><div class="sgrid">${celda("Total", st.faltas, "faltas", pj((st.faltas_pj_local || 0) + (st.faltas_pj_visita || 0)))}${celda("De local", st.faltas_local, "faltas_local", pj(st.faltas_pj_local))}${celda("De visita", st.faltas_visita, "faltas_visita", pj(st.faltas_pj_visita))}</div></div>
+    ${st.faltas_rival != null ? `<div class="fx-g"><span class="fx-h">Recibe</span><div class="sgrid">${celda("Total", st.faltas_rival, "faltas_rival", "de sus rivales")}${celda("De local", st.faltas_rival_local, "faltas_rival_local", "en su cancha")}${celda("De visita", st.faltas_rival_visita, "faltas_rival_visita", "fuera de casa")}</div></div>` : ""}</div>`;
+}
 function seasonCmp(L, home, away) {
   const s1 = statOf(L, home), s2 = statOf(L, away);
-  return [["Goles por partido", "gf", 2], ["Goles recibidos", "gc", 2], ["Tiros al arco", "tiros_arco", 1], ["Córners", "corners", 1], ["Posesión (%)", "posesion", 0], ["Tarjetas", "tarjetas", 1], ["Ambos marcan", "ambos", -1], ["Más de 2,5 goles", "over25", -1]]
-    .filter(([, key]) => s1[key] != null && s2[key] != null)
-    .map(([n, key, d]) => { const a = s1[key], b = s2[key], t = (a + b) || 1, f = v => d === -1 ? pct(v) : dec(v, d);
+  return [["Goles por partido", "gf", 2], ["Goles recibidos", "gc", 2], ["Tiros al arco", "tiros_arco", 1], ["Córners", "corners", 1], ["Posesión (%)", "posesion", 0], ["Tarjetas", "tarjetas", 1], ["Faltas cometidas", "faltas", 1], ["Faltas casa · fuera", "faltas_local", 1, "faltas_visita"], ["Faltas recibidas", "faltas_rival", 1], ["Ambos marcan", "ambos", -1], ["Más de 2,5 goles", "over25", -1]]
+    .filter(([, key, , key2]) => s1[key] != null && s2[key2 || key] != null)
+    .map(([n, key, d, key2]) => { const a = s1[key], b = s2[key2 || key], t = (a + b) || 1, f = v => d === -1 ? pct(v) : dec(v, d);
       return `<div class="cmp"><span class="num">${f(a)}</span><span class="cl"><i style="width:${100 * a / t}%"></i></span><span class="lbl">${n}</span><span class="cr"><i style="width:${100 * b / t}%"></i></span><span class="num">${f(b)}</span></div>`; }).join("");
 }
 function vPreStats(j, H, m) {
