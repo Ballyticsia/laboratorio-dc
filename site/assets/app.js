@@ -590,12 +590,12 @@ function dayList(sel) {
     const orden = D.indice.ligas.map(l => l.id), grupos = new Map();
     items.forEach(it => { const id = it.x.L.id; if (!grupos.has(id)) grupos.set(id, []); grupos.get(id).push(it); });
     const ids = [...grupos.keys()].sort((a, b) => (isFavL(b) - isFavL(a)) || (orden.indexOf(a) - orden.indexOf(b)));
-    const lim = VV.homeLim || 40; let n = 0;
+    const lim = VV.homeLim || homeLim0(); let n = 0;
     rows = ids.map(id => { if (n >= lim) return ""; const L = D.ligas[id], g = grupos.get(id), vivo = g.some(it => !it.r && it.x.estado === "en_vivo");
       const cab = `<button class="lgh" data-go="liga" data-liga="${id}" data-tab="partidos">${leagueMark(L, "sm")}<span class="lgh-n"><b>${esc(L.nombre)}</b><small>${esc(L.pais || "")}</small></span>${vivo ? `<span class="livetag">EN VIVO</span>` : ""}<span class="lgh-c">${g.length}</span><svg class="lgh-a" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 3 7.5 6 4.5 9"/></svg></button>`;
       const filas = g.slice(0, Math.max(1, lim - n)); n += filas.length;
       return `<div class="lgroup">${cab}${filas.map(it => fila(it, false)).join("")}</div>`; }).join("");
-    if (items.length > lim) rows += `<button class="vmore" id="home-more">Ver ${Math.min(40, items.length - lim)} partidos más (${items.length - lim} restantes)</button>`;
+    if (items.length > lim) rows += `<button class="vmore" id="home-more">Ver ${Math.min(40, items.length - lim)} partidos más${items.length - lim > 40 ? ` (${items.length - lim} restantes)` : ""}</button>`;
   } else rows = items.map(it => fila(it, sel === "todas")).join("");
   const more = !D.allLoaded && !D.agenda ? `<div class="skel-row"><span class="skel" style="width:40%"></span></div>` : "";
   const sortBar = byDay[dia].fx.length > 1 ? `<div class="hsort" role="group" aria-label="Ordenar partidos"><span class="lbl">Ordenar</span>${HSORT.map(x => `<button data-hsort="${x[0]}" aria-pressed="${x === so}">${x[1]}</button>`).join("")}</div>` : "";
@@ -610,7 +610,9 @@ const HSORT = [
   ["btts", "Ambos marcan", p => p.pBTTS, p => p.pBTTS != null ? `Ambos · ${pct(p.pBTTS)}` : ""],
   ["mercado", "Modelo vs mercado", p => { const m = mktDif(p); return m ? Math.abs(m.d) : null; }, p => { const m = mktDif(p); return m ? `${["Local", "Empate", "Visita"][m.i]} ${m.d > 0 ? "+" : "−"}${Math.round(Math.abs(m.d) * 100)} pts` : "sin cuota"; }],
 ];
-document.addEventListener("click", e => { if (e.target.id === "home-more") { VV.homeLim = (VV.homeLim || 40) + 40; go({ ...R, keepScroll: true }, false); } });
+// en el teléfono la lista empieza más corta para que el partido destacado y "Más análisis" no queden enterrados
+const homeLim0 = () => { try { return matchMedia("(max-width:760px)").matches ? 12 : 40; } catch (e) { return 40; } };
+document.addEventListener("click", e => { if (e.target.id === "home-more") { VV.homeLim = (VV.homeLim || homeLim0()) + 40; go({ ...R, keepScroll: true }, false); } });
 document.addEventListener("click", e => { const b = e.target.closest("[data-hsort]"); if (!b) return; VV.hsort = b.dataset.hsort; lsSet("bt_hsort", VV.hsort); go({ ...R, keepScroll: true }, false); });
 function resRow(x, showLeague, fav) {
   const L = x.L, hw = x.hg > x.ag, aw = x.ag > x.hg;
@@ -992,6 +994,8 @@ document.addEventListener("click", async e => {
   try { if (navigator.share && /Mobi|iPad|iPhone|Android/.test(navigator.userAgent)) { await navigator.share({ title, url }); return; } await navigator.clipboard.writeText(url); toast("Enlace copiado."); }
   catch (x) { if (x && x.name === "AbortError") return; try { await navigator.clipboard.writeText(url); toast("Enlace copiado."); } catch (y) { toast(url); } }
 });
+document.addEventListener("click", e => { document.querySelectorAll("details.shmenu[open]").forEach(d => { if (!d.contains(e.target) || e.target.closest(".shm-list button")) d.open = false; }); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll("details.shmenu[open]").forEach(d => { d.open = false; d.querySelector("summary").focus(); }); });
 document.addEventListener("click", e => { if (e.target.closest("[data-focus-q]")) { const q = document.getElementById("q"); if (q) { window.scrollTo({ top: 0 }); q.focus(); } } });
 
 /* ---------------- INICIO ---------------- */
@@ -1414,7 +1418,7 @@ function vPartido() {
     <div class="panel match">
       <div class="livebox" data-live-box="${esc(p.id)}" hidden></div>
       <div class="meta">${leagueMark(L, "sm")}<span>${esc(L.nombre)}</span><span>·</span><span>${new Date(p.kickoff).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })} ${hhmm(p.kickoff)}</span><span class="cdown" data-cd="${esc(p.kickoff)}"></span></div>
-      <div class="mact"><button class="btn ghost sm" data-sharelink>Compartir enlace</button><button class="btn ghost sm" data-share data-liga="${L.id}" data-mid="${esc(p.id)}">Compartir imagen</button><button class="btn ghost sm" data-share data-fmt="story" data-liga="${L.id}" data-mid="${esc(p.id)}" title="Formato vertical 9:16 para historias de Instagram o WhatsApp">Imagen para historias</button><button class="btn ghost sm" data-ics="match" data-liga="${L.id}" data-mid="${esc(p.id)}">Agregar al calendario</button></div>
+      <div class="mact"><details class="shmenu"><summary class="btn ghost sm"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"/></svg>Compartir<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5"/></svg></summary><div class="shm-list" role="menu"><button role="menuitem" data-sharelink>Enlace<small>Se ve con título en WhatsApp</small></button><button role="menuitem" data-share data-liga="${L.id}" data-mid="${esc(p.id)}">Imagen<small>Tarjeta con las probabilidades</small></button><button role="menuitem" data-share data-fmt="story" data-liga="${L.id}" data-mid="${esc(p.id)}">Imagen para historias<small>Vertical 9:16 para Instagram o WhatsApp</small></button></div></details><button class="btn ghost sm" data-ics="match" data-liga="${L.id}" data-mid="${esc(p.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Calendario</button></div>
       <div class="face">${side(sh, p.home, "l")}<span class="vs">VS</span>${side(sa, p.away, "r")}</div>
       <div class="probs">
         <div class="pt h"><span class="lbl">${esc(H)}</span><span class="v">${pct(k.H, 1)}</span><div class="tr"><i style="width:${100 * k.H}%"></i></div></div>

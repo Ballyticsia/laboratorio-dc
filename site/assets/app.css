@@ -350,7 +350,8 @@ table.t td.hl{color:var(--ink);font-weight:600;background:rgba(61,139,255,.06)}
   .search input{width:100%}
   .dd-menu{position:fixed;left:12px;right:12px;top:auto;max-width:none;width:auto}
   .hero-in{padding:20px 16px 40px}
-  .hero-cta{justify-content:flex-start}
+  .hero-cta{justify-content:flex-start;flex-wrap:nowrap;gap:8px}
+  .hero-cta .btn{flex:1 1 0;min-width:0;padding:10px 10px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .badge.xl{width:52px;height:52px;border-radius:13px;font-size:15px}
   .cmp{grid-template-columns:44px 1fr auto 1fr 44px}
   .rlist .rrow{grid-template-columns:44px minmax(0,1fr) 60px minmax(0,1fr);padding:9px 12px;font-size:13px}
@@ -592,6 +593,17 @@ nav.main .dd-item:hover{background:rgba(61,139,255,.1);color:var(--ink)}
 .gs{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-weight:700;font-size:13px;background:rgba(148,163,184,.1);color:var(--faint)}
 .gs.ok{background:rgba(46,230,166,.15);color:var(--good)} .gs.ko{background:rgba(255,92,122,.13);color:var(--bad)}
 .mact{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+.mact .btn.sm{display:inline-flex;align-items:center;gap:6px;align-self:auto}
+.mact .btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.mact .btn svg.chev{width:11px;height:11px;margin-left:-1px;transition:transform .15s}
+.shmenu{position:relative}
+.shmenu summary{list-style:none}
+.shmenu summary::-webkit-details-marker{display:none}
+.shmenu[open] summary svg.chev{transform:rotate(180deg)}
+.shm-list{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);z-index:30;min-width:240px;display:flex;flex-direction:column;padding:6px;background:var(--panel2,#111827);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.35)}
+.shm-list button{font:inherit;font-size:14px;font-weight:700;text-align:left;color:var(--ink);background:none;border:none;border-radius:8px;padding:9px 10px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.shm-list button small{font-weight:500;font-size:12px;color:var(--muted)}
+.shm-list button:hover,.shm-list button:focus-visible{background:rgba(148,163,184,.12)}
 @media (max-width:760px){
   #combobar{left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px))}
   .cb-in{width:100%;justify-content:space-between}
