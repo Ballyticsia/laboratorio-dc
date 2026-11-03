@@ -377,21 +377,31 @@ def props_liga(df):
     return out
 
 
-def props_partido(liga, sh, sa):
+GOL_EXP = 0.6   # cuánto siguen los remates a los goles esperados (los remates no crecen tanto como los goles)
+
+
+def props_partido(liga, sh, sa, goles=None):
     """Esperado de cada estadística para el local y la visita: ataque propio × lo que concede el rival / promedio."""
     out = {}
     for k, kc, _ in PROPS:
         lg = liga.get(k)
-        dh, da = (sh or {}).get("l") or {}, (sa or {}).get("v") or {}
-        if not lg or dh.get(k) is None or da.get(kc) is None or dh.get(kc) is None or da.get(k) is None:
+        n_ = lambda d: d.get("n_" + k, d.get("pj", 0)) if d and d.get(k) is not None and d.get(kc) is not None else 0
+        # de local / de visita si hay al menos 3 partidos; si no (copas con pocos partidos), todos sus partidos
+        dh = next((d for d in ((sh or {}).get("l"), (sh or {}).get("t")) if n_(d) >= 3), None) or ((sh or {}).get("t") if n_((sh or {}).get("t")) >= 2 else None)
+        da = next((d for d in ((sa or {}).get("v"), (sa or {}).get("t")) if n_(d) >= 3), None) or ((sa or {}).get("t") if n_((sa or {}).get("t")) >= 2 else None)
+        if not lg or not dh or not da:
             continue
-        nh, na = dh.get("n_" + k, dh["pj"]), da.get("n_" + k, da["pj"])
-        if nh < 3 or na < 3:
-            continue
+        nh, na = n_(dh), n_(da)
         enc = lambda v, n, mu: (v * n + mu * PROPS_K) / (n + PROPS_K)
         mh, ma = lg["h"], lg["a"]
         eh = enc(dh[k], nh, mh) * enc(da[kc], na, mh) / mh if mh > 0 else None
         ea = enc(da[k], na, ma) * enc(dh[kc], nh, ma) / ma if ma > 0 else None
+        if eh is not None and ea is not None and goles and k in ("ti", "ar"):
+            # remates y remates al arco: mitad lo que dicen sus números, mitad lo que dicen los goles esperados del modelo
+            lh, la, gh, ga = goles
+            if gh > 0 and ga > 0:
+                eh = .5 * eh + .5 * mh * (lh / gh) ** GOL_EXP
+                ea = .5 * ea + .5 * ma * (la / ga) ** GOL_EXP
         if eh is not None and ea is not None:
             out[k] = [r(eh, 2), r(ea, 2)]
     return out
@@ -979,7 +989,8 @@ def main():
                     p["ch"], p["ca"] = (r(v, 3) for v in mc.rates(x.home, x.away))
                 if mt:
                     p["th"], p["ta"] = (r(v, 3) for v in mt.rates(x.home, x.away))
-                pr_ = props_partido(pliga, det_de.get(x.home), det_de.get(x.away))
+                lh_, la_ = lam or (lh, la)
+                pr_ = props_partido(pliga, det_de.get(x.home), det_de.get(x.away), (lh_, la_, float(jug.hg.mean()), float(jug.ag.mean())) if len(jug) else None)
                 if pr_:
                     p["props"] = pr_
                 p["goleadores"] = [dict(s, jugador=name_of.get(s["jid"], "")) for s in scorer_probs(model, x.home, x.away, goles_cnt, team_goals, lam)]

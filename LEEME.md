@@ -157,6 +157,12 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - **Prueba histórica:** `pipeline/backtest_historico.py` (workflow "Backtest histórico", día 5 de cada mes o a mano) baja 5 temporadas de resultados, tiros y cuotas de cierre de Football-Data.co.uk (18 ligas) y compara, semana a semana y sobre los mismos partidos, el modelo propio, la segunda opinión, el promedio de ambos, Bet365 y Pinnacle. Resultado en `data/backtest_historico.json`, visible en "Cómo funciona".
 - **Margen de las cuotas:** la misma prueba compara 5 formas de quitarle el margen a la cuota (`pipeline/margen.py`: multiplicativo, aditivo, potencia, Shin y razón de chances; las fórmulas se comparan con las de penaltyblog). El robot usa la que gana (`metodo_margen`).
 
+## Estadísticas de equipo y mercados de estadísticas
+- `pipeline/caja.py` baja una vez el resumen de ESPN de cada partido jugado y guarda en `data/cache_espn/caja_<liga>.json` amarillas, rojas, fueras de juego, atajadas, pases, entradas, intercepciones, centros, despejes y remates bloqueados (hasta 400 partidos nuevos por liga en cada corrida).
+- La página de equipo muestra promedios por partido en total, de local y de visita, comparados con el promedio de la liga.
+- En la pestaña Mercados de cada partido: remates, remates al arco, córners, faltas, amarillas, fueras de juego y entradas por equipo y en total. Esperado = lo que hace el equipo × lo que concede el rival ÷ promedio de la liga (con 3 partidos "promedio" sumados para no exagerar); remates y al arco se mezclan mitad y mitad con los goles esperados. Probabilidades con binomial negativa (dispersión medida en la liga).
+- ESPN no publica saques de banda ni saques de meta.
+
 ## Catálogo de competiciones
 `pipeline/competiciones.py` (workflow "Revisar competiciones", los lunes) pregunta a ESPN qué competiciones tienen partidos cerca: "activa", "pausa" (receso o fin de temporada) o "inactiva" (nada en más de un año, no se muestra). Las en pausa salen al final y en gris, y su página explica cuándo vuelve. A mano con la opción "grilla" arma una imagen con el logo actual y el de ESPN de cada una (rama `revision-logos`) para revisar logos viejos.
 
