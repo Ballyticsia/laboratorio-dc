@@ -454,6 +454,18 @@ function centrarActivos() {
   }
 }
 
+/* errores reales en el navegador de la gente → servidor (anónimo: mensaje, archivo, línea, pantalla y versión) */
+(function () {
+  const VER = ((document.querySelector('script[src*="app.js"]') || {}).src || "").split("v=")[1] || "", vistos = new Set(); let n = 0;
+  const mandar = (m, f, l) => {
+    m = String(m || "").slice(0, 200); if (!m || n >= 5 || vistos.has(m) || /^Script error\.?$/i.test(m) || /ResizeObserver loop|extension:\/\/|chrome-extension/i.test(m + f)) return;
+    vistos.add(m); n++;
+    pushCfg().then(url => url && fetch(url + "/err", { method: "POST", headers: { "content-type": "application/json" }, keepalive: true,
+      body: JSON.stringify({ m, f: String(f || "").split("/").pop().split("?")[0], l: l || 0, r: (location.hash || "#/").split("/").slice(0, 2).join("/"), v: VER, ua: matchMedia("(pointer:coarse)").matches ? "m" : "d" }) })).catch(() => {});
+  };
+  window.addEventListener("error", e => { if (e.filename && !/\/assets\/app\.js/.test(e.filename)) return; mandar(e.message, e.filename, e.lineno); });
+  window.addEventListener("unhandledrejection", e => { const r = e.reason; if (r && /fetch|network|load failed|abort/i.test(String(r.message || r))) return; mandar("Promesa: " + String((r && (r.message || r)) || "sin detalle"), (r && r.stack || "").match(/app\.js[^:]*:(\d+)/) ? "app.js" : "", 0); });
+})();
 // para las pruebas automáticas (tests/): ruta actual, enlace limpio y datos cargados
 window.__bt = { route: () => R, cleanUrl: () => cleanUrl(R), data: () => D,
   ia: { dia: async q => { const { ctx, idmap } = await iaCtxDia(q); return { ctx, dias: Object.fromEntries(Object.entries(idmap).map(([k, c]) => [k, iaDia(new Date(c.t).toISOString())])),
@@ -1119,7 +1131,7 @@ function vInicio() {
     <h2 class="sec2" id="mas-analisis">Más análisis</h2>
     <div class="cards">
       ${card("Jugador destacado", carousel("jug", jug, "Jugadores destacados"), `<span class="tag">Goleadores</span>`, "accent")}
-      ${card("Equipo en forma", carousel("eq", eqs, "Equipos en forma"), `<span class="tag">Últimos 5</span>`)}
+      ${eqs.some(Boolean) ? card("Equipo en forma", carousel("eq", eqs, "Equipos en forma"), `<span class="tag">Últimos 5</span>`) : card("Equipo en forma", skelRows(3), `<span class="tag">Últimos 5</span>`)}
       ${card("Proyección del partido", proy, `<span class="tag">Destacado</span>`)}
       ${HL ? card("Ranking de fuerza", `<div class="scroll">${rank}</div><button class="link" data-go="liga" data-liga="${hl}" data-tab="fuerza">Ranking completo →</button>`, sw("rk")) : card("Ranking de fuerza", skelRows(6))}
       ${HL ? card("Tabla", `<div class="scroll">${tabla}</div><button class="link" data-go="liga" data-liga="${hl}" data-tab="tabla">Tabla completa →</button>`, sw("tb")) : card("Tabla", skelRows(6))}
@@ -1872,8 +1884,19 @@ function scatterAD(L) {
 const LIVE = {};
 let liveOK = true;
 async function pollLive() {
-  if (!liveOK || document.hidden) return;
-  const now = Date.now(), slugs = new Set();
+  if (document.hidden) return;
+  const now = Date.now(), cerca = ligasIds().some(id => (D.ligas[id].partidos || []).some(p => { const t = new Date(p.kickoff).getTime(); return t <= now + 20 * 60e3 && t >= now - 3 * 3600e3; }));
+  if (!cerca) return;
+  try {
+    const url = await pushCfg(); if (!url) throw new Error("sin servidor");
+    const d0 = new Date(now - 6 * 3600e3), j = await vget(`${url}/dia?d=${ymd(d0)},${ymd(new Date(now))}`);
+    if (!j || !j.ok) throw new Error("dia");
+    (j.events || []).forEach(e => { const pens = /pen|shootout/i.test(e.detail || "") || e.period >= 5;
+      LIVE[String(e.id)] = { state: e.state, clock: pens && e.state === "in" ? "Penales" : /half|HT/i.test(e.detail || "") && e.state === "in" ? "Entretiempo" : e.clock || "", hg: e.h.score, ag: e.a.score, sh: e.h.so, sa: e.a.so }; });
+    paintLive(); return;
+  } catch (e) { /* sigue con ESPN directo */ }
+  if (!liveOK) return;
+  const slugs = new Set();
   ligasIds().forEach(id => {
     const L = D.ligas[id];
     if (L.slug && L.partidos.some(p => { const t = new Date(p.kickoff).getTime(); return t <= now + 20 * 60e3 && t >= now - 3 * 3600e3; })) slugs.add(L.slug);
@@ -1922,8 +1945,8 @@ async function loadSummary() {
   if ((!box && !mini) || !L || !p || !L.slug) return;
   const fail = `<h3>Alineaciones</h3><p class="note">Aún no publicadas. Las alineaciones suelen salir cerca de una hora antes del partido.</p>`;
   try {
-    const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${L.slug}/summary?event=${encodeURIComponent(p.id)}`);
-    if (!r.ok) throw new Error(r.status);
+    const sj = await vget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${L.slug}/summary?event=${encodeURIComponent(p.id)}`);
+    const r = { ok: true, json: async () => sj };
     const j = await r.json();
     if (R.v !== "partido" || R.id !== want) return;
     const ros = (j.rosters || []).filter(t => (t.roster || []).some(x => x.starter));
@@ -2260,7 +2283,7 @@ function vJugador() {
     <div class="grid2">
       <div class="panel flush"><div class="ph"><h3>Sus goles esta temporada</h3></div><div class="rlist">${goles.map(({ x, mins }) => resultRow(L, x) + `<div class="gl"><span>${esc(mins.join(", "))}</span></div>`).join("") || `<div class="empty">Sin goles registrados.</div>`}</div></div>
       <div class="stack">
-        ${next ? `<div class="panel flush"><div class="ph"><h3>Próximo partido</h3></div>${matchRow(next, false)}</div>` : ""}
+        ${next ? `<div class="panel flush"><div class="ph"><h3>Próximo partido</h3></div>${matchRow(next, false, false, true)}</div>` : ""}
         ${otras.length ? `<div class="panel stack"><h3>En otras competiciones</h3>${otras.map(o => `<button class="srow" data-go="jugador" data-liga="${o.L.id}" data-id="${esc(pl.jid)}">${leagueMark(o.L)}<span><b>${esc(o.L.nombre)}</b><small>${o.p.goles} goles · ${o.p.amarillas} amarillas</small></span><span class="sn num">${o.p.goles}</span></button>`).join("")}</div>` : ""}
       </div>
     </div>
@@ -2338,6 +2361,7 @@ function vPrivacidad() {
         <li><b>"¿Quién gana?":</b> cuántos votos tiene cada resultado y cuál fue tu voto (asociado al identificador cifrado). Se borra solo a los 60 días.</li>
         <li><b>Prode:</b> el nombre del grupo, el apodo que elijas y tus pronósticos. Los ven los demás participantes del grupo.</li>
         <li><b>Avisos:</b> si activas los avisos, la dirección de suscripción que entrega tu navegador, los partidos que sigues y qué avisos quieres. Se borra sola si no se usa en 60 días.</li>
+        <li><b>Errores técnicos:</b> si algo de la página falla en tu navegador, se envía el mensaje del error, la sección donde pasó y si era teléfono o computador, para poder arreglarlo. No incluye nada tuyo. Se borra a los 15 días.</li>
         <li><b>Ballytics IA:</b> cuántas preguntas hiciste hoy (para el límite diario, asociado al identificador cifrado). Si marcas 👍 o 👎 en una respuesta, se guardan esa pregunta, la respuesta y tu voto durante 60 días para mejorar la IA.</li></ul>
       <h3>Otros servicios</h3><p>La página está alojada en GitHub Pages. Los resultados en vivo, escudos y fotos se piden directamente a ESPN y a API-Football, que reciben tu dirección IP como cualquier sitio que visitas. Las preguntas a la IA, junto con los datos de los partidos, se envían a Google (Gemini) o, si no responde, a los modelos de Cloudflare para generar la respuesta; no se envía tu nombre ni tu identificador. No escribas datos personales en el chat. Ballytics no usa cookies de publicidad ni de seguimiento.</p>
       <h3>Tus derechos</h3><p>Puedes borrar todo con el botón de abajo. Para pedir una copia o corregir algo, escribe en el repositorio. Ballytics se está adaptando a la Ley 21.719 de protección de datos personales, que empieza a regir el 1 de diciembre de 2026.</p>
@@ -2708,7 +2732,15 @@ const NCAA = new Set(["5487", "5499"]);   // fútbol universitario de EE.UU.: mu
 const ymd = d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
 const localDay = iso => ymd(new Date(iso));
 const fromYmd = s => new Date(+s.slice(0, 4), +s.slice(4, 6) - 1, +s.slice(6, 8), 12);
-const vget = async u => { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); };
+const vget = async u => {
+  try { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return await r.json(); }
+  catch (e) {   // ESPN bloqueado o caído para este navegador: el mismo pedido por el servidor de Ballytics (con caché)
+    if (!/^https:\/\/site\.api\.espn\.com\//.test(u)) throw e;
+    const w = await pushCfg(); if (!w) throw e;
+    const r = await fetch(`${w}/espn?u=${encodeURIComponent(u.replace("https://site.api.espn.com", ""))}`); if (!r.ok) throw e;
+    return r.json();
+  }
+};
 function lsGet(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 const favComps = () => lsGet("bt_vcomp", []);

@@ -1,0 +1,53 @@
+name: Salud del sitio
+
+# Cada 30 minutos revisa que la página abra, que los datos estén al día, que el servidor responda y
+# que no haya errores repetidos en los navegadores de la gente. Si algo falla abre un issue (te llega
+# un correo de GitHub) y lo cierra solo cuando se arregla.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: salud
+  cancel-in-progress: true
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: tests
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: Revisar
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: node tests/salud.js
+      - name: Avisar o cerrar el aviso
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          titulo="Alerta: el sitio tiene problemas"
+          abierto=$(gh issue list --repo "${{ github.repository }}" --state open --search "$titulo in:title" --json number --jq '.[0].number')
+          if [ -s salud.txt ]; then
+            cuerpo="$(cat salud.txt)
+
+          Revisión: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            if [ -z "$abierto" ]; then
+              gh issue create --repo "${{ github.repository }}" --title "$titulo" --body "$cuerpo"
+            else
+              ultimo=$(gh issue view "$abierto" --repo "${{ github.repository }}" --json comments,body --jq '(.comments | last | .body) // .body' | head -c 300)
+              if [ "$(head -c 300 salud.txt)" != "$(printf '%s' "$ultimo" | head -c 300)" ]; then gh issue comment "$abierto" --repo "${{ github.repository }}" --body "$cuerpo"; fi
+            fi
+            exit 1
+          elif [ -n "$abierto" ]; then
+            gh issue close "$abierto" --repo "${{ github.repository }}" --comment "Volvió a funcionar todo ($(date -u +'%Y-%m-%d %H:%M') UTC)."
+          fi

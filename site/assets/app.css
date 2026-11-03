@@ -1809,3 +1809,5 @@ body.ia-open #iafab{display:none}
 .pr-pts span{white-space:nowrap}
 #pr-next{white-space:nowrap}
 @media (max-width:760px){#pr-next{font-size:16px}.pr-stats small{font-size:10px;letter-spacing:.05em}}
+/* comparación con la liga dentro de un KPI: "▼ liga 42%" no se corta en dos líneas */
+.kpi small.faint{white-space:nowrap;display:inline-block}

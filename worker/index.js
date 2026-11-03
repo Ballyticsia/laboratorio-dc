@@ -648,6 +648,45 @@ async function iaVotos(env, req) {
   return json({ ok: true, votos: out.sort((a, b) => (b.t || "").localeCompare(a.t || "")) });
 }
 
+/* ---------- respaldo de ESPN: si el navegador no puede llegar a ESPN (bloqueo de red, CORS), lo pide el servidor ---------- */
+const ESPN_OK = /^\/apis\/(site\/v2|v2|common\/v3)\/sports\/soccer\/(all|[a-z]{2,6}(\.[a-z0-9_]{1,20}){0,3})\/(summary|scoreboard|news|standings|teams\/\d{1,8}(\/(schedule|roster))?|athletes\/\d{1,10}(\/(overview|gamelog))?)$/;
+const ESPN_Q = new Set(["event", "dates", "limit", "lang", "region", "fixture", "season"]);
+async function espnProxy(ctx, u) {
+  let t; try { t = new URL(String(u || ""), "https://site.api.espn.com"); } catch (e) { return json({ ok: false, error: "url" }, 400); }
+  if (t.origin !== "https://site.api.espn.com" || !ESPN_OK.test(t.pathname)) return json({ ok: false, error: "url" }, 400);
+  for (const k of [...t.searchParams.keys()]) if (!ESPN_Q.has(k) || t.searchParams.get(k).length > 40) t.searchParams.delete(k);
+  const cache = caches.default, ck = new Request("https://espn.ballytics" + t.pathname + t.search);
+  const hit = await cache.match(ck); if (hit) return new Response(hit.body, hit);
+  const r = await fetch(t.toString(), { headers: { "User-Agent": "Mozilla/5.0 Ballytics" } });
+  if (!r.ok) return json({ ok: false, error: "espn " + r.status }, 502);
+  const body = await r.text();
+  const ttl = /summary|scoreboard/.test(t.pathname) ? (/"state":"in"/.test(body) ? 20 : 120) : 900;
+  const res = new Response(body, { headers: { "content-type": "application/json", "cache-control": `public, max-age=${ttl}` } });
+  ctx.waitUntil(cache.put(ck, res.clone()));
+  return res;
+}
+
+/* ---------- errores reales de la página (anónimos): mensaje, pantalla y versión, contados por día ---------- */
+const limpio = (x, n) => String(x || "").replace(/https?:\/\/[^\s)]+/g, u => { try { return new URL(u).pathname.split("/").pop(); } catch (e) { return ""; } }).replace(/[\u0000-\u001f<>]/g, " ").slice(0, n);
+async function errGuardar(env, b) {
+  const m = limpio(b.m, 200).trim(); if (m.length < 3) return json({ ok: false }, 400);
+  const r = limpio(b.r, 40).replace(/\/\d{5,}/g, "/#"), v = limpio(b.v, 12), ua = ["m", "d"].includes(b.ua) ? b.ua : "?", f = limpio(b.f, 40), l = +b.l || 0;
+  const key = `errs:${ymdUTC()}`, d = (await env.SUBS.get(key, "json")) || {}, k = (await hash(m + "|" + f + "|" + l)).slice(0, 10);
+  if (!d[k] && Object.keys(d).length >= 150) return json({ ok: true });
+  const x = d[k] || (d[k] = { m, f, l, n: 0, rutas: {}, v, ua: {} });
+  x.n++; x.last = new Date().toISOString(); x.v = v || x.v; x.rutas[r] = (x.rutas[r] || 0) + 1; x.ua[ua] = (x.ua[ua] || 0) + 1;
+  if (Object.keys(x.rutas).length > 12) delete x.rutas[Object.keys(x.rutas)[0]];
+  await env.SUBS.put(key, JSON.stringify(d), { expirationTtl: 15 * 86400 });
+  return json({ ok: true });
+}
+async function errResumen(env, req, dias) {
+  const tok = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  if (!env.GEMINI_API_KEY || tok !== await hash("ballytics-ia-votos|" + env.GEMINI_API_KEY)) return json({ ok: false, error: "no autorizado" }, 401);
+  const out = {};
+  for (let i = 0; i < Math.min(14, Math.max(1, dias || 2)); i++) { const d = new Date(Date.now() - i * 864e5).toISOString().slice(0, 10).replace(/-/g, ""); out[d] = (await env.SUBS.get(`errs:${d}`, "json")) || {}; }
+  return json({ ok: true, dias: out });
+}
+
 export default {
   async fetch(req, env, ctx) {
     if (req.method === "OPTIONS") return cors(req, new Response(null, { status: 204 }));
@@ -664,6 +703,8 @@ export default {
       else if (p === "/xg") res = await xgVivo(env, ctx, u.searchParams.get("f"));
       else if (p === "/ia/resumen") res = json({ ok: true, ...((await env.SUBS.get("iavres", "json")) || { d: {}, m: {}, tipo: {} }) });
       else if (p === "/ia/votos") res = await iaVotos(env, req);
+      else if (p === "/espn") res = await espnProxy(ctx, u.searchParams.get("u"));
+      else if (p === "/err/resumen") res = await errResumen(env, req, +u.searchParams.get("dias"));
       else if (p === "/afestado") res = json({ ok: true, ...((await env.SUBS.get("afrem", "json")) || {}), pedidos: Object.keys((await env.SUBS.get("afped", "json")) || {}).length });
       else if (p.startsWith("/prode/") && req.method === "GET") res = await prodeVer(env, p.split("/")[2] || "", u.searchParams.get("uid"), ctx);
       else if (req.method === "POST") {
@@ -672,7 +713,7 @@ export default {
         const b = await leerJSON(req, max);
         if (!b) return cors(req, json({ ok: false, error: "demasiado grande" }, 413));
         if (p === "/ia") return cors(req, await preguntarIA(env, b, ctx, req));
-        const R = { "/follow": follow, "/unfollow": unfollow, "/prefs": setPrefs, "/novedades": novedades, "/voto": votar, "/prode/crear": prodeCrear, "/prode/unirse": prodeUnirse, "/prode/pick": prodePick, "/borrar": borrar, "/ia/voto": iaVoto }[p];
+        const R = { "/follow": follow, "/unfollow": unfollow, "/prefs": setPrefs, "/novedades": novedades, "/voto": votar, "/prode/crear": prodeCrear, "/prode/unirse": prodeUnirse, "/prode/pick": prodePick, "/borrar": borrar, "/ia/voto": iaVoto, "/err": errGuardar }[p];
         res = R ? await R(env, b, ctx) : json({ error: "no existe" }, 404);
       } else res = json({ ok: true, servicio: "Ballytics" });
     } catch (e) { console.error(p, e); res = json({ ok: false, error: "Error interno. Prueba de nuevo en un rato." }, 500); }
