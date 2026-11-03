@@ -15,8 +15,9 @@ on:
 permissions:
   contents: write
 
+# grupo propio: en el grupo del robot principal quedaba cancelada mientras esperaba
 concurrency:
-  group: actualizar
+  group: competiciones
   cancel-in-progress: false
 
 jobs:
