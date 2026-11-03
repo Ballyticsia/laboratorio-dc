@@ -15,6 +15,7 @@ import json
 import os
 import sys
 import time
+import urllib.error
 import urllib.request
 from datetime import date, timedelta
 
@@ -23,53 +24,69 @@ ARCH = os.path.join(RAIZ, "site", "assets", "competiciones.json")
 ESPN = "https://site.api.espn.com/apis/site/v2/sports/soccer"
 
 
+LOG = []
+
+
 def pedir(url):
+    """Igual que pipeline/datos.py (que funciona desde GitHub): sin cabeceras extra; si ESPN rechaza limit, sin él."""
     for i in range(2):
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 Ballytics"})
-            with urllib.request.urlopen(req, timeout=20) as r:
+            with urllib.request.urlopen(url, timeout=25) as r:
                 return json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            if e.code == 400 and "&limit=" in url:
+                url = url.split("&limit=")[0]
+                continue
+            LOG.append(f"{url.split('soccer/')[-1]}: HTTP {e.code}")
+            return None
         except Exception as e:   # noqa: BLE001
             if i == 1:
-                print("  falló", url.split("soccer/")[-1], e, flush=True)
+                LOG.append(f"{url.split('soccer/')[-1]}: {e}")
             time.sleep(2)
     return None
 
 
-def rango(a, b):
-    return f"{a:%Y%m%d}-{b:%Y%m%d}"
+def fechas_calendario(lg):
+    """Días con partidos de la temporada según el calendario que ESPN entrega con la liga."""
+    out = []
+    for x in lg.get("calendar") or []:
+        if isinstance(x, str):
+            out.append(x[:10])
+        elif isinstance(x, dict):
+            for k in ("startDate", "endDate"):
+                if x.get(k):
+                    out.append(x[k][:10])
+            for e in x.get("entries") or []:
+                if isinstance(e, dict) and e.get("startDate"):
+                    out.append(e["startDate"][:10])
+    return sorted(set(out))
 
 
 def revisar(c, hoy):
-    j = pedir(f"{ESPN}/{c['s']}/scoreboard?dates={rango(hoy - timedelta(days=60), hoy + timedelta(days=60))}&limit=1000")
+    j = pedir(f"{ESPN}/{c['s']}/scoreboard?limit=200")
     if j is None:
         return None
     evs = j.get("events") or []
     lg = (j.get("leagues") or [{}])[0]
     logos = lg.get("logos") or []
     le = next((x.get("href") for x in logos if "dark" not in (x.get("rel") or [])), None) or (logos[0].get("href") if logos else None)
-    ahora = hoy.isoformat()
-    fut = sorted(e.get("date", "")[:10] for e in evs if e.get("date", "")[:10] >= ahora)
-    pas = [e for e in evs if e.get("date", "")[:10] < ahora]
-    out = {"pas": len(pas), "fut": len(fut)}
+    ahora, cerca_a, cerca_d, lejos = hoy.isoformat(), (hoy - timedelta(days=60)).isoformat(), (hoy + timedelta(days=60)).isoformat(), (hoy - timedelta(days=400)).isoformat()
+    dias = fechas_calendario(lg) + [e.get("date", "")[:10] for e in evs if e.get("date")]
+    temp = lg.get("season") or {}
+    fin_temp = (temp.get("endDate") or "")[:10]
+    fut = sorted(d for d in dias if d >= ahora)
+    pas = sorted(d for d in dias if d < ahora)
+    out = {"pas": sum(1 for d in pas if d >= cerca_a), "fut": sum(1 for d in fut if d <= cerca_d)}
     if fut:
         out["prox"] = fut[0]
-    if evs:
+    if pas:
+        out["ultimo"] = pas[-1]
+    if out["pas"] or out["fut"] or any(e.get("status", {}).get("type", {}).get("state") == "in" for e in evs):
         estado = "activa"
+    elif fut or (pas and pas[-1] >= lejos) or (fin_temp and fin_temp >= lejos):
+        estado = "pausa"
     else:
-        j2 = pedir(f"{ESPN}/{c['s']}/scoreboard?dates={rango(hoy - timedelta(days=400), hoy - timedelta(days=61))}&limit=1000")
-        n = len((j2 or {}).get("events") or [])
-        if j2 is None:
-            return None
-        estado = "pausa" if n else "inactiva"
-        if n:
-            out["ultimo"] = max(e.get("date", "")[:10] for e in j2["events"])
-    j3 = None
-    if not fut and estado != "inactiva":   # próxima fecha aunque sea lejana (receso largo)
-        j3 = pedir(f"{ESPN}/{c['s']}/scoreboard?dates={rango(hoy + timedelta(days=61), hoy + timedelta(days=240))}&limit=1000")
-        f2 = sorted(e.get("date", "")[:10] for e in (j3 or {}).get("events") or [])
-        if f2:
-            out["prox"] = f2[0]
+        estado = "inactiva"
     return estado, out, le
 
 
@@ -129,7 +146,10 @@ def main():
     cuenta = {e: sum(1 for c in comps if c.get("estado") == e) for e in ("activa", "pausa", "inactiva")}
     print(f"{len(comps)} competiciones, {cambios} con cambios: {cuenta}")
     print("inactivas:", ", ".join(f"{c['s']} ({c['n']})" for c in comps if c.get("estado") == "inactiva"))
+    print("\n".join(LOG[:60]))
     if "--grilla" in sys.argv:
+        with open(os.path.join(RAIZ, "data", "competiciones_log.txt"), "w", encoding="utf-8") as f:
+            f.write("\n".join(LOG) + "\n\n" + "\n".join(f"{c['s']}\t{c.get('estado')}\t{json.dumps(c.get('act'))}" for c in comps))
         grilla(comps)
 
 

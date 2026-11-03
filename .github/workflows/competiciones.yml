@@ -39,7 +39,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if [ -f data/logos_revision.png ]; then
-            cp data/logos_revision.png /tmp/logos.png
+            cp data/logos_revision.png /tmp/logos.png; cp data/competiciones_log.txt /tmp/log.txt 2>/dev/null || true
           fi
           git add site/assets/competiciones.json
           if ! git diff --cached --quiet; then
@@ -47,6 +47,6 @@ jobs:
             for i in 1 2 3; do git pull --rebase -X theirs origin main && git push origin HEAD:main && break; git rebase --abort 2>/dev/null || true; sleep $((i * 10)); done
           fi
           if [ -f /tmp/logos.png ]; then
-            git checkout --orphan revision-logos && git rm -rfq . && cp /tmp/logos.png logos_revision.png && git add logos_revision.png
+            git checkout --orphan revision-logos && git rm -rfq . && cp /tmp/logos.png logos_revision.png && cp /tmp/log.txt registro.txt 2>/dev/null; git add logos_revision.png registro.txt 2>/dev/null || git add logos_revision.png
             git commit -qm "Logos para revisar" && git push -f origin HEAD:revision-logos
           fi
