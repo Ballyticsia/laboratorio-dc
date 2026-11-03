@@ -1,0 +1,186 @@
+
+
+uefa.champions	activa	{"pas": 0, "fut": 9, "prox": "2026-11-03", "ultimo": "2026-08-27"}
+eng.1	activa	{"pas": 22, "fut": 26, "prox": "2026-11-06", "ultimo": "2026-11-02"}
+esp.1	activa	{"pas": 32, "fut": 12, "prox": "2026-11-06", "ultimo": "2026-11-02"}
+uefa.europa	activa	{"pas": 0, "fut": 1, "prox": "2026-11-04", "ultimo": "2026-08-29"}
+ita.1	activa	{"pas": 29, "fut": 22, "prox": "2026-11-06", "ultimo": "2026-11-02"}
+ger.1	activa	{"pas": 23, "fut": 12, "prox": "2026-11-06", "ultimo": "2026-11-01"}
+fra.1	activa	{"pas": 24, "fut": 16, "prox": "2026-11-06", "ultimo": "2026-11-02"}
+conmebol.libertadores	activa	{"pas": 3, "fut": 1, "prox": "2027-01-01", "ultimo": "2026-10-24"}
+chi.1	activa	{"pas": 23, "fut": 6, "prox": "2026-11-05", "ultimo": "2026-11-02"}
+uefa.europa.conf	activa	{"pas": 0, "fut": 19, "prox": "2026-11-05", "ultimo": "2026-08-29"}
+conmebol.sudamericana	activa	{"pas": 3, "fut": 1, "prox": "2027-01-01", "ultimo": "2026-10-24"}
+arg.1	activa	{"pas": 37, "fut": 3, "prox": "2026-11-03", "ultimo": "2026-11-02"}
+bra.1	activa	{"pas": 30, "fut": 13, "prox": "2026-11-03", "ultimo": "2026-11-02"}
+fifa.world	activa	{"pas": 0, "fut": 1, "prox": "2026-12-31", "ultimo": "2026-07-19"}
+fifa.worldq.conmebol	pausa	{"pas": 0, "fut": 0, "ultimo": "2025-11-01"}
+uefa.nations	activa	{"pas": 0, "fut": 9, "prox": "2026-11-12", "ultimo": "2026-06-01"}
+fifa.friendly	activa	{"pas": 17, "fut": 12, "prox": "2026-11-11", "ultimo": "2026-10-06"}
+por.1	activa	{"pas": 26, "fut": 11, "prox": "2026-11-06", "ultimo": "2026-11-02"}
+ned.1	activa	{"pas": 27, "fut": 16, "prox": "2026-11-06", "ultimo": "2026-11-01"}
+eng.2	activa	{"pas": 23, "fut": 33, "prox": "2026-11-03", "ultimo": "2026-10-31"}
+mex.1	activa	{"pas": 32, "fut": 7, "prox": "2026-11-06", "ultimo": "2026-11-02"}
+usa.1	activa	{"pas": 31, "fut": 1, "prox": "2026-11-07", "ultimo": "2026-11-02"}
+ksa.1	activa	{"pas": 24, "fut": 13, "prox": "2026-11-05", "ultimo": "2026-10-31"}
+tur.1	activa	{"pas": 28, "fut": 22, "prox": "2026-11-06", "ultimo": "2026-11-02"}
+bel.1	activa	{"pas": 17, "fut": 19, "prox": "2026-11-04", "ultimo": "2026-11-01"}
+sco.1	activa	{"pas": 16, "fut": 17, "prox": "2026-11-07", "ultimo": "2026-11-01"}
+col.1	activa	{"pas": 50, "fut": 7, "prox": "2026-11-03", "ultimo": "2026-11-02"}
+uru.1	activa	{"pas": 31, "fut": 0, "ultimo": "2026-11-02"}
+per.1	activa	{"pas": 30, "fut": 6, "prox": "2026-11-03", "ultimo": "2026-11-02"}
+ecu.1	activa	{"pas": 26, "fut": 7, "prox": "2026-11-03", "ultimo": "2026-11-02"}
+par.1	activa	{"pas": 27, "fut": 11, "prox": "2026-11-03", "ultimo": "2026-11-01"}
+esp.copa_del_rey	activa	{"pas": 1, "fut": 5, "prox": "2026-11-03", "ultimo": "2026-10-12"}
+eng.fa	activa	{"pas": 1, "fut": 3, "prox": "2026-11-06", "ultimo": "2026-11-01"}
+eng.league_cup	activa	{"pas": 2, "fut": 2, "prox": "2026-11-03", "ultimo": "2026-10-29"}
+ita.coppa_italia	activa	{"pas": 1, "fut": 1, "prox": "2026-12-01", "ultimo": "2026-09-16"}
+ger.dfb_pokal	activa	{"pas": 10, "fut": 1, "prox": "2026-12-04", "ultimo": "2026-10-30"}
+fra.coupe_de_france	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-07-01"}
+chi.2	inactiva	{"pas": 0, "fut": 0, "ultimo": "2010-12-05"}
+fifa.cwc	inactiva	{"pas": 0, "fut": 0, "ultimo": "2025-08-01"}
+conmebol.america	inactiva	{"pas": 0, "fut": 0, "ultimo": "2024-12-31"}
+uefa.euro	inactiva	{"pas": 0, "fut": 0, "ultimo": "2024-07-31"}
+concacaf.champions	activa	{"pas": 0, "fut": 1, "prox": "2026-12-31", "ultimo": "2026-05-31"}
+club.friendly	activa	{"pas": 31, "fut": 6, "prox": "2026-11-03", "ultimo": "2026-10-23"}
+aus.1	activa	{"pas": 10, "fut": 25, "prox": "2026-11-06", "ultimo": "2026-11-01"}
+chn.1	activa	{"pas": 11, "fut": 9, "prox": "2026-11-08", "ultimo": "2026-10-24"}
+ind.1	activa	{"pas": 16, "fut": 25, "prox": "2026-11-05", "ultimo": "2026-11-01"}
+idn.1	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-05-23"}
+jpn.1	activa	{"pas": 21, "fut": 16, "prox": "2026-11-06", "ultimo": "2026-11-01"}
+mys.1	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-05-17"}
+tha.1	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-05-10"}
+ger.2	activa	{"pas": 24, "fut": 12, "prox": "2026-11-06", "ultimo": "2026-11-01"}
+ger.super_cup	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-08-22"}
+aut.1	activa	{"pas": 20, "fut": 14, "prox": "2026-11-06", "ultimo": "2026-11-01"}
+cze.1	inactiva	{"pas": 0, "fut": 0}
+cyp.1	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-05-22"}
+den.1	activa	{"pas": 23, "fut": 12, "prox": "2026-11-06", "ultimo": "2026-11-02"}
+sco.2	activa	{"pas": 22, "fut": 14, "prox": "2026-11-06", "ultimo": "2026-10-31"}
+sco.tennents	activa	{"pas": 7, "fut": 1, "prox": "2026-12-07", "ultimo": "2026-11-02"}
+sco.cis	activa	{"pas": 2, "fut": 1, "prox": "2026-12-13", "ultimo": "2026-11-01"}
+sco.3	pausa	{"pas": 0, "fut": 0, "ultimo": "2025-09-27"}
+sco.4	pausa	{"pas": 0, "fut": 0, "ultimo": "2025-09-27"}
+esp.2	activa	{"pas": 37, "fut": 16, "prox": "2026-11-06", "ultimo": "2026-11-02"}
+esp.copa_de_la_reina	activa	{"pas": 2, "fut": 3, "prox": "2026-11-03", "ultimo": "2026-10-05"}
+esp.super_cup	pausa	{"pas": 0, "fut": 0, "prox": "2027-02-01", "ultimo": "2026-07-01"}
+fin.1	inactiva	{"pas": 0, "fut": 0}
+fra.coupe_de_la_ligue	inactiva	{"pas": 0, "fut": 0, "ultimo": "2020-08-02"}
+fra.2	activa	{"pas": 22, "fut": 12, "prox": "2026-11-06", "ultimo": "2026-11-02"}
+fra.super_cup	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-08-16"}
+wal.1	inactiva	{"pas": 0, "fut": 0, "ultimo": "2025-05-18"}
+gre.1	activa	{"pas": 20, "fut": 15, "prox": "2026-11-07", "ultimo": "2026-11-02"}
+eng.trophy	activa	{"pas": 0, "fut": 5, "prox": "2026-11-03", "ultimo": "2026-07-01"}
+eng.charity	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-08-16"}
+eng.3	activa	{"pas": 17, "fut": 20, "prox": "2026-11-03", "ultimo": "2026-11-01"}
+eng.4	activa	{"pas": 13, "fut": 15, "prox": "2026-11-03", "ultimo": "2026-10-31"}
+eng.5	activa	{"pas": 30, "fut": 20, "prox": "2026-11-07", "ultimo": "2026-10-31"}
+irl.1	pausa	{"pas": 0, "fut": 0, "ultimo": "2025-11-01"}
+nir.1	pausa	{"pas": 0, "fut": 0, "ultimo": "2025-09-27"}
+isr.1	inactiva	{"pas": 0, "fut": 0, "ultimo": "2025-05-24"}
+ita.2	activa	{"pas": 27, "fut": 23, "prox": "2026-11-06", "ultimo": "2026-11-01"}
+ita.super_cup	activa	{"pas": 0, "fut": 2, "prox": "2026-12-22"}
+mlt.1	inactiva	{"pas": 0, "fut": 0, "ultimo": "2025-05-10"}
+nor.1	activa	{"pas": 25, "fut": 12, "prox": "2026-11-07", "ultimo": "2026-11-01"}
+ned.cup	activa	{"pas": 11, "fut": 1, "prox": "2026-12-04", "ultimo": "2026-10-30"}
+ned.2	activa	{"pas": 32, "fut": 18, "prox": "2026-11-06", "ultimo": "2026-11-02"}
+por.taca.portugal	activa	{"pas": 15, "fut": 4, "prox": "2026-11-24", "ultimo": "2026-10-25"}
+rou.1	pausa	{"pas": 0, "fut": 0, "ultimo": "2025-09-29"}
+rus.1	activa	{"pas": 21, "fut": 12, "prox": "2026-11-06", "ultimo": "2026-11-02"}
+swe.1	activa	{"pas": 28, "fut": 8, "prox": "2026-11-03", "ultimo": "2026-11-02"}
+sui.1	pausa	{"pas": 0, "fut": 0, "ultimo": "2025-09-28"}
+tur.2	inactiva	{"pas": 0, "fut": 0}
+afc.champions	activa	{"pas": 0, "fut": 8, "prox": "2026-11-03", "ultimo": "2026-07-01"}
+afc.cup	activa	{"pas": 0, "fut": 3, "prox": "2026-11-03", "ultimo": "2026-07-01"}
+aff.championship	pausa	{"pas": 0, "fut": 0, "prox": "2027-09-01", "ultimo": "2026-08-26"}
+afc.asian.cup	activa	{"pas": 0, "fut": 1, "prox": "2027-01-01"}
+afc.cupq	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-07-01"}
+caf.champions	activa	{"pas": 8, "fut": 0, "prox": "2027-01-26", "ultimo": "2026-10-27"}
+caf.nations	activa	{"pas": 0, "fut": 1, "prox": "2026-12-31", "ultimo": "2026-01-18"}
+concacaf.champions_cup	inactiva	{"pas": 0, "fut": 0, "ultimo": "2009-01-01"}
+campeones.cup	activa	{"pas": 2, "fut": 0, "ultimo": "2026-09-17"}
+concacaf.league	inactiva	{"pas": 0, "fut": 0, "ultimo": "2022-11-03"}
+concacaf.nations.league	activa	{"pas": 0, "fut": 8, "prox": "2026-11-09", "ultimo": "2026-07-01"}
+concacaf.nations.league_qual	inactiva	{"pas": 0, "fut": 0, "ultimo": "2019-07-01"}
+concacaf.womens.championship	activa	{"pas": 0, "fut": 6, "prox": "2026-11-27", "ultimo": "2026-04-21"}
+concacaf.confederations_playoff	inactiva	{"pas": 0, "fut": 0, "ultimo": "2015-12-31"}
+concacaf.gold	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-01-01"}
+concacaf.leagues.cup	activa	{"pas": 3, "fut": 1, "prox": "2026-12-31", "ultimo": "2026-09-07"}
+concacaf.superliga	inactiva	{"pas": 0, "fut": 0, "ultimo": "2010-06-01"}
+conmebol.america_qual	inactiva	{"pas": 0, "fut": 0, "ultimo": "2016-12-31"}
+fifa.confederations	inactiva	{"pas": 0, "fut": 0, "ultimo": "2018-01-01"}
+intercontinental	inactiva	{"pas": 0, "fut": 0, "ultimo": "2004-01-01"}
+fifa.worldq	inactiva	{"pas": 0, "fut": 0, "ultimo": "2010-01-01"}
+fifa.worldq.concacaf	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-01-01"}
+fifa.worldq.afc.conmebol	inactiva	{"pas": 0, "fut": 0, "ultimo": "2022-07-01"}
+fifa.worldq.concacaf.ofc	inactiva	{"pas": 0, "fut": 0, "ultimo": "2022-07-01"}
+fifa.worldq.uefa	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-04-02"}
+fifa.worldq.afc	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-01-01"}
+fifa.worldq.ofc	inactiva	{"pas": 0, "fut": 0, "ultimo": "2025-04-01"}
+fifa.worldq.caf	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-01-01"}
+fifa.intercontinental_cup	activa	{"pas": 1, "fut": 2, "prox": "2026-12-12", "ultimo": "2026-09-19"}
+global.champs_cup	inactiva	{"pas": 0, "fut": 0, "ultimo": "2019-12-31"}
+global.world_football_challenge	inactiva	{"pas": 0, "fut": 0, "ultimo": "2012-08-12"}
+panam.m	inactiva	{"pas": 0, "fut": 0, "ultimo": "2016-01-01"}
+uefa.carling	inactiva	{"pas": 0, "fut": 0, "ultimo": "2012-01-01"}
+uefa.champions_qual	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-09-01"}
+uefa.europa.conf_qual	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-09-01"}
+uefa.intertoto	inactiva	{"pas": 0, "fut": 0, "ultimo": "2009-06-15"}
+uefa.uefa	inactiva	{"pas": 0, "fut": 0, "ultimo": "2009-07-01"}
+uefa.euroq	inactiva	{"pas": 0, "fut": 0, "ultimo": "2024-05-01"}
+uefa.europa_qual	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-09-01"}
+uefa.super_cup	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-08-12"}
+crc.1	activa	{"pas": 24, "fut": 8, "prox": "2026-11-03", "ultimo": "2026-11-01"}
+slv.1	activa	{"pas": 33, "fut": 13, "prox": "2026-11-04", "ultimo": "2026-11-01"}
+usa.open	activa	{"pas": 2, "fut": 1, "prox": "2027-01-01", "ultimo": "2026-10-22"}
+usa.usl.1	activa	{"pas": 4, "fut": 4, "prox": "2026-11-03", "ultimo": "2026-11-02"}
+gua.1	activa	{"pas": 32, "fut": 11, "prox": "2026-11-03", "ultimo": "2026-11-02"}
+hon.1	activa	{"pas": 21, "fut": 10, "prox": "2026-11-04", "ultimo": "2026-11-01"}
+jam.1	inactiva	{"pas": 0, "fut": 0, "ultimo": "2016-04-10"}
+mex.campeon	activa	{"pas": 0, "fut": 1, "prox": "2027-01-01", "ultimo": "2026-07-26"}
+mex.copa_mx	inactiva	{"pas": 0, "fut": 0, "ultimo": "2020-11-05"}
+mex.2	activa	{"pas": 33, "fut": 8, "prox": "2026-11-04", "ultimo": "2026-11-01"}
+arg.3	activa	{"pas": 32, "fut": 0, "ultimo": "2026-11-02"}
+arg.4	pausa	{"pas": 0, "fut": 0, "ultimo": "2025-12-06"}
+arg.5	inactiva	{"pas": 0, "fut": 0, "ultimo": "2023-11-28"}
+arg.2	activa	{"pas": 35, "fut": 0, "ultimo": "2026-11-02"}
+bol.1	activa	{"pas": 25, "fut": 13, "prox": "2026-11-06", "ultimo": "2026-11-02"}
+bra.2	activa	{"pas": 44, "fut": 7, "prox": "2026-11-05", "ultimo": "2026-11-02"}
+bra.camp.carioca	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-03-08"}
+bra.camp.gaucho	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-03-08"}
+bra.camp.paulista	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-03-08"}
+bra.copa_do_brazil	activa	{"pas": 3, "fut": 2, "prox": "2026-11-10", "ultimo": "2026-11-01"}
+chi.super_cup	activa	{"pas": 0, "fut": 1, "prox": "2026-12-31", "ultimo": "2026-01-25"}
+col.2	pausa	{"pas": 0, "fut": 0, "ultimo": "2025-12-02"}
+col.superliga	activa	{"pas": 0, "fut": 1, "prox": "2027-01-01", "ultimo": "2026-01-22"}
+ecu.2	inactiva	{"pas": 0, "fut": 0, "ultimo": "2011-11-27"}
+par.2	inactiva	{"pas": 0, "fut": 0, "ultimo": "2010-09-19"}
+per.2	inactiva	{"pas": 0, "fut": 0, "ultimo": "2011-08-20"}
+uru.2	inactiva	{"pas": 0, "fut": 0, "ultimo": "2010-12-18"}
+ven.1	activa	{"pas": 19, "fut": 8, "prox": "2026-11-03", "ultimo": "2026-11-01"}
+gha.1	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-05-24"}
+ken.1	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-05-31"}
+nga.1	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-05-24"}
+rsa.1	activa	{"pas": 15, "fut": 20, "prox": "2026-11-04", "ultimo": "2026-10-31"}
+rsa.2	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-05-17"}
+esp.w.1	activa	{"pas": 22, "fut": 10, "prox": "2026-11-07", "ultimo": "2026-11-02"}
+fra.w.1	activa	{"pas": 17, "fut": 10, "prox": "2026-11-06", "ultimo": "2026-11-01"}
+eng.w.1	activa	{"pas": 24, "fut": 11, "prox": "2026-11-07", "ultimo": "2026-11-01"}
+concacaf.w.champions_cup	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-06-01"}
+concacaf.w.gold	inactiva	{"pas": 0, "fut": 0, "ultimo": "2025-01-01"}
+concacaf.u23	inactiva	{"pas": 0, "fut": 0, "ultimo": "2016-01-01"}
+conmebol.sudamericano_sub20	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-01-01"}
+fifa.wwc	inactiva	{"pas": 0, "fut": 0, "ultimo": "2023-09-01"}
+fifa.world.u17	activa	{"pas": 0, "fut": 15, "prox": "2026-11-19", "ultimo": "2026-07-01"}
+fifa.world.u20	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-01-01"}
+fifa.w.olympics	inactiva	{"pas": 0, "fut": 0, "ultimo": "2024-08-13"}
+fifa.olympics	inactiva	{"pas": 0, "fut": 0, "ultimo": "2024-08-13"}
+panam.w	inactiva	{"pas": 0, "fut": 0, "ultimo": "2016-01-01"}
+uefa.euro_u21	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-01-01"}
+uefa.euro.u19	activa	{"pas": 0, "fut": 1, "prox": "2027-01-01", "ultimo": "2026-07-11"}
+uefa.weuro	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-01-01"}
+uefa.wchampions	activa	{"pas": 5, "fut": 1, "prox": "2026-12-18", "ultimo": "2026-10-29"}
+uefa.w.nations	pausa	{"pas": 0, "fut": 0, "ultimo": "2026-01-01"}
+usa.nwsl	activa	{"pas": 31, "fut": 3, "prox": "2026-11-06", "ultimo": "2026-11-01"}
+usa.w.1	inactiva	{"pas": 0, "fut": 0, "ultimo": "2003-08-17"}
+bra.brasileiro_u20	activa	{"pas": 1, "fut": 1, "prox": "2026-12-31", "ultimo": "2026-09-04"}
