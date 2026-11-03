@@ -439,8 +439,9 @@ function render() {
   paintLive();
   paintCountdown();
   if (R.v === "inicio") vigilarMas();
-  if (["registro", "metodo", "partido", "picks"].includes(R.v)) loadExtras();
   if (["partido", "jugador", "equipo", "envivo", "arbitro", "liga"].includes(R.v)) loadFotos();
+  if (["registro", "metodo", "picks"].includes(R.v)) loadExtras();
+  else if (R.v === "partido") loadFotos().then(loadExtras);   // primero las caras de los jugadores, después el registro (pesado, más abajo)
   centrarActivos();
   arbLlenar();
 }
@@ -1027,7 +1028,7 @@ function vInicio() {
     const L = D.ligas[j.liga], p = findMatch(j.liga, j.partido); if (!L || !p) return "";
     const rival = p.home === j.equipo ? p.away : p.home;
     return `<div class="fp cardlink" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}">
-      <div class="fp-head">${face(L, j.equipo, j.jid, j.jugador, "lg")}<div><b class="fp-name">${esc(j.jugador)}</b><span class="muted">${esc(corto(L, j.equipo))} · ${esc(L.nombre)}</span></div></div>
+      <div class="fp-head">${face(L, j.equipo, j.jid, j.jugador, "lg", j.af ? `https://media.api-sports.io/football/players/${j.af}.png` : "")}<div><b class="fp-name">${esc(j.jugador)}</b><span class="muted">${esc(corto(L, j.equipo))} · ${esc(L.nombre)}</span></div></div>
       <div class="fp-big"><span class="lbl">Probabilidad de marcar</span><span class="v num">${pct(j.p)}</span><span class="muted">vs ${esc(corto(L, rival))} · ${esc(cuando(p.kickoff))}</span></div>
       <div class="fp-stats"><span><b class="num">${j.goles}</b> goles en la temporada</span><span class="l5">${(j.ult5 || []).map(g => `<i class="${g ? "on" : ""}">${g || "·"}</i>`).join("")}<small>últimos 5</small></span></div>
       <button class="btn ghost sm" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}">Ver partido</button></div>`;
@@ -1417,7 +1418,7 @@ function vPartido() {
     <h1 id="h-p" class="sr">${esc(H)} vs ${esc(A)}</h1>
     <div class="panel match">
       <div class="livebox" data-live-box="${esc(p.id)}" hidden></div>
-      <div class="meta">${leagueMark(L, "sm")}<span>${esc(L.nombre)}</span><span>·</span><span>${new Date(p.kickoff).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })} ${hhmm(p.kickoff)}</span><span class="cdown" data-cd="${esc(p.kickoff)}"></span></div>
+      <div class="meta">${leagueMark(L, "sm")}<span>${esc(L.nombre)}</span><span><span class="msep" aria-hidden="true">· </span>${new Date(p.kickoff).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })} ${hhmm(p.kickoff)}</span><span class="cdown" data-cd="${esc(p.kickoff)}"></span></div>
       <div class="mact"><details class="shmenu"><summary class="btn ghost sm"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"/></svg>Compartir<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5"/></svg></summary><div class="shm-list" role="menu"><button role="menuitem" data-sharelink>Enlace<small>Se ve con título en WhatsApp</small></button><button role="menuitem" data-share data-liga="${L.id}" data-mid="${esc(p.id)}">Imagen<small>Tarjeta con las probabilidades</small></button><button role="menuitem" data-share data-fmt="story" data-liga="${L.id}" data-mid="${esc(p.id)}">Imagen para historias<small>Vertical 9:16 para Instagram o WhatsApp</small></button></div></details><button class="btn ghost sm" data-ics="match" data-liga="${L.id}" data-mid="${esc(p.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Calendario</button></div>
       <div class="face">${side(sh, p.home, "l")}<span class="vs">VS</span>${side(sa, p.away, "r")}</div>
       <div class="probs">

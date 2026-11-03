@@ -1085,6 +1085,16 @@ def main():
     cuotas.guardar_estado()
     portada["partidos"] = sorted(portada["partidos"], key=lambda p: -p["peso"])[:6]
     portada["jugadores"] = sorted(portada["jugadores"], key=lambda p: -p["p"])[:6]
+    # la foto va en el índice: el jugador destacado del inicio aparece sin esperar fotos.json (~80 KB)
+    try:
+        with open(os.path.join(SALIDA, "fotos.json"), encoding="utf-8") as ff:
+            mapa_fotos = json.load(ff)
+    except (OSError, ValueError):
+        mapa_fotos = {}
+    for j in portada["jugadores"]:
+        af = mapa_fotos.get(str(j["jid"]))
+        if af:
+            j["af"] = af
     portada["equipos"] = sorted(portada["equipos"], key=lambda p: (-p["puntos5"], p["pos"]))[:6]
     portada["rachas"] = sorted(portada["rachas"], key=lambda p: -p["n"])[:8]
     with open(os.path.join(SALIDA, "indice.json"), "w", encoding="utf-8") as f:
