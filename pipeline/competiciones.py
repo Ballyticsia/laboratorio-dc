@@ -85,8 +85,10 @@ def revisar(c, hoy):
         estado = "activa"
     elif fut or (pas and pas[-1] >= lejos) or (fin_temp and fin_temp >= lejos):
         estado = "pausa"
-    else:
+    elif pas or fin_temp:   # solo con prueba de que lo último fue hace más de un año
         estado = "inactiva"
+    else:                   # ESPN no entrega calendario: no se esconde, se muestra como en pausa
+        estado = "pausa"
     return estado, out, le
 
 
