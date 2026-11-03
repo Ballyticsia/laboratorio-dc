@@ -37,6 +37,11 @@ def slug(s):
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
 
 
+def ID_OK(i):
+    """Número de partido de ESPN ("401850654") o de API-Football ("af1234567"): va en la dirección de la página."""
+    return bool(re.fullmatch(r"(af)?\d+", str(i or "")))
+
+
 def ruta_partido(liga, p):
     return f"partido/{liga}/{p['id']}-{slug(p['home'])}-vs-{slug(p['away'])}/"
 
@@ -273,7 +278,7 @@ def main():
         ligas[L["id"]] = L
         prox = []
         for p in L.get("partidos", []):
-            if not str(p.get("id", "")).isdigit() or p.get("estado") != "pendiente":
+            if not ID_OK(p.get("id")) or p.get("estado") != "pendiente":
                 continue
             k = datetime.fromisoformat(p["kickoff"].replace("Z", "+00:00"))
             if not (ahora - timedelta(hours=3) <= k <= hasta):
@@ -299,7 +304,7 @@ def main():
     reg = leer(os.path.join(DATA, "registro.json"), {}) or {}
     for fl in reg.get("filas", []):
         L = ligas.get(fl.get("liga"))
-        if not L or fl.get("hg") is None or not str(fl.get("id", "")).isdigit():
+        if not L or fl.get("hg") is None or not ID_OK(fl.get("id")):
             continue
         ruta, h = partido_jugado(tpl, L, fl)
         if not ruta or URL + ruta in hechos:

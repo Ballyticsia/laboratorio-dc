@@ -9,7 +9,7 @@ Sitio de probabilidades de fútbol con un modelo Dixon-Coles abierto. Se actuali
 - **Registro público:** cada predicción se guarda antes del partido y se califica después.
 - **Cómo funciona:** el método y el backtest contra las cuotas de mercado.
 
-Ligas: Premier League, LaLiga, Serie A, Bundesliga, Ligue 1, Championship, Primeira Liga, Eredivisie, Primera División de Chile, Liga Profesional Argentina, Brasileirão, MLS, Champions League y Copa Libertadores. Datos: marcadores públicos de ESPN.
+Ligas: Premier League, LaLiga, Serie A, Bundesliga, Ligue 1, Championship, Primeira Liga, Eredivisie, Primera División de Chile, Liga Profesional Argentina, Brasileirão, MLS, Champions League y Copa Libertadores, entre otras. Datos: marcadores públicos de ESPN; la Primera B de Chile, que ESPN dejó de publicar en 2010, sale de API-Football.
 
 ---
 
@@ -76,6 +76,12 @@ El robot usa la clave guardada en **Settings → Secrets and variables → Actio
 - Con el plan Pro se puede subir `API_FOOTBALL_DIAS` a `3` y bajar `API_FOOTBALL_MIN_HORAS` a `2` en `.github/workflows/actualizar.yml`.
 - El estado de la conexión (consultas usadas, restantes y errores) queda en `data/api_football/estado.json`.
 - Si la clave falta o la API falla, el sitio sigue funcionando sin bajas.
+
+### Ligas que ESPN no cubre (Primera B de Chile)
+- En `pipeline/generar.py`, una liga con `fuente="api_football"` toma sus partidos de API-Football (`pipeline/datos_af.py`) en vez de ESPN. Necesita su número de liga en `AF_LIGA` (`pipeline/fotos.py`; la Primera B es la 266).
+- Por corrida: 1 consulta para la temporada actual (como mucho cada `AF_PARTIDOS_HORAS`, 1,5 h) y 1 por cada 20 partidos terminados que todavía no tienen goles, tarjetas y estadísticas. La primera vez son unas 40 consultas (tres temporadas); después, 1 o 2.
+- Todo queda guardado en `data/api_football/partidos/`. Si la clave falta o la API falla, se usa esa copia.
+- Los partidos y jugadores de estas ligas llevan el prefijo `af` en su número, para no confundirlos con los de ESPN. No tienen alineaciones ni van al Prode.
 
 ## Probabilidad Ballytics, modelo propio y mercado
 - Si ESPN trae cuota (hoy DraftKings), `modelo.calibrar()` busca los goles esperados que reproducen la cuota sin margen (1X2 y más/menos). De ahí salen todos los mercados del partido.

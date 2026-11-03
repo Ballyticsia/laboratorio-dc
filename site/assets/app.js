@@ -96,6 +96,7 @@ function face(L, t, jid, name, size = "", alt = "") {
   const w = String(name || "").replace(/[^A-Za-zÀ-ÿ' -]/g, "").trim().split(/\s+/).filter(Boolean);
   const ini = ((w[0] || "?")[0] + (w.length > 1 ? w[w.length - 1][0] : "")).toUpperCase();
   const espn = /^\d+$/.test(String(jid || "")) && !NOFOTO.has(String(jid)) ? `https://a.espncdn.com/i/headshots/soccer/players/full/${jid}.png` : "";
+  if (!alt && /^af\d+$/.test(String(jid || ""))) alt = `https://media.api-sports.io/football/players/${String(jid).slice(2)}.png`;
   if (!alt && jid) alt = fotoDe(jid);
   const api = typeof alt === "string" && /^https:\/\/media\.api-sports\.io\//.test(alt) ? alt : "";
   // si ya sabemos su foto de API-Football se usa primero (ESPN casi no tiene fotos de fútbol)
@@ -316,7 +317,7 @@ function pathHash() {
 const curHash = () => (location.hash && location.hash !== "#" ? location.hash : pathHash() || "#/");
 // dirección para compartir: la página propia del partido (con su vista previa en WhatsApp) cuando existe
 function cleanUrl(r) {
-  if (r.v === "partido" && /^\d+$/.test(String(r.id))) { const p = findMatch(r.liga, r.id) || (D.registro && (D.registro.filas || []).find(f => String(f.id) === String(r.id)));
+  if (r.v === "partido" && /^(af)?\d+$/.test(String(r.id))) { const p = findMatch(r.liga, r.id) || (D.registro && (D.registro.filas || []).find(f => String(f.id) === String(r.id)));
     if (p) return `${BASE_URL}partido/${r.liga}/${r.id}-${slugify(p.home)}-vs-${slugify(p.away)}/`; }
   if (r.v === "liga" && (!r.tab || r.tab === "resumen")) return `${BASE_URL}liga/${r.liga}/`;
   if (r.v === "picks") return `${BASE_URL}picks/`;
@@ -1953,6 +1954,7 @@ async function loadSummary() {
   const box = document.getElementById("lineups"), mini = document.getElementById("xi-adj");
   if ((!box && !mini) || !L || !p || !L.slug) return;
   const fail = `<h3>Alineaciones</h3><p class="note">Aún no publicadas. Las alineaciones suelen salir cerca de una hora antes del partido.</p>`;
+  if (!/^\d+$/.test(String(p.id))) { if (box) box.innerHTML = `<h3>Alineaciones</h3><p class="note">Para ${esc(L.nombre)} todavía no hay alineaciones.</p>`; return; }
   try {
     const sj = await vget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${L.slug}/summary?event=${encodeURIComponent(p.id)}`);
     const r = { ok: true, json: async () => sj };
@@ -2970,8 +2972,9 @@ async function vFillComps() {
   const all = await vComps(), box = document.getElementById("vc-list"); if (!box) return;
   const q = ((document.getElementById("vc-q") || {}).value || "").trim().toLowerCase(), fav = favComps();
   const orden = c => c.estado === "pausa" ? 1 : 0;
-  const L = all.filter(c => c.estado !== "inactiva" && (!q || (c.n + " " + c.p).toLowerCase().includes(q))).sort((a, b) => orden(a) - orden(b));
-  const item = c => `<div class="vci${c.estado === "pausa" ? " pausa" : ""}"${c.estado === "pausa" ? ` title="${esc(compPausa(c))}"` : ""}><button class="vcib" data-go="comp" data-liga="${esc(c.s)}">${compImg(c)}<span><b>${esc(c.n)}${modelBySlug(c.s) ? ` <span class="tagm" title="Esta competición tiene probabilidades del modelo de Ballytics">Pronósticos</span>` : ""}</b><small>${esc(c.p)}${c.t.includes("fem") ? " · femenino" : ""}${c.t.includes("juv") ? " · juvenil" : ""}</small></span></button><button class="vstar${fav.includes(c.s) ? " on" : ""}" data-fcomp="${esc(c.s)}" aria-label="Seguir">${fav.includes(c.s) ? "★" : "☆"}</button></div>`;
+  const L = all.filter(c => (c.estado !== "inactiva" || modelBySlug(c.s)) && (!q || (c.n + " " + c.p).toLowerCase().includes(q))).sort((a, b) => orden(a) - orden(b));
+  const afL = c => { const M = modelBySlug(c.s); return M && M.fuente === "api_football" ? M : null; };
+  const item = c => `<div class="vci${c.estado === "pausa" ? " pausa" : ""}"${c.estado === "pausa" ? ` title="${esc(compPausa(c))}"` : ""}>${afL(c) ? `<button class="vcib" data-go="liga" data-liga="${esc(afL(c).id)}">` : `<button class="vcib" data-go="comp" data-liga="${esc(c.s)}">`}${compImg(c)}<span><b>${esc(c.n)}${modelBySlug(c.s) ? ` <span class="tagm" title="Esta competición tiene probabilidades del modelo de Ballytics">Pronósticos</span>` : ""}</b><small>${esc(c.p)}${c.t.includes("fem") ? " · femenino" : ""}${c.t.includes("juv") ? " · juvenil" : ""}</small></span></button><button class="vstar${fav.includes(c.s) ? " on" : ""}" data-fcomp="${esc(c.s)}" aria-label="Seguir">${fav.includes(c.s) ? "★" : "☆"}</button></div>`;
   const favs = all.filter(c => fav.includes(c.s)), top = L.filter(c => c.o < 40 && c.estado !== "pausa");
   const regs = ["Selecciones", "Copas internacionales", "Sudamérica", "Europa", "Norteamérica", "Asia", "África"];
   let html = "";
@@ -3068,6 +3071,8 @@ async function vFillComp(slug, tab) {
   await vComps();
   const c = VV.bySlug[slug], head = document.getElementById("cp-head"), body = document.getElementById("cp-body"); if (!head) return;
   const fav = favComps().includes(slug), M = modelBySlug(slug);
+  if (M && M.fuente === "api_football") {   // ESPN no la cubre: su página es la de Ballytics (reemplaza la dirección, así "atrás" no vuelve aquí)
+    const r = { v: "liga", liga: M.id, tab: "resumen" }; go(r, false); try { history.replaceState(null, "", toHash(r)); lastUrl = location.href; } catch (e) {} return; }
   let evs = [];
   try { evs = await vSched(slug); } catch (e) {}
   const lg = (VV.sched[slug] || {}).lg || {}, name = c ? c.n : lg.name || slug, logo = c && c.l ? c.l : ((lg.logos || [])[0] || {}).href;

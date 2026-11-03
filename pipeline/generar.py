@@ -23,6 +23,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(__file__))
 import datos  # noqa: E402
+import datos_af  # noqa: E402
 import fotos  # noqa: E402
 import arbitros  # noqa: E402
 import picks_publicos  # noqa: E402
@@ -113,7 +114,8 @@ LIGAS = [
     dict(id="peru", peso=0.7, nombre="Liga 1", pais="Perú", region="Sudamérica", s1="per.1", s2=[], inicio=1, tabla=False, oficial=True),
     dict(id="ecuador", peso=0.75, nombre="LigaPro", pais="Ecuador", region="Sudamérica", s1="ecu.1", s2=[], inicio=1, tabla=False, oficial=True),
     dict(id="paraguay", peso=0.7, nombre="Primera División", pais="Paraguay", region="Sudamérica", s1="par.1", s2=[], inicio=1, tabla=False, oficial=True),
-    dict(id="chile2", peso=0.7, nombre="Primera B", pais="Chile", region="Sudamérica", s1="chi.2", s2=["chi.1"], inicio=1,
+    # ESPN dejó de publicar la Primera B en 2010: sus partidos vienen de API-Football (pipeline/datos_af.py)
+    dict(id="chile2", peso=0.7, nombre="Primera B", pais="Chile", region="Sudamérica", s1="chi.2", s2=[], inicio=1, fuente="api_football",
          zonas=[(1, 1, "Ascenso directo", "cl"), (2, 8, "Liguilla de ascenso", "el"), (16, 16, "Descenso", "desc")]),
     dict(id="turquia", peso=0.85, nombre="Süper Lig", pais="Turquía", region=EUROPA, s1="tur.1", s2=[], inicio=7,
          zonas=[(1, 1, "Champions League", "cl"), (2, 2, "Champions (previa)", "cl"), (3, 3, "Europa League", "el"), (4, 4, "Conference League", "ecl"), (16, 18, "Descenso", "desc")]),
@@ -697,6 +699,8 @@ XI_CACHE = os.path.join(RAIZ, "data", "cache_espn", "xi")
 
 def xi_ultimo(event_id, team):
     """Titulares y formación de un equipo en un partido ya jugado (sirve de alineación probable para el siguiente)."""
+    if not str(event_id).isdigit():   # partido de API-Football ("af…"): ESPN no lo tiene
+        return None
     os.makedirs(XI_CACHE, exist_ok=True)
     path = os.path.join(XI_CACHE, f"{event_id}.json")
     try:
@@ -789,7 +793,10 @@ def main():
             continue
         print(f"{L['nombre']}: descargando…", flush=True)
         start, cur_start, season_end = season_bounds(L, today)
-        d1 = datos.load(L["s1"], start, season_end, today)
+        if L.get("fuente") == "api_football":
+            d1 = datos_af.load(L, start, season_end, today)
+        else:
+            d1 = datos.load(L["s1"], start, season_end, today)
         if d1.empty:
             print("  sin datos, la salto")
             continue
@@ -823,7 +830,11 @@ def main():
         mj = model.to_json()
         att_avg = np.mean([mj["equipos"][t][0] for t in teams if t in mj["equipos"]] or [0])
         def_avg = np.mean([mj["equipos"][t][1] for t in teams if t in mj["equipos"]] or [0])
-        tabla = standings(jug, teams)
+        # API-Football trae también la liguilla y la final: la tabla cuenta solo la fase regular
+        jug_tabla = jug
+        if "ronda" in jug.columns and jug.ronda.astype(str).str.startswith("Regular Season").any():
+            jug_tabla = jug[jug.ronda.astype(str).str.startswith("Regular Season")]
+        tabla = standings(jug_tabla, teams)
         proy = project(model, tabla, rest[rest.estado == "pendiente"], L.get("zonas", []), rng) if tiene_tabla else {}
         for s in tabla:
             a_, d_ = mj["equipos"].get(s["equipo"], [att_avg, def_avg])
@@ -971,7 +982,7 @@ def main():
                    actualizado=now.isoformat(timespec="minutes"), datos_hasta=str(p1.date.max().date()) if len(p1) else None,
                    usa_tiros=model.usa_tiros, usa_xg=bool(n_xg), tabla_ok=tiene_tabla, zonas=[dict(desde=a, hasta=b, nombre=n, cls=c) for a, b, n, c in L.get("zonas", [])],
                    modelo=mj, modelo_corners=mc.to_json() if mc else None, modelo_tarjetas=mt.to_json() if mt else None,
-                   slug=L["s1"], grupos=grupos, equipos=info, tabla=tabla, stats=stats_eq, rachas=rachas, goleadores=goleadores, amonestados=amonestados,
+                   slug=L["s1"], fuente=L.get("fuente", "espn"), grupos=grupos, equipos=info, tabla=tabla, stats=stats_eq, rachas=rachas, goleadores=goleadores, amonestados=amonestados,
                    partidos=partidos, resultados=resultados, copa=copa)
         # partidos jugados de la liga en las últimas temporadas, para el historial de los árbitros
         hist_arb = []
@@ -980,7 +991,7 @@ def main():
             hist_arb.append(dict(kickoff=x.kickoff, home=x.home, away=x.away, hg=x.hg, ag=x.ag, ev=getattr(x, "eventos", None),
                                  fh=int(fh_) if fh_ == fh_ else None, fa=int(fa_) if fa_ == fa_ else None))
         pendientes.append((L, out, dict(model=model, goles=goles_cnt, team_goals=team_goals, name_of=name_of, hist_arb=hist_arb)))
-        indice.append(dict(id=L["id"], slug=L["s1"], nombre=L["nombre"], pais=L["pais"], region=L["region"], logo=meta.get("logo"),
+        indice.append(dict(id=L["id"], slug=L["s1"], fuente=L.get("fuente", "espn"), nombre=L["nombre"], pais=L["pais"], region=L["region"], logo=meta.get("logo"),
                            datos_hasta=out["datos_hasta"], proximos=len(partidos)))
         print(f"  {len(jug)} jugados · {len(partidos)} por jugar · datos hasta {out['datos_hasta']} · "
               f"córners {'sí' if mc else 'no'} · tarjetas {'sí' if mt else 'no'} · {len(goleadores)} goleadores · "
@@ -1092,7 +1103,8 @@ def main():
     except Exception as e:
         print("  ✗ agenda:", e)
     # marcador más probable de cada partido próximo: Ballytics juega con él en los prodes (lo lee el worker)
-    picks = {str(p["id"]): p["top"] for L, out, _ in pendientes for p in out["partidos"] if p.get("top")}
+    # solo partidos de ESPN: el prode del worker trabaja con los números de ESPN (los "af…" no están ahí)
+    picks = {str(p["id"]): p["top"] for L, out, _ in pendientes for p in out["partidos"] if p.get("top") and str(p["id"]).isdigit()}
     with open(os.path.join(SALIDA, "picks.json"), "w", encoding="utf-8") as f:
         json.dump(dict(actualizado=now.isoformat(timespec="minutes"), picks=picks), f, ensure_ascii=False, separators=(",", ":"))
     lesiones.guardar_estado()
