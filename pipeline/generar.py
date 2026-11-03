@@ -30,6 +30,7 @@ import copas  # noqa: E402
 import cuotas  # noqa: E402
 import lesiones  # noqa: E402
 import xg  # noqa: E402
+import caja  # noqa: E402
 from modelo import XI, ALPHA, calibrar, fit, markets, mercado_q, score_matrix  # noqa: E402
 import margen  # noqa: E402
 
@@ -63,7 +64,7 @@ REG_JUG = os.path.join(RAIZ, "data", "registro_jugadores.json")   # goleadores y
 EXTRA = {}   # id -> córners, tarjetas, goleadores y amonestados reales de cada partido jugado
 HISTORIAL = os.path.join(RAIZ, "data", "historial.json")
 TEMPORADAS = 3
-DETALLE_CAMPOS = ("hist", "xi_prob", "tarjetas_jug", "goleadores", "h2h")   # van en site/data/detalle/<liga>.json
+DETALLE_CAMPOS = ("hist", "xi_prob", "tarjetas_jug", "goleadores", "h2h", "props")   # van en site/data/detalle/<liga>.json
 SIMS = 10000
 DETALLE_DIAS = 21
 HOME_L2 = 20.0      # localía propia de cada equipo, encogida hacia el promedio (backtest: log-loss 0,9948 → 0,9942)   # partidos con análisis completo (córners, tarjetas, goleadores, h2h)
@@ -260,6 +261,62 @@ def streaks(df, teams):
     return sorted(out, key=lambda s: -s["n"])
 
 
+def tarjetas_de(x, lado, tipo):
+    """Amarillas ("Y") o rojas ("R") de un lado: la caja de ESPN si la trae, si no los eventos del partido."""
+    v = stat(x, lado, "yellowCards" if tipo == "Y" else "redCards")
+    if v == v:
+        return v
+    e = evs(x._asdict() if hasattr(x, "_asdict") else x)
+    if e is None or not eventos_completos(x):
+        return np.nan
+    return float(sum(1 for ev in e if ev["lado"] == lado and ev["t"] == tipo))
+
+
+def _pct_pases(x, lado):
+    a, t = stat(x, lado, "accuratePasses"), stat(x, lado, "totalPasses")
+    return 100 * a / t if a == a and t == t and t > 0 else np.nan
+
+
+# (clave corta, función(partido, lado propio, lado rival)) — promedios por partido de la página de equipo
+DET = [
+    ("gf", lambda m, s, o: m["gf"]), ("gc", lambda m, s, o: m["gc"]),
+    ("ti", lambda m, s, o: stat(m["x"], s, "totalShots")), ("ti_c", lambda m, s, o: stat(m["x"], o, "totalShots")),
+    ("ar", lambda m, s, o: stat(m["x"], s, "shotsOnTarget")), ("ar_c", lambda m, s, o: stat(m["x"], o, "shotsOnTarget")),
+    ("bl", lambda m, s, o: stat(m["x"], s, "blockedShots")),
+    ("co", lambda m, s, o: stat(m["x"], s, "wonCorners")), ("co_c", lambda m, s, o: stat(m["x"], o, "wonCorners")),
+    ("po", lambda m, s, o: stat(m["x"], s, "possessionPct")),
+    ("pa", lambda m, s, o: stat(m["x"], s, "totalPasses")), ("pp", lambda m, s, o: _pct_pases(m["x"], s)),
+    ("ce", lambda m, s, o: stat(m["x"], s, "totalCrosses")),
+    ("of", lambda m, s, o: stat(m["x"], s, "offsides")), ("of_c", lambda m, s, o: stat(m["x"], o, "offsides")),
+    ("fa", lambda m, s, o: stat(m["x"], s, "foulsCommitted")), ("fa_r", lambda m, s, o: stat(m["x"], o, "foulsCommitted")),
+    ("am", lambda m, s, o: tarjetas_de(m["x"], s, "Y")), ("am_c", lambda m, s, o: tarjetas_de(m["x"], o, "Y")),
+    ("ro", lambda m, s, o: tarjetas_de(m["x"], s, "R")),
+    ("en", lambda m, s, o: stat(m["x"], s, "totalTackles")), ("en_c", lambda m, s, o: stat(m["x"], o, "totalTackles")),
+    ("it", lambda m, s, o: stat(m["x"], s, "interceptions")), ("de", lambda m, s, o: stat(m["x"], s, "totalClearance")),
+    ("at", lambda m, s, o: stat(m["x"], s, "saves")),
+]
+SUMAS = ("ro",)   # se muestran como total de la temporada además del promedio
+
+
+def _det(ms):
+    n = len(ms)
+    if not n:
+        return None
+    d = dict(pj=n, va=sum(1 for m in ms if m["gc"] == 0), sm=sum(1 for m in ms if m["gf"] == 0),
+             bt=r(sum(1 for m in ms if m["gf"] > 0 and m["gc"] > 0) / n, 3), o25=r(sum(1 for m in ms if m["gf"] + m["gc"] > 2.5) / n, 3),
+             g=sum(1 for m in ms if m["gf"] > m["gc"]), e=sum(1 for m in ms if m["gf"] == m["gc"]), p=sum(1 for m in ms if m["gf"] < m["gc"]))
+    for k, fn in DET:
+        v = [fn(m, "h" if m["local"] else "a", "a" if m["local"] else "h") for m in ms]
+        v = [float(a) for a in v if a is not None and a == a]
+        if v:
+            d[k] = r(sum(v) / len(v), 2)
+            if len(v) < n:
+                d["n_" + k] = len(v)
+            if k in SUMAS:
+                d[k + "_t"] = int(sum(v))
+    return d
+
+
 def team_stats(df, teams):
     out = []
     for t in teams:
@@ -277,6 +334,7 @@ def team_stats(df, teams):
         side = lambda m: "h" if m["local"] else "a"
         opp = lambda m: "a" if m["local"] else "h"
         out.append(dict(
+            det=dict(t=_det(ms), l=_det([m for m in ms if m["local"]]), v=_det([m for m in ms if not m["local"]])),
             equipo=t, pj=n,
             gf=r(sum(m["gf"] for m in ms) / n, 2), gc=r(sum(m["gc"] for m in ms) / n, 2),
             tiros=avg(lambda m: stat(m["x"], side(m), "totalShots")),
@@ -292,6 +350,50 @@ def team_stats(df, teams):
             vallas=sum(1 for m in ms if m["gc"] == 0),
             sin_marcar=sum(1 for m in ms if m["gf"] == 0),
         ))
+    return out
+
+
+PROPS = [("ti", "ti_c", "totalShots"), ("ar", "ar_c", "shotsOnTarget"), ("fa", "fa_r", "foulsCommitted"),
+         ("of", "of_c", "offsides"), ("en", "en_c", "totalTackles"), ("am", "am_c", None)]
+PROPS_K = 3.0   # partidos "de liga promedio" que se suman a cada equipo para no exagerar con muestras chicas
+
+
+def props_liga(df):
+    """Promedio de local y de visita de cada estadística y su dispersión (varianza / media) en la liga."""
+    out = {}
+    for k, _, campo in PROPS:
+        vh, va = [], []
+        for x in df.itertuples():
+            h = tarjetas_de(x, "h", "Y") if campo is None else stat(x, "h", campo)
+            a = tarjetas_de(x, "a", "Y") if campo is None else stat(x, "a", campo)
+            if h == h and a == a:
+                vh.append(h)
+                va.append(a)
+        if len(vh) < 20:
+            continue
+        todo = np.array(vh + va)
+        mu = todo.mean()
+        out[k] = dict(h=float(np.mean(vh)), a=float(np.mean(va)), disp=r(max(1.0, float(todo.var()) / mu) if mu > 0 else 1.0, 3))
+    return out
+
+
+def props_partido(liga, sh, sa):
+    """Esperado de cada estadística para el local y la visita: ataque propio × lo que concede el rival / promedio."""
+    out = {}
+    for k, kc, _ in PROPS:
+        lg = liga.get(k)
+        dh, da = (sh or {}).get("l") or {}, (sa or {}).get("v") or {}
+        if not lg or dh.get(k) is None or da.get(kc) is None or dh.get(kc) is None or da.get(k) is None:
+            continue
+        nh, na = dh.get("n_" + k, dh["pj"]), da.get("n_" + k, da["pj"])
+        if nh < 3 or na < 3:
+            continue
+        enc = lambda v, n, mu: (v * n + mu * PROPS_K) / (n + PROPS_K)
+        mh, ma = lg["h"], lg["a"]
+        eh = enc(dh[k], nh, mh) * enc(da[kc], na, mh) / mh if mh > 0 else None
+        ea = enc(da[k], na, ma) * enc(dh[kc], nh, ma) / ma if ma > 0 else None
+        if eh is not None and ea is not None:
+            out[k] = [r(eh, 2), r(ea, 2)]
     return out
 
 
@@ -325,7 +427,13 @@ def players(df):
         ids = team_games[key[1]][-5:]
         return [sum(1 for g in ultimos[key] if g == i) for i in ids]
 
-    gol = [dict(jid=k[0], jugador=eq[k], equipo=k[1], goles=n, penales=pens[k], ult5=last5(k)) for k, n in goles.most_common(25)]
+    # los 25 mejores de la liga y, además, los 10 mejores de cada equipo (para la página del equipo)
+    por_eq = Counter()
+    gol = []
+    for i, (k, n) in enumerate(goles.most_common()):
+        por_eq[k[1]] += 1
+        if i < 25 or por_eq[k[1]] <= 10:
+            gol.append(dict(jid=k[0], jugador=eq[k], equipo=k[1], goles=n, penales=pens[k], ult5=last5(k)))
     amo = sorted(set(tarj) | set(rojas), key=lambda k: (-(tarj[k] + 2 * rojas[k]), eq[k]))[:20]
     tar = [dict(jid=k[0], jugador=eq[k], equipo=k[1], amarillas=tarj[k], rojas=rojas[k]) for k in amo]
     return gol, tar, goles, team_games, tarj
@@ -795,6 +903,7 @@ def main():
 
         cur = d1[d1.date >= cur_start]
         jug = cur[(cur.estado == "jugado") & cur.hg.notna()]
+        jug = caja.mezclar(jug, caja.cargar(L["s1"], list(jug.id)))   # amarillas, rojas, pases, entradas… de cada partido
         rest = cur[cur.estado.isin(["pendiente", "en_vivo"]) & (cur.date >= hoy - pd.Timedelta(days=1))].sort_values("kickoff")
         p1 = d1[(d1.estado == "jugado") & d1.hg.notna()]
         base_cnt.update(np.select([p1.hg > p1.ag, p1.hg == p1.ag], ["H", "D"], "A").tolist())
@@ -815,6 +924,8 @@ def main():
             a_, d_ = mj["equipos"].get(s["equipo"], [att_avg, def_avg])
             s.update(proy.get(s["equipo"], {}), ataque=r(np.exp(a_ - att_avg), 3), defensa=r(np.exp(-(d_ - def_avg)), 3))
         stats_eq = team_stats(jug, teams)
+        det_de = {s_["equipo"]: s_.get("det") for s_ in stats_eq}
+        pliga = props_liga(jug)
         rachas = streaks(jug, teams)
         goleadores, amonestados, goles_cnt, team_games, tarj_cnt = players(jug)
         team_goals = Counter()
@@ -868,6 +979,9 @@ def main():
                     p["ch"], p["ca"] = (r(v, 3) for v in mc.rates(x.home, x.away))
                 if mt:
                     p["th"], p["ta"] = (r(v, 3) for v in mt.rates(x.home, x.away))
+                pr_ = props_partido(pliga, det_de.get(x.home), det_de.get(x.away))
+                if pr_:
+                    p["props"] = pr_
                 p["goleadores"] = [dict(s, jugador=name_of.get(s["jid"], "")) for s in scorer_probs(model, x.home, x.away, goles_cnt, team_goals, lam)]
                 p["h2h"] = h2h(both, x.home, x.away)
                 if mt and tarj_cnt:
@@ -957,6 +1071,7 @@ def main():
                    actualizado=now.isoformat(timespec="minutes"), datos_hasta=str(p1.date.max().date()) if len(p1) else None,
                    usa_tiros=model.usa_tiros, usa_xg=bool(n_xg), tabla_ok=tiene_tabla, zonas=[dict(desde=a, hasta=b, nombre=n, cls=c) for a, b, n, c in L.get("zonas", [])],
                    modelo=mj, modelo_corners=mc.to_json() if mc else None, modelo_tarjetas=mt.to_json() if mt else None,
+                   props_liga={k: dict(h=r(v["h"], 2), a=r(v["a"], 2), disp=v["disp"]) for k, v in pliga.items()},
                    slug=L["s1"], grupos=grupos, equipos=info, tabla=tabla, stats=stats_eq, rachas=rachas, goleadores=goleadores, amonestados=amonestados,
                    partidos=partidos, resultados=resultados, copa=copa)
         # partidos jugados de la liga en las últimas temporadas, para el historial de los árbitros

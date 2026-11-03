@@ -1396,6 +1396,7 @@ function vPartido() {
     ${(p.tarjetas_jug || []).length ? `<div class="panel stack"><h3>Probabilidad de amarilla ${help("Ritmo de amarillas de cada jugador en la temporada, ajustado por las tarjetas que el modelo espera para su equipo en este partido. Supone que juega el partido completo.")}</h3><div class="slist">${p.tarjetas_jug.map(c => `<div class="srow" data-go="ficha" data-id="${esc(c.jid)}">${face(L, c.lado === "h" ? p.home : p.away, c.jid, c.jugador)}<span><b>${esc(c.jugador)}</b><small>${c.amarillas} amarillas en la temporada</small></span><span class="sn num ycol">${pct(c.p)}</span></div>`).join("")}</div></div>` : ""}
     <div class="panel stack"><h3>Goleadores probables</h3><div class="slist">${scorers}</div><p class="note">Probabilidad de marcar según sus goles en la temporada y los goles esperados de su equipo.</p></div>`;
   if (tab === "mercados") body = `
+    ${statsProps(L, p, H, A, st)}
     <div class="panel stack"><h3>Mercados y valor</h3>
       ${mkt}
       <p class="note">${cq ? `Cuotas precargadas de ${esc(cq.casa || "ESPN")} (vía ESPN); puedes cambiarlas por las de tu casa. EV es el valor esperado por cada $1.` : "Escribe la cuota de tu casa de apuestas para ver el valor esperado (EV) por cada $1."} En el backtest, apostar solo por "valor" del modelo perdió plata.</p>
@@ -1442,6 +1443,79 @@ function bindOdds() {
 }
 
 /* ---------------- EQUIPO ---------------- */
+// estadísticas de la página de equipo: [clave, nombre, detalle, formato, mejor ("+" más es mejor, "-" menos es mejor, "" neutro)]
+const EQS = [
+  ["Goles", [["gf", "Goles a favor", "por partido", "d2", "+"], ["gc", "Goles en contra", "por partido", "d2", "-"],
+             ["bt", "Ambos equipos marcan", "de sus partidos", "pc", ""], ["o25", "Más de 2,5 goles", "de sus partidos", "pc", ""],
+             ["va", "Vallas invictas", "partidos sin recibir gol", "n", "+"], ["sm", "Partidos sin marcar", "en la temporada", "n", "-"]]],
+  ["Remates", [["ti", "Remates totales", "por partido", "d1", "+"], ["ar", "Remates al arco", "por partido", "d1", "+"],
+               ["pu", "Puntería", "remates que van al arco", "pc", "+"], ["bl", "Remates bloqueados", "por partido, le tapan", "d1", ""],
+               ["ti_c", "Remates del rival", "por partido, en contra", "d1", "-"], ["ar_c", "Remates al arco del rival", "por partido, en contra", "d1", "-"]]],
+  ["Juego", [["po", "Posesión", "promedio por partido", "p0", "+"], ["pa", "Pases", "por partido", "d0", "+"],
+             ["pp", "Precisión de pases", "pases completados", "p0", "+"], ["ce", "Centros", "por partido", "d1", ""],
+             ["co", "Córners a favor", "por partido", "d1", "+"], ["co_c", "Córners en contra", "por partido", "d1", "-"],
+             ["of", "Fueras de juego", "por partido, cobrados al equipo", "d1", ""], ["of_c", "Fueras de juego del rival", "por partido", "d1", ""]]],
+  ["Defensa", [["en", "Entradas (tackles)", "por partido", "d1", ""], ["it", "Intercepciones", "por partido", "d1", ""],
+               ["de", "Despejes", "por partido", "d1", ""], ["at", "Atajadas del arquero", "por partido", "d1", ""]]],
+  ["Disciplina", [["am", "Tarjetas amarillas", "por partido", "d1", "-"], ["ro", "Tarjetas rojas", "por partido", "d2", "-"],
+                  ["fa", "Faltas cometidas", "por partido", "d1", "-"], ["fa_r", "Faltas recibidas", "por partido, le cometen", "d1", ""],
+                  ["am_c", "Amarillas del rival", "por partido", "d1", ""]]]];
+function eqDet(st) {
+  if (st.det && st.det.t) return st.det;
+  if (!st.pj) return null;   // datos de antes del cambio: solo el total
+  return { t: { pj: st.pj, gf: st.gf, gc: st.gc, ti: st.tiros, ar: st.tiros_arco, ti_c: st.tiros_rival, co: st.corners, co_c: st.corners_rival,
+    po: st.posesion, fa: st.faltas, bt: st.ambos, o25: st.over25, va: st.vallas, sm: st.sin_marcar } };
+}
+function eqVal(d, k) {
+  if (!d) return null;
+  if (k === "pu") return d.ti > 0 && d.ar != null ? d.ar / d.ti : null;
+  if (k === "pp") return d.pp != null ? d.pp / 100 : null;
+  if (k === "po") return d.po != null ? d.po / 100 : null;
+  return d[k] ?? null;
+}
+function eqLiga(L, modo) {   // promedio de la liga en ese modo (cada equipo pesa por sus partidos)
+  const acc = {};
+  (L.stats || []).forEach(s => { const d = (eqDet(s) || {})[modo]; if (!d || !d.pj) return;
+    EQS.forEach(([, items]) => items.forEach(([k]) => { const v = eqVal(d, k); if (v == null || ["va", "sm"].includes(k)) return; const a = acc[k] || (acc[k] = [0, 0]); a[0] += v * d.pj; a[1] += d.pj; })); });
+  return Object.fromEntries(Object.entries(acc).map(([k, [s, n]]) => [k, n ? s / n : null]));
+}
+function eqFmt(v, f) {
+  if (v == null) return "—";
+  return f === "pc" ? pct(v) : f === "p0" ? pct(v) : f === "n" ? String(v) : dec(v, f === "d0" ? 0 : f === "d1" ? 1 : 2);
+}
+function eqGrid(L, d, liga, modo) {
+  if (!d || !d.pj) return `<div class="empty">Todavía no juega ${modo === "l" ? "de local" : "de visita"} esta temporada.</div>`;
+  const rec = `<div class="eqs-rec"><b>${d.pj}</b> partido${d.pj === 1 ? "" : "s"}${d.g != null ? ` · <span class="g">${d.g} G</span> <span class="e">${d.e} E</span> <span class="p">${d.p} P</span>` : ""}</div>`;
+  const grupos = EQS.map(([g, items]) => {
+    const tiles = items.map(([k, nom, det, f, mejor]) => {
+      const v = eqVal(d, k); if (v == null) return "";
+      const lv = liga[k], extra = k === "ro" && d.ro_t != null ? `${d.ro_t} en total` : k === "va" || k === "sm" ? `de ${d.pj} partido${d.pj === 1 ? "" : "s"}` : det;
+      let cmp = "";
+      if (lv != null && !["va", "sm"].includes(k)) {
+        const dif = lv ? (v - lv) / Math.abs(lv) : 0, cls = !mejor || Math.abs(dif) < .05 ? "n" : (dif > 0) === (mejor === "+") ? "b" : "w";
+        cmp = `<span class="eqs-c ${cls}" title="Promedio de la liga: ${eqFmt(lv, f)}">Liga ${eqFmt(lv, f)}${Math.abs(dif) >= .05 ? ` <i>${dif > 0 ? "▲" : "▼"} ${Math.round(Math.abs(dif) * 100)}%</i>` : ""}</span>`;
+      }
+      return `<div class="eqs-t"><span class="eqs-v">${eqFmt(v, f)}</span><span class="eqs-l">${nom}</span><span class="eqs-d">${extra}</span>${cmp}</div>`;
+    }).join("");
+    return tiles ? `<section class="eqs-g"><h4>${g}</h4><div class="eqs-grid">${tiles}</div></section>` : "";
+  }).join("");
+  return rec + grupos;
+}
+function eqStats(L, t, st) {
+  const det = eqDet(st); if (!det) return "";
+  const modos = [["t", "Todos"], ["l", "De local"], ["v", "De visita"]].filter(([m]) => det[m] !== undefined);
+  const seg = modos.length > 1 ? `<div class="pr-seg eqs-seg" role="tablist" aria-label="Partidos">${modos.map(([m, n], i) => `<button role="tab" aria-selected="${i === 0}" data-eqs="${m}">${n}</button>`).join("")}</div>` : "";
+  const sinCaja = det.t && det.t.am == null && det.t.pa == null;
+  return `<div class="panel eqs"><div class="eqs-h"><div><h3>Estadísticas de la temporada</h3><p class="note">Promedios por partido en ${esc(L.nombre)}. Debajo de cada número, el promedio de la liga (▲▼ cuánto se aleja).</p></div>${seg}</div>
+    ${modos.map(([m], i) => `<div class="eqs-b" data-eqs-b="${m}"${i ? " hidden" : ""}>${eqGrid(L, det[m], eqLiga(L, m), m)}</div>`).join("")}
+    <p class="note eqs-pie">${sinCaja ? "Tarjetas por color, pases, entradas y fueras de juego se están cargando partido a partido; aparecen en las próximas horas. " : ""}Los saques de banda y de meta no aparecen porque ESPN, nuestra fuente de datos, no los publica.</p></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-eqs]"); if (!b) return;
+  const box = b.closest(".eqs"); const m = b.dataset.eqs;
+  box.querySelectorAll("[data-eqs]").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+  box.querySelectorAll("[data-eqs-b]").forEach(x => { x.hidden = x.dataset.eqsB !== m; });
+});
 function vEquipo() {
   const L = D.ligas[R.liga]; const t = R.team;
   if (!L || !(L.equipos[t] || rowOf(L, t).equipo)) return `<section class="view"><button class="back" data-go="inicio">← Inicio</button><div class="panel empty">No encontré ese equipo.</div></section>`;
@@ -1450,14 +1524,16 @@ function vEquipo() {
   const res = L.resultados.filter(x => x.home === t || x.away === t).slice(0, 8);
   const rs = (L.rachas || []).filter(x => x.equipo === t);
   const zs = s.zonas ? Object.entries(s.zonas).map(([cls, v]) => { const z = (L.zonas || []).find(z => z.cls === cls); return z ? kpi(cls === "desc" ? "" : "", cls === "desc" ? "Descenso" : z.nombre.replace("(fase de grupos)", "(grupos)"), pct(v, 1), "") : ""; }).join("") : "";
+  const sub = [s.pos ? `<b>${s.pos}º</b> en la tabla` : "", s.pts != null && s.pj ? `${s.pts} pts en ${s.pj} partido${s.pj === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ");
   return `<section class="view" aria-labelledby="h-e">
     <button class="back" data-go="liga" data-liga="${L.id}" data-tab="resumen">← ${esc(L.nombre)}</button>
-    <div class="lhead panel">${badge(L, t, "xl")}<div><h1 id="h-e">${esc(corto(L, t))}</h1><span class="row" style="gap:8px;margin-top:6px">${starBtn("t", L.id + "|" + t, "Seguir este equipo")}<button class="btn ghost sm cmp-btn" data-go="comparar" data-liga="${L.id}" data-team="${esc(t)}">Comparar</button><button class="btn ghost sm" data-ics="team" data-liga="${L.id}" data-team="${esc(t)}">Partidos al calendario</button></span><span class="muted">${esc(L.nombre)}${s.pos ? ` · ${s.pos}º con ${s.pts} pts en ${s.pj} partidos` : ""}</span></div><span style="margin-left:auto">${formHtml(s.forma)}</span></div>
-    <div class="kpis">${s.ataque ? kpi("m", "Ataque", dec(s.ataque), "1,00 = promedio liga") + kpi("", "Defensa", dec(s.defensa), "menos es mejor") : ""}${s.pts_esp != null ? kpi("", "Pts finales", dec(s.pts_esp, 1), "proyección") + kpi("k", "Campeón", pct(s.p_campeon, 1), "") : ""}${zs}</div>
-    ${st.pj ? `<div class="panel stack"><h3>Estadísticas de la temporada</h3><div class="sgrid wide">
-      ${[["Goles/PJ", dec(st.gf)], ["Recibe/PJ", dec(st.gc)], ["Tiros/PJ", dec(st.tiros, 1)], ["Al arco/PJ", dec(st.tiros_arco, 1)], ["Córners/PJ", dec(st.corners, 1)], ["Posesión", st.posesion != null ? dec(st.posesion, 0) + "%" : "—"],
-         ["Tarjetas/PJ", dec(st.tarjetas, 1)], ["Faltas/PJ", dec(st.faltas, 1)], ["Ambos marcan", pct(st.ambos)], ["+2,5 goles", pct(st.over25)], ["Vallas invictas", st.vallas], ["Sin marcar", st.sin_marcar]]
-        .map(([n, v]) => `<div><span class="lbl">${n}</span><b class="num">${v}</b></div>`).join("")}</div></div>` : ""}
+    <div class="lhead panel eqh">${badge(L, t, "xl")}
+      <div class="eqh-main"><h1 id="h-e">${esc(corto(L, t))}</h1>
+        <div class="eqh-sub">${leagueMark(L, "sm")}<span>${esc(L.nombre)}</span>${sub ? `<span class="eqh-dot">·</span><span>${sub}</span>` : ""}</div>
+        ${s.forma ? `<div class="eqh-form"><span class="faint">Últimos 5</span>${formHtml(s.forma)}</div>` : ""}</div>
+      <div class="eqh-act">${starBtn("t", L.id + "|" + t, "Seguir este equipo")}<button class="btn ghost sm cmp-btn" data-go="comparar" data-liga="${L.id}" data-team="${esc(t)}">Comparar</button><button class="btn ghost sm" data-ics="team" data-liga="${L.id}" data-team="${esc(t)}">Partidos al calendario</button></div></div>
+    <div class="kpis">${s.ataque ? kpi("m", "Ataque", dec(s.ataque), "1,00 = promedio de la liga") + kpi("", "Defensa", dec(s.defensa), "goles que concede · menos es mejor") : ""}${s.pts_esp != null ? kpi("", "Puntos al final", dec(s.pts_esp, 1), "proyección del modelo") + kpi("k", "Campeón", pct(s.p_campeon, 1), "probabilidad") : ""}${zs}</div>
+    ${eqStats(L, t, st)}
     <div class="grid2">
       ${L.tabla_ok ? `<div class="panel stack"><h3>Posición en la tabla</h3>${posChart(L, t)}</div>` : ""}
       <div class="panel stack"><h3>Goles por partido</h3>${goalsChart(L, t)}</div>
@@ -1826,15 +1902,16 @@ function posChart(L, team) {
 function goalsChart(L, team) {
   const ms = L.resultados.filter(x => x.home === team || x.away === team).slice(0, 12).reverse();
   if (!ms.length) return `<p class="note">Sin partidos jugados.</p>`;
-  const W = 560, H = 190, pl = 8, pr = 8, mid = 92, u = 18, bw = Math.min(26, (W - pl - pr) / ms.length - 6);
+  const W = 560, H = 214, pl = 8, pr = 8, mid = 96, u = 18, slot = (W - pl - pr) / Math.max(ms.length, 8), bw = Math.min(26, slot - 8), x0 = (W - slot * ms.length) / 2;
   const mx = Math.max(3, ...ms.map(x => Math.max(x.hg, x.ag)));
   const sc = v => v * Math.min(u, 74 / mx);
   let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Goles a favor y en contra">`;
   g += `<line x1="${pl}" x2="${W - pr}" y1="${mid}" y2="${mid}" class="axis"/>`;
   ms.forEach((x, i) => {
-    const home = x.home === team, f = home ? x.hg : x.ag, c = home ? x.ag : x.hg, cx = pl + 4 + i * (W - pl - pr) / ms.length;
+    const home = x.home === team, f = home ? x.hg : x.ag, c = home ? x.ag : x.hg, cx = x0 + i * slot + (slot - bw) / 2;
     g += `<rect x="${cx}" y="${mid - sc(f)}" width="${bw}" height="${sc(f)}" rx="3" class="gfbar"><title>${fecha(x.kickoff)} vs ${corto(L, home ? x.away : x.home)} ${f}–${c}</title></rect>`;
     g += `<rect x="${cx}" y="${mid}" width="${bw}" height="${sc(c)}" rx="3" class="gcbar"/>`;
+    g += `<text x="${cx + bw / 2}" y="${mid - sc(f) - 5}" text-anchor="middle" class="gnum">${f}</text><text x="${cx + bw / 2}" y="${mid + sc(c) + 13}" text-anchor="middle" class="gnum">${c}</text>`;
     g += `<text x="${cx + bw / 2}" y="${H - 6}" text-anchor="middle">${esc((info(L, home ? x.away : x.home).abr || "").slice(0, 3))}</text>`;
   });
   return g + `</svg><div class="row note"><span><i class="lg-dot lh"></i>Goles a favor (arriba)</span><span><i class="lg-dot la"></i>Goles en contra (abajo)</span></div>`;
@@ -2460,6 +2537,49 @@ document.addEventListener("click", e => {
   b.setAttribute("aria-pressed", String(i < 0));
   saveCombo(); paintComboBar();
 });
+// Más de "line" con binomial negativa (media mu, varianza = disp · mu); con disp ≈ 1 es Poisson
+function nbOver(line, mu, disp = 1) {
+  if (!(mu > 0)) return 0;
+  if (!(disp > 1.02)) return poisOverJ(line, mu);
+  const r = mu / (disp - 1), q = 1 - 1 / disp; let pk = Math.pow(1 / disp, r), c = pk;
+  for (let k = 0; k < Math.floor(line); k++) { pk *= (k + r) / (k + 1) * q; c += pk; }
+  return Math.max(0, Math.min(1, 1 - c));
+}
+const SPROP = [["ti", "Remates totales"], ["ar", "Remates al arco"], ["co", "Córners"], ["fa", "Faltas"], ["am", "Tarjetas amarillas"], ["of", "Fueras de juego"], ["en", "Entradas (tackles)"]];
+function spMedias(L, p, k) {   // [local, visita, dispersión] de una estadística del partido
+  if (k === "co") return p.ch != null && p.ca != null ? [p.ch, p.ca, 1] : null;
+  const v = p.props && p.props[k]; if (!v) return null;
+  return [v[0], v[1], ((L.props_liga || {})[k] || {}).disp || 1];
+}
+function spLineas(mu) { const b = Math.floor(mu) + .5; return [b - 1, b, b + 1].filter(l => l > 0); }
+function spProb(L, p, k, lado, ou, line) {
+  const m = spMedias(L, p, k); if (!m) return null;
+  const mu = lado === "h" ? m[0] : lado === "a" ? m[1] : m[0] + m[1], o = nbOver(line, mu, m[2]);
+  return ou === "O" ? o : 1 - o;
+}
+function statsProps(L, p, H, A, st) {
+  const ks = SPROP.filter(([k]) => spMedias(L, p, k));
+  if (!ks.length) return "";
+  const lf = l => String(l).replace(".", ",");
+  const fila = (k, nom, lado, quien, ou, line, pr) => { const key = `S${k}${lado}${ou}${line}`, n = `${ou === "O" ? "Más" : "Menos"} de ${lf(line)}`;
+    return `<div class="sp-r"><span class="sp-n">${n}</span><span class="sp-p num">${pct(pr, 0)}</span><span class="sp-j num" title="Cuota justa">${dec(1 / pr)}</span>
+      <input class="odd" inputmode="decimal" aria-label="Tu cuota ${esc(nom)} ${esc(quien)} ${n}" data-k="${key}" data-p="${pr}" value="${st[key] ? String(st[key]).replace(".", ",") : ""}" placeholder="Cuota"><span class="sp-ev" data-ev="${key}"></span>
+      <button class="addsel" data-sel="${key}" data-label="${esc(`${nom} ${quien}: ${n}`)}" data-jug="" data-liga="${L.id}" data-mid="${esc(p.id)}" aria-pressed="${inCombo(p.id, key)}" title="Agregar a la combinada">+</button></div>`; };
+  const bloque = (k, nom) => { const [mh, ma, disp] = spMedias(L, p, k);
+    const col = (lado, quien, mu, cls) => `<div class="sp-col ${cls}"><div class="sp-h">${lado === "t" ? `<span class="sp-tot">Σ</span>` : badge(L, lado === "h" ? p.home : p.away)}<span><b>${esc(quien)}</b><small>Esperado <b class="num">${dec(mu, 1)}</b></small></span></div>
+      ${spLineas(mu).map(l => { const o = nbOver(l, mu, disp); return fila(k, nom, lado, quien, "O", l, o) + fila(k, nom, lado, quien, "U", l, 1 - o); }).join("")}</div>`;
+    return `<div class="sp-b" data-sp-b="${k}"${k === ks[0][0] ? "" : " hidden"}><div class="sp-cols">${col("h", H, mh, "")}${col("t", "Total del partido", mh + ma, "t")}${col("a", A, ma, "")}</div></div>`; };
+  return `<div class="panel stack sprops"><div class="sp-top"><div><h3>Estadísticas del partido</h3><p class="note">Lo que espera Ballytics para los mercados de remates, córners, faltas y tarjetas que ofrecen las casas (como Betano). Si tu casa paga más que la <b>cuota justa</b>, el EV sale positivo.</p></div></div>
+    <div class="pr-seg sp-seg" role="tablist" aria-label="Estadística">${ks.map(([k, n], i) => `<button role="tab" aria-selected="${i === 0}" data-sp="${k}">${n}</button>`).join("")}</div>
+    ${ks.map(([k, n]) => bloque(k, n)).join("")}
+    <p class="note">Se calcula con lo que hace cada equipo (de local o de visita) y lo que le hacen sus rivales esta temporada, con el promedio de la liga como ancla cuando hay pocos partidos. Los saques de banda y de meta no están: ESPN no los publica. Es una referencia, no una recomendación.</p></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-sp]"); if (!b) return;
+  const box = b.closest(".sprops"); const k = b.dataset.sp;
+  box.querySelectorAll("[data-sp]").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+  box.querySelectorAll("[data-sp-b]").forEach(x => { x.hidden = x.dataset.spB !== k; });
+});
 function selLabel(g, n) {
   const pre = { "Doble oportunidad": "Doble oportunidad", "Goles": "Goles", "Ambos marcan": "Ambos marcan", "Córners (total)": "Córners", "Tarjetas (total)": "Tarjetas", "Marca en cualquier momento": "Marca" }[g];
   return pre ? `${pre}: ${n}` : n;
@@ -2481,6 +2601,7 @@ function otherProb(L, p, key) {
   let m;
   if ((m = key.match(/^C([OU])([\d.]+)$/)) && ct != null) return m[1] === "O" ? poisOver(+m[2], ct) : 1 - poisOver(+m[2], ct);
   if ((m = key.match(/^T([OU])([\d.]+)$/)) && tt != null) return m[1] === "O" ? poisOver(+m[2], tt) : 1 - poisOver(+m[2], tt);
+  if ((m = key.match(/^S([a-z]{2})([hat])([OU])([\d.]+)$/))) return spProb(L, p, m[1], m[2], m[3], +m[4]);
   if (key[0] === "G") { const g = (p.goleadores || []).find(x => "G" + x.jid === key); return g ? g.p : null; }
   if (key[0] === "Y") { const c = (p.tarjetas_jug || []).find(x => "Y" + x.jid === key); return c ? c.p : null; }
   return null;
