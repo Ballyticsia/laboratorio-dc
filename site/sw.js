@@ -15,14 +15,21 @@ self.addEventListener("activate", e => {
 // escudos y fotos (ESPN, wsrv.nl, API-Football): se guardan en el teléfono y la próxima vez aparecen al instante
 const IMGS = "bt-img-v1", IMG_HOSTS = /^(a\.espncdn\.com|wsrv\.nl|images\.weserv\.nl|media\.api-sports\.io)$/, IMG_MAX = 700;
 let podar = 0;
+// sitios de imágenes que respondieron sin CORS (cada imagen costaría dos viajes); se recuerda entre visitas
+const SIN_CORS = new Set(), SC_KEY = h => new URL("__sin_cors/" + h, self.registration.scope).href;
+const SC_LISTO = caches.open(IMGS).then(c => c.keys()).then(ks => ks.forEach(k => { const m = k.url.match(/\/__sin_cors\/([^/?#]+)$/); if (m) SIN_CORS.add(m[1]); })).catch(() => {});
+const sinCors = h => { if (SIN_CORS.has(h)) return; SIN_CORS.add(h); caches.open(IMGS).then(c => c.put(SC_KEY(h), new Response("1"))).catch(() => {}); };
 async function imagen(req) {
-  const c = await caches.open(IMGS), hit = await c.match(req.url);
+  const c = await caches.open(IMGS), hit = await c.match(req.url); await SC_LISTO;
   if (hit) return hit;
   try {
+    if (SIN_CORS.has(new URL(req.url).hostname)) return fetch(req);   // ese sitio no permite CORS: no se pierde un viaje intentándolo
     const r = await fetch(req.url, { mode: "cors", credentials: "omit" });   // con CORS se puede guardar sin ocupar espacio de más
-    if (r.ok) { c.put(req.url, r.clone()).catch(() => {}); if (++podar % 40 === 0) c.keys().then(ks => ks.length > IMG_MAX && Promise.all(ks.slice(0, ks.length - IMG_MAX).map(k => c.delete(k)))).catch(() => {}); }
+    if (r.ok) { c.put(req.url, r.clone()).catch(() => {}); if (++podar % 40 === 0) c.keys().then(ks => { ks = ks.filter(k => !/\/__sin_cors\//.test(k.url)); return ks.length > IMG_MAX && Promise.all(ks.slice(0, ks.length - IMG_MAX).map(k => c.delete(k))); }).catch(() => {}); }
     return r;
-  } catch (x) { return fetch(req); }   // sin CORS: la imagen se pide normal y no se guarda
+  } catch (x) {   // sin CORS: la imagen se pide normal y no se guarda; si así sí llega, el sitio no permite CORS (y no fue un corte de red)
+    const r = await fetch(req); if (r.type === "opaque") sinCors(new URL(req.url).hostname); return r;
+  }
 }
 self.addEventListener("fetch", e => {
   const u = new URL(e.request.url);

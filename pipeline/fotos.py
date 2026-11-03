@@ -92,7 +92,7 @@ def actualizar(ligas):
 
     pend = []   # (liga, equipo, id ESPN del equipo)
     for L, out in ligas:
-        if L["id"] not in AF_LIGA:
+        if L["id"] not in AF_LIGA or L.get("fuente") == "api_football":   # sus jugadores ya traen el id de API-Football
             continue
         for team, inf in (out.get("equipos") or {}).items():
             m = re.search(r"/(\d+)\.png", str((inf or {}).get("logo") or ""))
