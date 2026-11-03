@@ -353,8 +353,9 @@ def team_stats(df, teams):
     return out
 
 
-PROPS = [("ti", "ti_c", "totalShots"), ("ar", "ar_c", "shotsOnTarget"), ("fa", "fa_r", "foulsCommitted"),
-         ("of", "of_c", "offsides"), ("en", "en_c", "totalTackles"), ("am", "am_c", None)]
+# backtest (1.900 partidos de 11 ligas, solo con datos previos): mejor que el promedio de la liga en remates (+6,5 % Brier),
+# faltas (+3,7 %), entradas (+2,5 %) y al arco (+2,2 %); en amarillas (−2,8 %) y fueras de juego (0 %) no, así que no van
+PROPS = [("ti", "ti_c", "totalShots"), ("ar", "ar_c", "shotsOnTarget"), ("fa", "fa_r", "foulsCommitted"), ("en", "en_c", "totalTackles")]
 PROPS_K = 3.0   # partidos "de liga promedio" que se suman a cada equipo para no exagerar con muestras chicas
 
 

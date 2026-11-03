@@ -2545,9 +2545,10 @@ function nbOver(line, mu, disp = 1) {
   for (let k = 0; k < Math.floor(line); k++) { pk *= (k + r) / (k + 1) * q; c += pk; }
   return Math.max(0, Math.min(1, 1 - c));
 }
-const SPROP = [["ti", "Remates totales"], ["ar", "Remates al arco"], ["co", "Córners"], ["fa", "Faltas"], ["am", "Tarjetas amarillas"], ["of", "Fueras de juego"], ["en", "Entradas (tackles)"]];
+const SPROP = [["ti", "Remates totales"], ["ar", "Remates al arco"], ["co", "Córners"], ["fa", "Faltas"], ["tj", "Tarjetas"], ["en", "Entradas (tackles)"]];
 function spMedias(L, p, k) {   // [local, visita, dispersión] de una estadística del partido
   if (k === "co") return p.ch != null && p.ca != null ? [p.ch, p.ca, 1] : null;
+  if (k === "tj") return p.th != null && p.ta != null ? [p.th, p.ta, 1] : null;   // modelo de tarjetas (amarillas y rojas)
   const v = p.props && p.props[k]; if (!v) return null;
   return [v[0], v[1], ((L.props_liga || {})[k] || {}).disp || 1];
 }
@@ -2572,7 +2573,7 @@ function statsProps(L, p, H, A, st) {
   return `<div class="panel stack sprops"><div class="sp-top"><div><h3>Estadísticas del partido</h3><p class="note">Lo que espera Ballytics para los mercados de remates, córners, faltas y tarjetas que ofrecen las casas (como Betano). Si tu casa paga más que la <b>cuota justa</b>, el EV sale positivo.</p></div></div>
     <div class="pr-seg sp-seg" role="tablist" aria-label="Estadística">${ks.map(([k, n], i) => `<button role="tab" aria-selected="${i === 0}" data-sp="${k}">${n}</button>`).join("")}</div>
     ${ks.map(([k, n]) => bloque(k, n)).join("")}
-    <p class="note">Se calcula con lo que hace cada equipo (de local o de visita) y lo que le hacen sus rivales esta temporada, con el promedio de la liga como ancla cuando hay pocos partidos. Los saques de banda y de meta no están: ESPN no los publica. Es una referencia, no una recomendación.</p></div>`;
+    <p class="note">Se calcula con lo que hace cada equipo (de local o de visita) y lo que le hacen sus rivales esta temporada, con el promedio de la liga como ancla cuando hay pocos partidos; los remates se ajustan además con los goles esperados. Probado en 1.900 partidos de 11 ligas: acierta mejor que el promedio de la liga en remates, al arco, faltas y entradas. Fueras de juego no aparece porque en esa prueba no mejoró. Los saques de banda y de meta no están: ESPN no los publica. Es una referencia, no una recomendación.</p></div>`;
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-sp]"); if (!b) return;
