@@ -146,7 +146,7 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 
 ## Rendimiento (para que se sienta como una app)
 - **Imágenes:** todos los escudos de ESPN pasan por su redimensionador (`combiner`) y las fotos y logos de API-Football por wsrv.nl (WebP), en el tamaño en que se ven (`IMG()` en `app.js`; si falla, se pide la original). El service worker los guarda (`bt-img-v1`, hasta 700) y en la segunda visita aparecen al instante. Mientras cargan se ve un fondo neutro.
-- **Fuentes propias** en `site/assets/fonts` (licencia SIL OFL), con precarga; nada se pide a Google Fonts.
+- **Fuentes propias** en `site/assets/fonts` (licencia SIL OFL: Plus Jakarta Sans para el texto, Chakra Petch para títulos y JetBrains Mono para números), con precarga; nada se pide a Google Fonts.
 - **Datos por partes:** el inicio solo baja `indice.json` y `agenda.json` (todos los partidos de ayer a 8 días, liviano). Las ligas completas se bajan al entrar a una liga, partido o equipo, al buscar, al usar la IA, en En vivo o al llegar a "Más análisis" (en el computador, también a los 8 segundos). El detalle de cada partido (goleadores, amarillas, alineación probable, historial y cruces) está en `data/detalle/<liga>.json` y se baja al abrir un partido. El registro y las fotos, solo cuando una pantalla los usa.
 - **Primera pantalla al instante:** `index.html` pide `indice.json` y `agenda.json` apenas abre (en paralelo con `app.js`, que los recoge de `window.__pre`) y trae escrito el texto de bienvenida del inicio, así se ve algo útil antes de que corra el JavaScript.
 - **Código achicado al publicar:** el robot pasa `app.js` (terser) y `app.css` (lightningcss) por `tests/minificar.js` justo antes de la prueba de humo; en el repositorio quedan legibles.
@@ -156,6 +156,9 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - **Segunda opinión:** el robot ajusta además el Dixon-Coles de la librería [penaltyblog](https://pypi.org/project/penaltyblog/) (MIT) con los mismos partidos y lo guarda en `p.pb`. El partido lo muestra en Mercados y avisa si los dos modelos difieren 6 puntos o más. Se instala sin sus extras (`requirements-penaltyblog.txt`); si falla la instalación, el robot sigue sin ella.
 - **Prueba histórica:** `pipeline/backtest_historico.py` (workflow "Backtest histórico", día 5 de cada mes o a mano) baja 5 temporadas de resultados, tiros y cuotas de cierre de Football-Data.co.uk (18 ligas) y compara, semana a semana y sobre los mismos partidos, el modelo propio, la segunda opinión, el promedio de ambos, Bet365 y Pinnacle. Resultado en `data/backtest_historico.json`, visible en "Cómo funciona".
 - **Margen de las cuotas:** la misma prueba compara 5 formas de quitarle el margen a la cuota (`pipeline/margen.py`: multiplicativo, aditivo, potencia, Shin y razón de chances; las fórmulas se comparan con las de penaltyblog). El robot usa la que gana (`metodo_margen`).
+
+## Catálogo de competiciones
+`pipeline/competiciones.py` (workflow "Revisar competiciones", los lunes) pregunta a ESPN qué competiciones tienen partidos cerca: "activa", "pausa" (receso o fin de temporada) o "inactiva" (nada en más de un año, no se muestra). Las en pausa salen al final y en gris, y su página explica cuándo vuelve. A mano con la opción "grilla" arma una imagen con el logo actual y el de ESPN de cada una (rama `revision-logos`) para revisar logos viejos.
 
 ## Monitoreo
 - **Salud del sitio** (`.github/workflows/salud.yml`, cada 30 minutos): revisa que la página abra, que los datos tengan menos de 6 horas, que el servidor responda y que En vivo cargue. Si algo falla abre el issue "Alerta: el sitio tiene problemas" (GitHub te avisa por correo) y lo cierra solo cuando se arregla.

@@ -1,0 +1,51 @@
+name: Revisar competiciones
+
+# Una vez por semana: qué competiciones tienen partidos ahora, cuáles están en pausa y cuáles ya no
+# existen (site/assets/competiciones.json). A mano con "grilla" arma una imagen con los logos.
+on:
+  schedule:
+    - cron: "37 9 * * 1"     # lunes, 06:37 en Chile
+  workflow_dispatch:
+    inputs:
+      grilla:
+        description: "Armar la imagen para revisar logos (rama revision-logos)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: actualizar
+  cancel-in-progress: false
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Revisar
+        run: |
+          if [ "${{ inputs.grilla }}" = "true" ]; then pip install pillow >/dev/null && python pipeline/competiciones.py --grilla; else python pipeline/competiciones.py; fi
+      - name: Guardar
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f data/logos_revision.png ]; then
+            cp data/logos_revision.png /tmp/logos.png
+          fi
+          git add site/assets/competiciones.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Competiciones revisadas $(date -u +'%Y-%m-%d')"
+            for i in 1 2 3; do git pull --rebase -X theirs origin main && git push origin HEAD:main && break; git rebase --abort 2>/dev/null || true; sleep $((i * 10)); done
+          fi
+          if [ -f /tmp/logos.png ]; then
+            git checkout --orphan revision-logos && git rm -rfq . && cp /tmp/logos.png logos_revision.png && git add logos_revision.png
+            git commit -qm "Logos para revisar" && git push -f origin HEAD:revision-logos
+          fi

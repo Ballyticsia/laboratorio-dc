@@ -1498,7 +1498,8 @@ function ppFila(f, corta) {
   return `<button class="pp-f" data-go="${D.ligas[f.liga] ? "partido" : "registro"}" data-liga="${esc(f.liga)}" data-id="${esc(f.id)}">
     ${t ? badge(L, t) : `<span class="badge" style="background:var(--panel2);color:var(--muted)">X</span>`}
     <span class="pp-m"><b>${esc(ppLado(L, f))}</b><small>${esc(corto(L, f.home))} vs ${esc(corto(L, f.away))}${f.hg != null ? ` · ${f.hg}–${f.ag}` : ""}${corta ? "" : ` · ${esc(L.nombre || "")}`}</small></span>
-    <span class="pp-n num"><b>${dec(f.cuota)}</b><small>${pct(f.prob)}</small></span>${corta ? "" : `<span class="pp-e" style="--c:${PP_EST[f.est].c}">${PP_EST[f.est].n}</span>`}${st}</button>`;
+    <span class="pp-ring" style="--p:${Math.round(100 * (f.prob || 0))};--c:${PP_EST[f.est].c}" title="Probabilidad Ballytics"><b class="num">${Math.round(100 * (f.prob || 0))}</b></span>
+    <span class="pp-n num"><small>cuota</small><b>${dec(f.cuota)}</b></span>${corta ? "" : `<span class="pp-e" style="--c:${PP_EST[f.est].c}">${PP_EST[f.est].n}</span>`}${st}</button>`;
 }
 function ppCurva(R_) {
   const S = Object.entries(PP_EST).map(([k, e]) => ({ e, s: (R_[k] || {}).serie || [] })).filter(x => x.s.length);
@@ -1517,7 +1518,8 @@ function ppCurva(R_) {
 function ppKpis(k, x) {
   const e = PP_EST[k];
   if (!x || !x.n) return `<div class="panel pp-k" style="--c:${e.c}"><span class="pp-kh">${e.n}</span><small class="muted">${e.d}</small><p class="note">${x && x.pendientes ? `${x.pendientes} picks esperando resultado.` : "Todavía sin picks calificados."}</p></div>`;
-  return `<div class="panel pp-k" style="--c:${e.c}"><span class="pp-kh">${e.n}</span><small class="muted">${e.d}</small>
+  return `<div class="panel pp-k" style="--c:${e.c}"><div class="pp-kt"><div><span class="pp-kh">${e.n}</span><small class="muted">${e.d}</small></div>
+    <span class="pp-gauge" style="--a:${Math.round(100 * x.acierto)};--e:${Math.round(100 * x.esperado)}" title="Acertados ${pct(x.acierto, 0)} · esperado ${pct(x.esperado, 0)}"><b class="num">${pct(x.acierto, 0)}</b><small>acierto</small></span></div>
     <b class="pp-big num ${x.unidades > 0 ? "good" : x.unidades < 0 ? "bad" : ""}">${ppU(x.unidades)}</b>
     <span class="muted">ROI <b class="num">${x.roi > 0 ? "+" : ""}${pct(x.roi, 1)}</b> · ${x.ganados} de ${x.n} acertados (${pct(x.acierto, 0)}; se esperaba ${pct(x.esperado, 0)}) · cuota media ${dec(x.cuota_media)}</span>
     <span class="faint">Con $1.000 por pick: ${ppPlata(x.unidades)} en ${x.n} picks${x.pendientes ? ` · ${x.pendientes} por jugarse` : ""}</span></div>`;
@@ -1535,8 +1537,9 @@ function vPicks() {
   const pocos = (T.n || 0) < 100;
   const lim = VV.ppLim || 10;
   return `<section class="view" aria-labelledby="h-pp">
-    <h1 id="h-pp">Picks públicos</h1>
-    <p class="muted">Dos listas por día con una regla fija. Se publican antes de los partidos y se califican todas, ganen o pierdan, con la cuota real que pagaba la casa. Así se ve con números, y no con un caso suelto, cómo le iría a quien sigue a Ballytics.</p>
+    <div class="pp-hero"><div class="pp-hero-t"><span class="pr-kick">Transparencia total</span><h1 id="h-pp">Picks públicos</h1>
+      <p>Dos listas por día con una regla fija. Se publican antes de los partidos y se califican todas, ganen o pierdan, con la cuota real que pagaba la casa.</p></div>
+      <div class="pp-hero-s">${[["Picks calificados", T.n || 0, ""], ["Acertados", T.n ? pct(T.acierto, 0) : "—", ""], ["Resultado", T.n ? ppU(T.unidades) : "—", T.unidades > 0 ? "good" : T.unidades < 0 ? "bad" : ""]].map(([l, v, c]) => `<div><small>${l}</small><b class="num ${c}">${v}</b></div>`).join("")}</div></div>
     ${pocos ? `<div class="panel note-panel"><b>${T.n ? `Muestra chica (${T.n} picks calificados).` : `Empezó el ${esc(fecha((P.reglas || {}).desde + "T12:00"))}.`}</b> Con menos de 100 picks una buena o mala racha es casi pura suerte: con cuotas cercanas a 1,30, perder 2 de 6 ya deja el día en negativo. Mira la curva cuando pasen algunas semanas.</div>` : ""}
     <div class="grid2">${Object.keys(PP_EST).map(k => ppKpis(k, Rs[k])).join("")}</div>
     ${T.n ? `<div class="panel stack"><h3>Ganancia acumulada</h3><p class="note">1 unidad por pick. Si la línea sube, la regla ganó plata con las cuotas que había.</p>${ppCurva(Rs)}${T.clv != null ? `<p class="note">Cuota al fijar contra la de cierre: <b class="num">${T.clv > 0 ? "+" : ""}${pct(T.clv, 1)}</b> ${help("Si la cuota de cierre (la última antes del partido) quedó más baja que la que se tomó al fijar la lista, el mercado se movió a favor del pick. Ganarle a la cuota de cierre de forma sostenida es la mejor señal de que hay valor real, más que el resultado de unos pocos partidos.")}</p>` : ""}</div>` : ""}
@@ -2651,7 +2654,7 @@ async function shareImage(L, p, fmt) {
   x.fillStyle = g; x.fillRect(0, 0, W, H);
   const glow = (cx, cy, r, col) => { const rg = x.createRadialGradient(cx, cy, 0, cx, cy, r); rg.addColorStop(0, col); rg.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = rg; x.fillRect(0, 0, W, H); };
   glow(160, 120, 560, "rgba(61,139,255,.35)"); glow(960, 1250, 600, "rgba(177,140,255,.28)");
-  const D1 = "'Chakra Petch', 'Arial Narrow', sans-serif", D2 = "'Manrope', system-ui, sans-serif", D3 = "'JetBrains Mono', monospace";
+  const D1 = "'Chakra Petch', 'Arial Narrow', sans-serif", D2 = "'Jakarta', system-ui, sans-serif", D3 = "'JetBrains Mono', monospace";
   x.fillStyle = "#3d8bff"; x.beginPath(); x.roundRect(70, 70, 64, 64, 16); x.fill();
   x.strokeStyle = "#fff"; x.lineWidth = 7; x.lineCap = "round"; x.lineJoin = "round"; x.beginPath(); x.moveTo(84, 118); x.lineTo(98, 98); x.lineTo(110, 106); x.lineTo(122, 86); x.stroke();
   x.fillStyle = "#e8edf7"; x.font = `700 44px ${D1}`; x.textBaseline = "middle"; x.fillText("BALLYTICS", 156, 104);
@@ -2733,7 +2736,7 @@ const ymd = d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}
 const localDay = iso => ymd(new Date(iso));
 const fromYmd = s => new Date(+s.slice(0, 4), +s.slice(4, 6) - 1, +s.slice(6, 8), 12);
 const vget = async u => {
-  try { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return await r.json(); }
+  try { const r = await fetch(u, /^https:\/\/site\.api\.espn\.com\//.test(u) && window.AbortSignal && AbortSignal.timeout ? { signal: AbortSignal.timeout(9000) } : undefined); if (!r.ok) throw new Error(r.status); return await r.json(); }
   catch (e) {   // ESPN bloqueado o caído para este navegador: el mismo pedido por el servidor de Ballytics (con caché)
     if (!/^https:\/\/site\.api\.espn\.com\//.test(u)) throw e;
     const w = await pushCfg(); if (!w) throw e;
@@ -2748,7 +2751,7 @@ const followed = () => lsGet("bt_vfollow", {});
 
 async function vComps() {
   if (VV.comps) return VV.comps;
-  try { VV.comps = await vget("assets/competiciones.json?v=2"); } catch (e) { VV.comps = []; }
+  try { VV.comps = await vget("assets/competiciones.json?v=3"); } catch (e) { VV.comps = []; }
   VV.comps.forEach(c => { VV.byId[c.id] = c; VV.bySlug[c.s] = c; });
   return VV.comps;
 }
@@ -2918,16 +2921,35 @@ async function vFillList(key, solo, refresh, evsIn) {
   const pass = e => (!solo || isLive(e)) && (!q || [e.h.full, e.a.full, e.comp].some(s => (s || "").toLowerCase().includes(q)));
   const groups = new Map();
   evs.filter(pass).forEach(e => { const k = e.lid || e.comp; if (!groups.has(k)) groups.set(k, { lid: e.lid, comp: e.comp, slug: e.slug, c: VV.byId[e.lid], evs: [] }); groups.get(k).evs.push(e); });
-  const G = [...groups.values()].map(g => (g.evs.sort((a, b) => (isLive(b) - isLive(a)) || a.date.localeCompare(b.date)), g))
+  let G = [...groups.values()].map(g => (g.evs.sort((a, b) => (isLive(b) - isLive(a)) || a.date.localeCompare(b.date)), g))
     .sort((a, b) => ((fav.includes(b.slug)) - (fav.includes(a.slug))) || ((a.c ? a.c.o : 160) - (b.c ? b.c.o : 160)) || (b.evs.some(isLive) - a.evs.some(isLive)) || a.comp.localeCompare(b.comp));
+  // al actualizar solo (cada 30 s) se mantiene el orden que la persona ya está viendo: nada salta de lugar
+  const ORD = VV.ord || (VV.ord = {}), o = ORD[key];
+  if (refresh && o) {
+    const gi = k => (o.g[k] ?? 1e6), ri = id => (o.r[id] ?? 1e6);
+    G = G.map(g => (g.evs.sort((a, b) => ri(a.id) - ri(b.id) || a.date.localeCompare(b.date)), g)).sort((a, b) => gi(a.lid || a.comp) - gi(b.lid || b.comp));
+  }
+  ORD[key] = { g: Object.fromEntries(G.map((g, i) => [g.lid || g.comp, i])), r: Object.fromEntries(G.flatMap(g => g.evs.map((e, i) => [e.id, i]))) };
   const MAX = 8;
-  box.innerHTML = G.length ? G.map(g => {
+  const html = G.length ? G.map(g => {
     const k = g.lid || g.comp, open = VV.more[k] || q || solo, lv = g.evs.filter(isLive).length, star = g.slug && fav.includes(g.slug);
     const rows = (open ? g.evs : g.evs.slice(0, MAX)).map(vRow).join("");
     return `<div class="panel flush vcomp"><div class="vch">${compImg(g.c)}<span class="vchn">${g.slug ? `<button class="link" data-go="comp" data-liga="${esc(g.slug)}">${esc(g.comp)}</button>` : `<b>${esc(g.comp)}</b>`}<small>${esc(g.c ? g.c.p : "")}</small></span>
       <span class="vcount">${lv ? `<span class="dot"></span>${lv} en vivo · ` : ""}${g.evs.length}</span>${g.slug ? `<button class="vstar${star ? " on" : ""}" data-fcomp="${esc(g.slug)}" aria-label="Seguir competición" title="Seguir competición">${star ? "★" : "☆"}</button>` : ""}</div>
       ${rows}${!open && g.evs.length > MAX ? `<button class="vmore" data-more="${esc(k)}">Ver los ${g.evs.length} partidos</button>` : ""}</div>`;
   }).join("") : `<div class="panel empty">${solo ? "No hay partidos en vivo en este momento." : q ? "Ningún partido coincide con el filtro." : "No hay partidos este día."}</div>`;
+  // si siguen los mismos partidos en el mismo orden, se cambian solo las filas que cambiaron (marcador, minuto)
+  let parcial = false;
+  if (refresh && box.dataset.k === key + (solo ? "s" : "")) {
+    const tmp = document.createElement("div"); tmp.innerHTML = html;
+    const viejas = box.querySelectorAll(".vrow[data-id]"), nuevas = tmp.querySelectorAll(".vrow[data-id]"), firma = l => [...l].map(x => x.dataset.id).join(",");
+    if (viejas.length && firma(viejas) === firma(nuevas) && box.querySelectorAll(".vcomp").length === tmp.querySelectorAll(".vcomp").length) {
+      nuevas.forEach((nr, i) => { const vr = viejas[i]; if (vr.querySelector(".vsc,.vtime,.vmin") && nr.querySelector(".vsc,.vtime,.vmin") && (vr.querySelector(".vmid").textContent + vr.querySelector(".vmin").textContent) === (nr.querySelector(".vmid").textContent + nr.querySelector(".vmin").textContent)) return; vr.replaceWith(nr); });
+      const oc = box.querySelectorAll(".vcount"), nc = tmp.querySelectorAll(".vcount"); nc.forEach((x, i) => { if (oc[i] && oc[i].innerHTML !== x.innerHTML) oc[i].innerHTML = x.innerHTML; });
+      parcial = true;
+    }
+  }
+  if (!parcial) { box.innerHTML = html; box.dataset.k = key + (solo ? "s" : ""); }
   const u = document.getElementById("vv-upd"); if (u) u.textContent = `${evs.length} partidos · actualizado ${hhmm(new Date().toISOString())}`;
 }
 
@@ -2941,9 +2963,10 @@ function vCompeticiones() {
 async function vFillComps() {
   const all = await vComps(), box = document.getElementById("vc-list"); if (!box) return;
   const q = ((document.getElementById("vc-q") || {}).value || "").trim().toLowerCase(), fav = favComps();
-  const L = all.filter(c => !q || (c.n + " " + c.p).toLowerCase().includes(q));
-  const item = c => `<div class="vci"><button class="vcib" data-go="comp" data-liga="${esc(c.s)}">${compImg(c)}<span><b>${esc(c.n)}${modelBySlug(c.s) ? ` <span class="tagm" title="Esta competición tiene probabilidades del modelo de Ballytics">Pronósticos</span>` : ""}</b><small>${esc(c.p)}${c.t.includes("fem") ? " · femenino" : ""}${c.t.includes("juv") ? " · juvenil" : ""}</small></span></button><button class="vstar${fav.includes(c.s) ? " on" : ""}" data-fcomp="${esc(c.s)}" aria-label="Seguir">${fav.includes(c.s) ? "★" : "☆"}</button></div>`;
-  const favs = all.filter(c => fav.includes(c.s)), top = L.filter(c => c.o < 40);
+  const orden = c => c.estado === "pausa" ? 1 : 0;
+  const L = all.filter(c => c.estado !== "inactiva" && (!q || (c.n + " " + c.p).toLowerCase().includes(q))).sort((a, b) => orden(a) - orden(b));
+  const item = c => `<div class="vci${c.estado === "pausa" ? " pausa" : ""}"${c.estado === "pausa" ? ` title="${esc(compPausa(c))}"` : ""}><button class="vcib" data-go="comp" data-liga="${esc(c.s)}">${compImg(c)}<span><b>${esc(c.n)}${modelBySlug(c.s) ? ` <span class="tagm" title="Esta competición tiene probabilidades del modelo de Ballytics">Pronósticos</span>` : ""}</b><small>${esc(c.p)}${c.t.includes("fem") ? " · femenino" : ""}${c.t.includes("juv") ? " · juvenil" : ""}</small></span></button><button class="vstar${fav.includes(c.s) ? " on" : ""}" data-fcomp="${esc(c.s)}" aria-label="Seguir">${fav.includes(c.s) ? "★" : "☆"}</button></div>`;
+  const favs = all.filter(c => fav.includes(c.s)), top = L.filter(c => c.o < 40 && c.estado !== "pausa");
   const regs = ["Selecciones", "Copas internacionales", "Sudamérica", "Europa", "Norteamérica", "Asia", "África"];
   let html = "";
   if (!q && favs.length) html += `<div class="panel stack"><h3>Mis competiciones</h3><div class="vcgrid">${favs.map(item).join("")}</div></div>`;
@@ -2983,6 +3006,13 @@ function vComp() {
     <div class="panel lhead" id="cp-head">${skelHead()}</div>
     <div class="mtabs vtabs" role="tablist">${tabs.map(([k, n]) => `<button role="tab" data-go="comp" data-liga="${esc(slug)}" data-tab="${k}" data-keep aria-selected="${k === tab}">${n}</button>`).join("")}</div>
     <div id="cp-body">${skelRows(5)}</div></section>`;
+}
+// texto para una competición sin partidos cerca (según la revisión semanal del catálogo)
+function compPausa(c) {
+  const a = (c && c.act) || {}, f = d => new Date(d + "T12:00:00").toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" });
+  if (a.prox) return `Sin partidos en este momento. El próximo partido publicado es el ${f(a.prox)}.`;
+  if (a.ultimo) return `Sin partidos en este momento: la temporada terminó (último partido el ${f(a.ultimo)}). ESPN todavía no publica el calendario de la próxima.`;
+  return "Sin partidos en este momento. ESPN todavía no publica el calendario.";
 }
 async function vSched(slug) {
   const c = VV.sched[slug]; if (c && Date.now() - c.t < 60000) return c.evs;
@@ -3040,6 +3070,7 @@ async function vFillComp(slug, tab) {
     <div class="row" style="margin-left:auto;gap:8px">${M ? `<button class="btn sm" data-go="liga" data-liga="${M.id}">Probabilidades Ballytics</button>` : ""}<button class="vstar big${fav ? " on" : ""}" data-fcomp="${esc(slug)}" aria-label="Seguir">${fav ? "★" : "☆"}</button></div>`;
   if (tab === "partidos") {
     const now = Date.now(), live = evs.filter(isLive), next = evs.filter(e => e.state === "pre" && new Date(e.date).getTime() >= now - 3 * 3600e3).slice(0, 20), done = evs.filter(e => e.state === "post").slice(-20).reverse();
+    if (!live.length && !next.length && !done.length) { body.innerHTML = `<div class="panel cp-vacia"><span class="cp-vacia-ic" aria-hidden="true">${ICO.trophy}</span><div><h3>Competición en pausa</h3><p class="muted">${esc(compPausa(c))}</p>${(c && c.p) ? `<button class="btn ghost sm" data-go="competiciones">Ver otras competiciones</button>` : ""}</div></div>`; return; }
     body.innerHTML = (live.length ? `<div class="panel flush vcomp"><div class="vch"><span class="dot"></span><b>En vivo</b></div>${live.map(vRow).join("")}</div>` : "")
       + `<div class="grid2"><div class="panel flush vcomp"><div class="vch"><b>Próximos partidos</b></div>${next.length ? dayGroups(next) : `<div class="empty">Sin partidos programados en las próximas semanas.</div>`}</div>
          <div class="panel flush vcomp"><div class="vch"><b>Resultados</b></div>${done.length ? dayGroups(done) : `<div class="empty">Sin resultados recientes.</div>`}</div></div>`;
@@ -3050,7 +3081,7 @@ async function vFillComp(slug, tab) {
     const groups = j ? (j.children && j.children.length ? j.children : [j]) : [];
     const lives = (VV.sched[slug] ? VV.sched[slug].evs : []).filter(isLive).map(e => ({ hId: e.h.id, aId: e.a.id, hs: +e.h.score || 0, as: +e.a.score || 0 }));
     const t = lives.length ? liveTableHtml(groups, lives, slug) : stTable(groups, [], slug);
-    body.innerHTML = t || `<div class="panel empty">Esta competición no tiene tabla de posiciones (o aún no empieza).</div>`;
+    body.innerHTML = t || `<div class="panel cp-vacia"><span class="cp-vacia-ic" aria-hidden="true">${ICO.trophy}</span><div><h3>Sin tabla de posiciones</h3><p class="muted">${j ? "Esta competición se juega por eliminación o la temporada todavía no empieza." : "No se pudo cargar la tabla. Prueba de nuevo en un rato."}</p></div></div>`;
   }
   if (tab === "noticias") { const a = await vNews(slug); if (R.v === "comp" && R.liga === slug) body.innerHTML = newsCards(a.slice(0, 18)); }
 }
