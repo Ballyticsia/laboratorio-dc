@@ -66,7 +66,7 @@ def cargar(slug, ids):
             cache = json.load(f)
     except (OSError, ValueError):
         cache = {}
-    faltan = [str(i) for i in ids if i and str(i) not in cache][:MAX_NUEVOS]
+    faltan = [str(i) for i in ids if i and not str(i).startswith("af") and str(i) not in cache][:MAX_NUEVOS]   # "af…": API-Football, ya trae todo
     if faltan:
         with ThreadPoolExecutor(max_workers=8) as ex:
             for eid, r in zip(faltan, ex.map(_bajar, faltan)):

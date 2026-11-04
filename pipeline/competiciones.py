@@ -125,6 +125,9 @@ def grilla(comps):
     print("grilla:", out)
 
 
+AF_SLUGS = {"chi.2"}   # igual que datos_af.FUENTE: ligas con datos de API-Football
+
+
 def main():
     hoy = date.today()
     comps = json.load(open(ARCH, encoding="utf-8"))
@@ -138,6 +141,8 @@ def main():
             print("sin respuesta:", c["s"])
             continue
         estado, act, le = r
+        if c["s"] in AF_SLUGS:   # ESPN no la cubre: los datos vienen de API-Football (página de liga con modelo)
+            estado, act, le = "activa", {"af": True}, None
         if c.get("estado") != estado or c.get("act") != act or (le and c.get("le") != le):
             cambios += 1
         c["estado"], c["act"] = estado, act

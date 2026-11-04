@@ -31,6 +31,7 @@ import cuotas  # noqa: E402
 import lesiones  # noqa: E402
 import xg  # noqa: E402
 import caja  # noqa: E402
+import datos_af  # noqa: E402
 from modelo import XI, ALPHA, calibrar, fit, markets, mercado_q, score_matrix  # noqa: E402
 import margen  # noqa: E402
 
@@ -114,7 +115,7 @@ LIGAS = [
     dict(id="peru", peso=0.7, nombre="Liga 1", pais="Perú", region="Sudamérica", s1="per.1", s2=[], inicio=1, tabla=False, oficial=True),
     dict(id="ecuador", peso=0.75, nombre="LigaPro", pais="Ecuador", region="Sudamérica", s1="ecu.1", s2=[], inicio=1, tabla=False, oficial=True),
     dict(id="paraguay", peso=0.7, nombre="Primera División", pais="Paraguay", region="Sudamérica", s1="par.1", s2=[], inicio=1, tabla=False, oficial=True),
-    dict(id="chile2", peso=0.7, nombre="Primera B", pais="Chile", region="Sudamérica", s1="chi.2", s2=["chi.1"], inicio=1,
+    dict(id="chile2", peso=0.7, nombre="Liga de Ascenso", pais="Chile", region="Sudamérica", s1="chi.2", s2=[], inicio=1,   # datos de API-Football (ESPN no la cubre desde 2010)
          zonas=[(1, 1, "Ascenso directo", "cl"), (2, 8, "Liguilla de ascenso", "el"), (16, 16, "Descenso", "desc")]),
     dict(id="turquia", peso=0.85, nombre="Süper Lig", pais="Turquía", region=EUROPA, s1="tur.1", s2=[], inicio=7,
          zonas=[(1, 1, "Champions League", "cl"), (2, 2, "Champions (previa)", "cl"), (3, 3, "Europa League", "el"), (4, 4, "Conference League", "ecl"), (16, 18, "Descenso", "desc")]),
@@ -894,11 +895,11 @@ def main():
             continue
         print(f"{L['nombre']}: descargando…", flush=True)
         start, cur_start, season_end = season_bounds(L, today)
-        d1 = datos.load(L["s1"], start, season_end, today)
+        d1 = (datos_af.load if L["s1"] in datos_af.FUENTE else datos.load)(L["s1"], start, season_end, today)
         if d1.empty:
             print("  sin datos, la salto")
             continue
-        extra = [datos.load(s, start, today, today) for s in L.get("s2", [])]
+        extra = [(datos_af.load if s in datos_af.FUENTE else datos.load)(s, start, today, today) for s in L.get("s2", [])]
         both = pd.concat([d1] + [e for e in extra if not e.empty], ignore_index=True)
         played = both[(both.estado == "jugado") & both.hg.notna() & (both.date <= hoy)].drop_duplicates(["date", "home", "away"])
         n_xg = 0
@@ -1014,7 +1015,7 @@ def main():
                     prev = played[(played.home == team) | (played.away == team)]
                     if len(prev):
                         u = prev.sort_values("kickoff").iloc[-1]
-                        t = xi_ultimo(str(u.id), team)
+                        t = xi_ultimo(str(u.id), team) if not str(u.id).startswith("af") else None
                         if t:
                             t["desde"] = dict(fecha=str(u.date.date()), rival=u.away if u.home == team else u.home)
                             xi[lado] = t
@@ -1076,7 +1077,7 @@ def main():
                 copa = copas.llaves(model, d1, hoy)
         except Exception as e:
             print(f"  (sin simulación de copa: {e})")
-        meta = dict(datos.meta(L["s1"]))
+        meta = dict(datos_af.meta(L["s1"]) if L["s1"] in datos_af.FUENTE else datos.meta(L["s1"]))
         if LOGOS.get(L["s1"]):          # logo revisado a mano (ESPN tiene algunos viejos o genéricos)
             meta["logo"] = LOGOS[L["s1"]]
         out = dict(id=L["id"], nombre=L["nombre"], pais=L["pais"], region=L["region"], logo=meta.get("logo"),
