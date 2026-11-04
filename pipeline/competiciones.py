@@ -125,6 +125,39 @@ def grilla(comps):
     print("grilla:", out)
 
 
+EQUIPOS = os.path.join(RAIZ, "site", "assets", "equipos.json")
+
+
+def equipos(comps):
+    """Índice de equipos de todas las competiciones activas o en pausa, para el buscador: [nombre, liga, id de ESPN]."""
+    sel = [c for c in comps if c.get("estado") != "inactiva" and c["s"] not in AF_SLUGS]
+    # primero las ligas (así cada equipo queda con su liga y no con una copa)
+    sel.sort(key=lambda c: (("copa" in (c.get("r") or "").lower() or "cup" in c["s"] or c["s"].count(".") > 1), c.get("o", 99)))
+
+    def bajar(c):
+        j = pedir(f"{ESPN}/{c['s']}/teams?limit=500")
+        try:
+            return [t["team"] for t in j["sports"][0]["leagues"][0]["teams"]]
+        except (TypeError, KeyError, IndexError):
+            return []
+
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        res = list(ex.map(bajar, sel))
+    out, vistos = [], set()
+    for c, ts in zip(sel, res):
+        for t in ts:
+            tid = str(t.get("id") or "")
+            if not tid or tid in vistos:
+                continue
+            vistos.add(tid)
+            out.append([t.get("displayName") or t.get("name") or "", c["s"], tid])
+    if len(out) > 500:   # si ESPN falló casi entero, se deja el índice anterior
+        with open(EQUIPOS, "w", encoding="utf-8") as f:
+            json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"equipos para el buscador: {len(out)} de {len(sel)} competiciones")
+
+
 AF_SLUGS = {"chi.2"}   # igual que datos_af.FUENTE: ligas con datos de API-Football
 
 
@@ -150,6 +183,7 @@ def main():
             c["le"] = le
     with open(ARCH, "w", encoding="utf-8") as f:
         json.dump(comps, f, ensure_ascii=False, separators=(",", ":"))
+    equipos(comps)
     cuenta = {e: sum(1 for c in comps if c.get("estado") == e) for e in ("activa", "pausa", "inactiva")}
     print(f"{len(comps)} competiciones, {cambios} con cambios: {cuenta}")
     print("inactivas:", ", ".join(f"{c['s']} ({c['n']})" for c in comps if c.get("estado") == "inactiva"))

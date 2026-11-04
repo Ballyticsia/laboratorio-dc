@@ -41,7 +41,7 @@ jobs:
           if [ -f data/logos_revision.png ]; then
             cp data/logos_revision.png /tmp/logos.png; cp data/competiciones_log.txt /tmp/log.txt 2>/dev/null || true
           fi
-          git add site/assets/competiciones.json
+          git add site/assets/competiciones.json site/assets/equipos.json 2>/dev/null || git add site/assets/competiciones.json
           if ! git diff --cached --quiet; then
             git commit -m "Competiciones revisadas $(date -u +'%Y-%m-%d')"
             for i in 1 2 3; do git pull --rebase -X theirs origin main && git push origin HEAD:main && break; git rebase --abort 2>/dev/null || true; sleep $((i * 10)); done

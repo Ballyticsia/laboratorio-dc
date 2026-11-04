@@ -262,13 +262,16 @@ function buildMenu() {
     });
     const sel = ((VV.sel || {}).equipos || []).map(t => ({ k: "Selecciones", n: t.n, alt: t.en, sub: (VV.sel.conf[t.cf] || "").split(" (")[0], html: selImg(t), go: `data-go="club" data-liga="sel" data-id="${esc(t.id)}"` }));
     const comps = (VV.comps || []).map(c => ({ k: "Competiciones", n: c.n, alt: c.p, sub: c.p, html: compImg(c), go: `data-go="comp" data-liga="${esc(c.s)}"` }));
+    // equipos de todas las competiciones (índice semanal; los de las ligas con modelo ya están arriba)
+    const otros = (VV.eqIdx || []).map(([n, sl, id]) => { const c = VV.bySlug && VV.bySlug[sl];
+      return { k: "Equipos", n, sub: c ? c.n : "", otro: true, copa: true, html: `<span class="vlogo sm"><img${isrc(`https://a.espncdn.com/i/teamlogos/soccer/500/${id}.png`, 24)} alt="" loading="lazy" referrerpolicy="no-referrer" data-n="${esc(n)}" onerror="bfb(this)"></span>`, go: `data-go="club" data-liga="${esc(sl)}" data-id="${esc(id)}"` }; });
     // un mismo equipo aparece en su liga y en las copas: se deja una sola vez (la de su liga) y se nombran las demás
     const byName = new Map();
-    eq.sort((a, b) => a.copa - b.copa).forEach(x => { const k = norm(x.alt || x.n); const y = byName.get(k); if (!y) byName.set(k, x); else if (!y.sub.includes(x.sub)) y.sub += " · " + x.sub; });
+    [...eq.sort((a, b) => a.copa - b.copa), ...otros].forEach(x => { if (x.otro && byName.has(norm(x.n))) return; const k = x.otro ? norm(x.n) + "|" + x.go : norm(x.alt || x.n); const y = byName.get(k); if (!y) byName.set(k, x); else if (!y.sub.includes(x.sub)) y.sub += " · " + x.sub; });
     idx = [...ligas, ...byName.values(), ...sel, ...comps, ...pl].map(x => ({ ...x, s: norm(x.n + " " + (x.alt || "")), w: norm(x.n + " " + (x.alt || "")).split(/[^a-z0-9]+/).filter(Boolean) }));
   };
   indexAll(); whenAll(indexAll); Promise.all([vComps(), vSel()]).then(indexAll);
-  q.addEventListener("focus", () => loadAll(), { once: true });   // el buscador completo necesita todas las ligas
+  q.addEventListener("focus", () => { loadAll(); if (!VV.eqIdx) getJSON("assets/equipos.json?v=" + Math.floor(Date.now() / 864e5)).then(x => { VV.eqIdx = Array.isArray(x) ? x : []; indexAll(); }).catch(() => { VV.eqIdx = []; }); }, { once: true });   // el buscador completo necesita todas las ligas y el índice de equipos
   let act = -1;
   const items = () => [...res.querySelectorAll(".dd-item")];
   const setAct = i => { const it = items(); if (!it.length) return; act = (i + it.length) % it.length; it.forEach((x, j) => x.classList.toggle("act", j === act)); it[act].scrollIntoView({ block: "nearest" }); };
@@ -3189,6 +3192,8 @@ async function vFillComp(slug, tab) {
   try { evs = await vSched(slug); } catch (e) {}
   const lg = (VV.sched[slug] || {}).lg || {}, name = c ? c.n : lg.name || slug, logo = c && c.l ? c.l : ((lg.logos || [])[0] || {}).href;
   if (R.v !== "comp" || R.liga !== slug) return;
+  // liga que ESPN no cubre pero Ballytics sí (datos de API-Football): directo a su página completa
+  if (!evs.length && M && c && c.act && c.act.af) { go({ v: "liga", liga: M.id, tab: "resumen" }, false); return; }
   head.innerHTML = `${logo ? `<img class="cimg xl"${isrc(logo, 72)} alt="" referrerpolicy="no-referrer" data-n="${esc(name)}" onerror="bfb(this)">` : `<span class="cflag xl">${esc((c && c.f) || "⚽")}</span>`}<div><h1>${esc(name)}</h1><span class="muted">${esc(c ? c.p : "")}${lg.season && lg.season.displayName ? " · " + esc(lg.season.displayName) : ""}</span></div>
     <div class="row" style="margin-left:auto;gap:8px">${M ? `<button class="btn sm" data-go="liga" data-liga="${M.id}">Probabilidades Ballytics</button>` : ""}<button class="vstar big${fav ? " on" : ""}" data-fcomp="${esc(slug)}" aria-label="Seguir">${fav ? "★" : "☆"}</button></div>`;
   if (tab === "partidos") {
@@ -3504,6 +3509,76 @@ const ICON = { goal: "⚽", og: "⚽", miss: "✕", yellow: `<i class="ycard"></
 function vLogo(t, cls = "") { const px = /xl/.test(cls) ? 72 : 28, ya = t.logo && LOK.has(IMG(t.logo, px));   // ya cargado: sin fundido (no parpadea al refrescar en vivo)
   return `<span class="vlogo ${cls}">${t.logo ? `<img${isrc(t.logo, px)}${ya ? ` class="ok"` : ""} alt="" decoding="async" referrerpolicy="no-referrer" data-n="${esc(t.short || t.name || "")}" onload="this.classList.add('ok');window.__lok.add(this.getAttribute('src'))" onerror="bfb(this)">` : fbSpan(t.short || t.name, t.abr)}</span>`; }
 
+/* ---------- análisis rápido para partidos fuera del modelo (con los últimos partidos de cada equipo, de todas sus competiciones) ---------- */
+VV.quick = VV.quick || {};
+function qParse(ev, teamId, antes) {
+  const c = (ev.competitions || [])[0] || {}, st = ((c.status || ev.status || {}).type || {});
+  if (st.state !== "post" || (antes && new Date(ev.date).getTime() >= antes)) return null;
+  const cs = c.competitors || [], me = cs.find(x => String((x.team || {}).id) === String(teamId)), op = cs.find(x => x !== me);
+  if (!me || !op) return null;
+  const sc = x => { const v = x.score && typeof x.score === "object" ? (x.score.value ?? x.score.displayValue) : x.score; const n = parseFloat(v); return isNaN(n) ? null : n; };
+  const gf = sc(me), gc = sc(op); if (gf == null || gc == null) return null;
+  const lid = String(ev.uid || "").split("~l:")[1]?.split("~")[0] || "";
+  return { date: ev.date, gf, gc, local: me.homeAway === "home", rival: (op.team || {}).shortDisplayName || (op.team || {}).displayName || "", rlogo: ((op.team || {}).logos || [{}])[0].href || (op.team || {}).logo,
+    comp: (ev.league && (ev.league.shortName || ev.league.name)) || (VV.byId[lid] || {}).n || "", res: gf > gc ? "G" : gf < gc ? "P" : "E" };
+}
+async function qTeam(id, antes) {
+  const k = id + "|" + Math.floor(antes / 36e5);
+  if (VV.quick[k]) return VV.quick[k];
+  let j = null; try { j = await vget(`${ESPN}/all/teams/${id}/schedule`); } catch (e) {}
+  const ms = ((j || {}).events || []).map(e => qParse(e, id, antes)).filter(Boolean).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
+  return (VV.quick[k] = ms);
+}
+const Q_MU = 1.3, Q_K = 3;   // goles por partido de referencia y cuántos partidos "promedio" se suman (para no exagerar con pocos datos)
+async function vQuick(H) {
+  if (!H.h.id || !H.a.id) return null;
+  const antes = new Date(H.date).getTime(), [mh, ma] = await Promise.all([qTeam(H.h.id, antes), qTeam(H.a.id, antes)]);
+  if (mh.length < 3 || ma.length < 3) return { mh, ma, ok: false };
+  const av = (ms, k) => (ms.reduce((s, x) => s + x[k], 0) + Q_MU * Q_K) / (ms.length + Q_K);
+  const ah = av(mh, "gf"), dh = av(mh, "gc"), aa = av(ma, "gf"), da = av(ma, "gc");
+  const lh = Math.max(.2, Math.min(4, Math.sqrt(ah * da) * 1.1)), la = Math.max(.2, Math.min(4, Math.sqrt(aa * dh) * .9));
+  (VV.qpre ||= {})[R.id] = { lh, la };
+  return { mh, ma, ok: true, lh, la };
+}
+function qResumen(ms) {
+  const n = ms.length || 1, f = k => ms.reduce((s, x) => s + x[k], 0) / n;
+  return { n: ms.length, gf: f("gf"), gc: f("gc"), o25: ms.filter(x => x.gf + x.gc > 2.5).length / n, bt: ms.filter(x => x.gf > 0 && x.gc > 0).length / n, va: ms.filter(x => x.gc === 0).length,
+    g: ms.filter(x => x.res === "G").length, e: ms.filter(x => x.res === "E").length, p: ms.filter(x => x.res === "P").length };
+}
+function qPanel(j, H, q) {
+  if (!q || H.state !== "pre") return "";
+  const H1 = H.h.short, A1 = H.a.short;
+  const forma = (t, ms) => ms.length ? `<div class="qf"><div class="qf-h">${vLogo(t, "sm")}<b>${esc(t.short)}</b><span class="form">${ms.slice(0, 5).map(x => `<i class="${x.res}" title="${esc(`${x.local ? "vs" : "en"} ${x.rival} ${x.gf}-${x.gc}`)}">${x.res}</i>`).join("")}</span></div>
+      ${ms.slice(0, 5).map(x => `<div class="qf-r"><span class="faint">${esc(new Date(x.date).toLocaleDateString("es-CL", { day: "numeric", month: "short" }))}</span><span class="qf-v">${x.local ? "vs" : "en"}</span><span class="qf-n">${esc(x.rival)}</span><b class="num qf-s ${x.res}">${x.gf}–${x.gc}</b><small class="faint qf-c">${esc(x.comp)}</small></div>`).join("")}</div>` : "";
+  let probs = "";
+  if (q.ok) {
+    const o = outcome3(0, 0, q.lh, q.la);
+    let o25 = 0, bt = 0, best = [0, 0, 0];
+    for (let i = 0; i <= 10; i++) for (let k = 0; k <= 10; k++) { const pr = pois(i, q.lh) * pois(k, q.la); if (i + k > 2.5) o25 += pr; if (i > 0 && k > 0) bt += pr; if (pr > best[2]) best = [i, k, pr]; }
+    const pc = (j.pickcenter || [])[0], am = x => { x = +x; return !x ? null : x > 0 ? 1 + x / 100 : 1 + 100 / -x; };
+    let cuota = "";
+    if (pc && pc.homeTeamOdds && pc.awayTeamOdds) { const h = am(pc.homeTeamOdds.moneyLine), d = am((pc.drawOdds || {}).moneyLine), a = am(pc.awayTeamOdds.moneyLine);
+      if (h && d && a) { const s = 1 / h + 1 / d + 1 / a;
+        cuota = `<div class="qodds"><span class="lbl">Cuotas de ${esc((pc.provider || {}).name || "la casa")}</span><div class="qodds-r">${[[H1, h, o.H], ["Empate", d, o.D], [A1, a, o.A]].map(([n, c, pr]) => `<div><small>${esc(n)}</small><b class="num">${dec(c)}</b><span class="faint">casa ${pct(1 / c / s)} · Ballytics ${pct(pr)}</span></div>`).join("")}</div></div>`; } }
+    probs = `<div class="qprob"><div class="cnums"><span class="h"><b>${pct(o.H)}</b>${esc(H1)}</span><span class="d"><b>${pct(o.D)}</b>Empate</span><span class="a"><b>${pct(o.A)}</b>${esc(A1)}</span></div>
+      <div class="kpis mini">${kpi("", "Goles previstos", `${dec(q.lh, 1)} – ${dec(q.la, 1)}`, "")}${kpi("", "Más de 2,5 goles", pct(o25), "")}${kpi("", "Ambos marcan", pct(bt), "")}${kpi("", "Resultado más probable", `${best[0]}–${best[1]}`, pct(best[2]))}</div>${cuota}</div>`;
+  }
+  const rh = qResumen(q.mh), ra = qResumen(q.ma);
+  const fila = (n, a, b, fmt) => `<div class="cmp"><span class="num">${fmt(a)}</span><span class="cl"><i style="width:${100 * a / ((a + b) || 1)}%"></i></span><span class="lbl">${n}</span><span class="cr"><i style="width:${100 * b / ((a + b) || 1)}%"></i></span><span class="num">${fmt(b)}</span></div>`;
+  const cmp = rh.n && ra.n ? `<div class="cmph"><span>${vLogo(H.h, "sm")} ${esc(H1)}</span><span>${esc(A1)} ${vLogo(H.a, "sm")}</span></div>
+    ${fila("Goles a favor por partido", rh.gf, ra.gf, v => dec(v, 1))}${fila("Goles en contra por partido", rh.gc, ra.gc, v => dec(v, 1))}${fila("Partidos con más de 2,5 goles", rh.o25, ra.o25, v => pct(v))}${fila("Ambos marcan", rh.bt, ra.bt, v => pct(v))}${fila("Vallas invictas", rh.va, ra.va, v => String(v))}
+    <p class="note">En sus últimos ${rh.n} y ${ra.n} partidos de todas las competiciones · ${esc(H1)}: ${rh.g}G ${rh.e}E ${rh.p}P · ${esc(A1)}: ${ra.g}G ${ra.e}E ${ra.p}P.</p>` : "";
+  return `<div class="panel stack qpanel cpanel"><div class="row" style="justify-content:space-between;align-items:baseline"><h3>Análisis Ballytics ${help("Esta competición todavía no tiene el modelo completo de Ballytics. Esta estimación usa los goles a favor y en contra de cada equipo en sus últimos 10 partidos (de cualquier competición), con un ajuste por localía y un ancla de 1,3 goles para no exagerar con pocos partidos. Es más simple que el modelo de las ligas principales.")}</h3><span class="note">Estimación rápida</span></div>
+    ${probs || `<p class="note">Faltan partidos recientes de alguno de los equipos para estimar probabilidades.</p>`}
+    ${cmp}
+    <div class="grid2 qforms">${forma(H.h, q.mh)}${forma(H.a, q.ma)}</div></div>`;
+}
+function vH2H(j, H) {
+  const g = (j.headToHeadGames || [])[0], evs = (g && g.events) || []; if (!evs.length) return "";
+  const yo = String(((g.team || {}).id) || H.h.id), nom = yo === H.h.id ? H.h.short : H.a.short;
+  return `<div class="panel stack"><h3>Cara a cara</h3><div class="qf h2h">${evs.slice(0, 8).map(e => { const r = (e.gameResult || "").toUpperCase(), cl = r === "W" ? "G" : r === "L" ? "P" : r === "D" ? "E" : "";
+    return `<div class="qf-r"><span class="faint">${e.gameDate ? esc(new Date(e.gameDate).toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "2-digit" })) : ""}</span><span class="qf-v">${e.atVs === "@" ? "en" : "vs"}</span><span class="qf-n">${esc((e.opponent || {}).displayName || "")}</span><b class="num qf-s ${cl}">${esc(e.score || "")}</b>${e.leagueName ? `<small class="faint qf-c">${esc(e.leagueName)}</small>` : ""}</div>`; }).join("")}</div><p class="note">Resultados de ${esc(nom)}.</p></div>`;
+}
 async function vFillMatch(force) {
   const id = R.id, head = document.getElementById("vc-head"), body = document.getElementById("vc-body");
   if (!head || !body) return;
@@ -3512,6 +3587,8 @@ async function vFillMatch(force) {
   if (R.v !== "envivo" || R.id !== id) return;
   await vComps();
   const H = vHeader(j), evs = vEvents(j, H), c = VV.byId[H.lid], comp = c ? c.n : H.league, m = vModel(id); VV.state = H.state;
+  const q = H.state === "pre" && !m ? await withTimeout(vQuick(H), 6000).catch(() => null) : null;
+  if (R.v !== "envivo" || R.id !== id) return;
   const goals = l => evs.filter(e => (e.kind === "goal" && e.lado === l) || (e.kind === "og" && e.lado && e.lado !== l)).map(e => `${esc((e.who[0] || "").split(" ").slice(-1)[0])} ${esc(e.min)}${e.kind === "og" ? " (ec)" : e.pen ? " (p)" : ""}`).join(", ");
   const pens = H.h.so != null && H.a.so != null && (H.h.so || H.a.so || /pen/i.test(H.detail) || H.period >= 5);
   const status = H.state === "in" && (/pen|shootout/i.test(H.detail) || H.period >= 5) ? `<span class="vmin live big">Penales</span>` : H.state === "in" ? `<span class="vmin live big">${esc(/half|HT/i.test(H.detail) ? "Entretiempo" : H.clock || H.detail)}</span>` : H.state === "post" ? `<span class="vmin big">${esc(finalEs(H.detail))}</span>` : `<span class="vmin big">${esc(new Date(H.date).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))} · ${hhmm(H.date)}</span>`;
@@ -3529,12 +3606,12 @@ async function vFillMatch(force) {
       ${tl(H.a, "a")}</div>
     <div class="row" style="justify-content:center;margin-top:10px;gap:8px">${H.state !== "post" ? `<button class="btn ghost sm vbell2${f ? " on" : ""}" data-follow="${esc(id)}">${f ? `${ICO.bell} Siguiendo` : `${ICO.belloff} Avisarme de goles`}</button>` : ""}${m ? `<button class="btn ghost sm" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">Análisis de Ballytics →</button>` : ""}</div>`;
   const tab = R.tab || "resumen";
-  if (tab === "resumen") { body.innerHTML = videosHtml(j) + vShootout(j, H) + (pens && H.state === "in" ? "" : vCurvePanel(j, H, evs, m)) + (H.state !== "post" || true ? voteBox(id, H.date, H.h.short, H.a.short, m ? [m.p.pH, m.p.pD, m.p.pA] : null) : "") + vKeyStats(j, H) + vTimeline(evs, H) + vInfo(j, H, m) + vArbEnVivo(j, H, m); hydrateVotes(); arbLlenar(); }
+  if (tab === "resumen") { body.innerHTML = videosHtml(j) + vShootout(j, H) + (pens && H.state === "in" ? "" : q && q.ok ? "" : vCurvePanel(j, H, evs, m)) + qPanel(j, H, q) + (H.state === "pre" ? vH2H(j, H) : "") + (H.state !== "post" || true ? voteBox(id, H.date, H.h.short, H.a.short, m ? [m.p.pH, m.p.pD, m.p.pA] : null) : "") + vKeyStats(j, H) + vTimeline(evs, H) + vInfo(j, H, m) + vArbEnVivo(j, H, m); hydrateVotes(); arbLlenar(); }
   const hasXI = (j.rosters || []).some(t => (t.roster || []).some(x => x.starter));
   if (tab === "alineaciones" && !hasXI && m && m.p.xi_prob) { VV.lastPitch = null; body.innerHTML = vPitch({ rosters: xiRosters(m.p.xi_prob), keyEvents: [] }, H, null).replace("<h3>Alineaciones", "<h3>Alineación probable") + `<div class="panel stack">${xiProbNote(m.p.xi_prob, m.p.bajas, k => k === "h" ? H.h.short : H.a.short)}</div>`; }
   else if (tab === "alineaciones") { body.innerHTML = vPitch(j, H, id); loadMatchPlayers(id, H, j).then(ch => { if (ch && R.v === "envivo" && R.id === id && (R.tab || "resumen") === "alineaciones") body.innerHTML = vPitch(j, H, id); }); }
   if (tab === "estadisticas") body.innerHTML = vStats(j, H, m);
-  if (tab === "previa") { body.innerHTML = vPrevia(j, H, m) + vArbEnVivo(j, H, m); arbLlenar(); }
+  if (tab === "previa") { body.innerHTML = qPanel(j, H, q) + vPrevia(j, H, m) + vH2H(j, H) + vInfo(j, H, m) + vArbEnVivo(j, H, m); arbLlenar(); }
   if (tab === "tabla") { const g = ((j.standings || {}).groups || []).map(x => ({ name: x.header, standings: x.standings }));
     const lives = H.state === "in" ? [{ hId: H.h.id, aId: H.a.id, hs: +H.h.score || 0, as: +H.a.score || 0 }] : [];
     body.innerHTML = !g.length ? `<div class="panel empty">Sin tabla para esta competición.</div>` : lives.length ? liveTableHtml(g, lives, H.slug, [H.h.id, H.a.id]) : stTable(g, [H.h.id, H.a.id], H.slug); }
@@ -3580,7 +3657,7 @@ function vInfo(j, H, m) {
   const gi = j.gameInfo || {}, v = gi.venue || {}, ref = (gi.officials || [])[0], tv = ((j.broadcasts || [])[0] || {});
   const arb = ref ? (ref.displayName || ref.fullName || "") : (m && m.p.arbitro && m.p.arbitro.n) || (H ? arbDeEvento(H) : null);
   const arbLink = m && m.p.arbitro && m.p.arbitro.pj ? ` <button class="link" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">ver su análisis →</button>` : "";
-  const items = [v.fullName ? `Estadio: <b>${esc(v.fullName)}</b>${v.address && v.address.city ? ` (${esc(v.address.city)})` : ""}` : "", arb ? `Árbitro: <b>${esc(arb)}</b>${arbLink}` : "", gi.attendance ? `Público: <b>${Number(gi.attendance).toLocaleString("es-CL")}</b>` : ""].filter(Boolean);
+  const items = [v.fullName ? `Estadio: <b>${esc(v.fullName)}</b>${v.address && v.address.city ? ` (${esc(v.address.city)})` : ""}${v.capacity ? ` · capacidad ${Number(v.capacity).toLocaleString("es-CL")}` : ""}` : "", arb ? `Árbitro: <b>${esc(arb)}</b>${arbLink}` : "", gi.attendance ? `Público: <b>${Number(gi.attendance).toLocaleString("es-CL")}</b>` : ""].filter(Boolean);
   return items.length ? `<div class="panel stack"><h3>Información</h3><p class="note" style="font-size:14px">${items.join(" · ")}</p></div>` : "";
 }
 function vArbEnVivo(j, H, m) {
@@ -3731,11 +3808,13 @@ function lambdasFromProbs(pH, pA) {
 }
 function preLambdas(j, m) {
   if (m && m.p.lh) return { lh: m.p.lh, la: m.p.la, src: "Ballytics" };
+  const qk = Object.keys(VV.qpre || {}).length && VV.qpre[R.id];
   const pc = (j.pickcenter || [])[0], am = x => { x = +x; return !x ? null : x > 0 ? 1 + x / 100 : 1 + 100 / -x; };
   if (pc && pc.homeTeamOdds && pc.awayTeamOdds) {
     const h = am(pc.homeTeamOdds.moneyLine), a = am(pc.awayTeamOdds.moneyLine), d = am((pc.drawOdds || {}).moneyLine);
     if (h && a && d) { const s = 1 / h + 1 / a + 1 / d, [lh, la] = lambdasFromProbs(1 / h / s, 1 / a / s); return { lh, la, src: `cuota de ${(pc.provider || {}).name || "la casa"}` }; }
   }
+  if (qk) return { lh: qk.lh, la: qk.la, src: "últimos partidos de cada equipo" };
   return { lh: 1.45, la: 1.15, src: "promedio de la liga" };
 }
 function curveData(lh, la, evs, minNow, done) {
