@@ -1,0 +1,52 @@
+name: Buscar logo oficial (a mano)
+
+# Baja de la página oficial del campeonato los logos que encuentre y los deja en la rama "diagnostico"
+# para revisarlos antes de usarlos en el sitio.
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Página donde buscar"
+        default: "https://www.campeonatochileno.cl/ligas/liga-de-ascenso-caixun/"
+
+permissions:
+  contents: write
+
+jobs:
+  buscar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Buscar
+        env:
+          URL: ${{ inputs.url }}
+        run: |
+          mkdir -p out && cd out
+          python3 - <<'PY'
+          import os, re, urllib.request, urllib.parse
+          u = os.environ["URL"]
+          req = lambda x: urllib.request.urlopen(urllib.request.Request(x, headers={"User-Agent": "Mozilla/5.0"}), timeout=30).read()
+          html = req(u).decode("utf-8", "ignore")
+          srcs = set(re.findall(r'(?:src|href|content|data-src)=["\']([^"\']+\.(?:png|svg|webp|jpg|jpeg)(?:\?[^"\']*)?)', html, re.I))
+          srcs |= set(re.findall(r'https?://[^"\'\s)]+\.(?:png|svg|webp)', html, re.I))
+          lista = sorted(urllib.parse.urljoin(u, s) for s in srcs)
+          open("lista.txt", "w").write("\n".join(lista))
+          n = 0
+          for s in lista:
+              if re.search(r"ascenso|caixun|logo|liga", s, re.I) and n < 25:
+                  try:
+                      b = req(s)
+                      nombre = f"{n:02d}_" + re.sub(r"[^a-zA-Z0-9._-]", "_", s.split("/")[-1].split("?")[0])[:60]
+                      open(nombre, "wb").write(b); n += 1
+                      print("ok", s)
+                  except Exception as e:
+                      print("x", s, e)
+          PY
+          ls -la
+      - name: Guardar en rama diagnostico
+        run: |
+          cd out
+          git init -q && git checkout -q -b diagnostico
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add . && git commit -qm "Logos encontrados"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" HEAD:diagnostico
