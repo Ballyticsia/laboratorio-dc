@@ -657,9 +657,9 @@
      "prob": 0.7014,
      "cuota": 1.377,
      "cierre": 1.385,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 1,
+     "ag": 0
     },
     {
      "id": "401877912",
@@ -825,5 +825,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-04T01:16Z"
+ "actualizado": "2026-11-04T02:59Z"
 }
