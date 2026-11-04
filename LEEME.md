@@ -163,6 +163,16 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - En la pestaña Mercados de cada partido: remates, remates al arco, córners, faltas, tarjetas y entradas por equipo y en total (amarillas sueltas y fueras de juego no, porque en el backtest de 1.900 partidos no mejoraron al promedio de la liga). Esperado = lo que hace el equipo × lo que concede el rival ÷ promedio de la liga (con 3 partidos "promedio" sumados para no exagerar); remates y al arco se mezclan mitad y mitad con los goles esperados. Probabilidades con binomial negativa (dispersión medida en la liga).
 - ESPN no publica saques de banda ni saques de meta.
 
+## Ligas que ESPN no cubre (API-Football)
+- `pipeline/datos_af.py` entrega los partidos de esas ligas en el mismo formato que ESPN, así el modelo, la tabla y las estadísticas funcionan igual. Hoy: Liga de Ascenso (Primera B de Chile, liga 266 de API-Football). Para agregar otra, se suma en `FUENTE` (y en `AF_SLUGS` de `pipeline/competiciones.py`).
+- Consultas: 1 por corrida (calendario) + 1 cada 20 partidos terminados sin detalle (goles, tarjetas y estadísticas, con caché en `data/api_football/ligas/`).
+- Si API-Football aplaza un partido sin fecha nueva, aparece en "Partidos aplazados" de la liga.
+- El logo de la Liga de Ascenso (`site/assets/logos/chi.2.png`) sale del sitio oficial; la acción "Buscar logo oficial" baja los logos de una página a la rama `diagnostico` para revisarlos.
+
+## Partidos fuera del modelo y buscador
+- En partidos de competiciones sin modelo (por ejemplo la AFC Champions League), la página del partido muestra una estimación rápida (1X2, goles, más de 2,5, ambos marcan) con los últimos 10 partidos de cada equipo de todas sus competiciones, cuotas si ESPN las trae, cara a cara, estadio con capacidad y árbitro.
+- `site/assets/equipos.json` (lo arma cada lunes `pipeline/competiciones.py`): unos 3.000 equipos de todas las competiciones activas para el buscador.
+
 ## Catálogo de competiciones
 `pipeline/competiciones.py` (workflow "Revisar competiciones", los lunes) pregunta a ESPN qué competiciones tienen partidos cerca: "activa", "pausa" (receso o fin de temporada) o "inactiva" (nada en más de un año, no se muestra). Las en pausa salen al final y en gris, y su página explica cuándo vuelve. A mano con la opción "grilla" arma una imagen con el logo actual y el de ESPN de cada una (rama `revision-logos`) para revisar logos viejos.
 
