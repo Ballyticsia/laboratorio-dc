@@ -1,6 +1,6 @@
 {
  "activa": true,
- "creditos_usados": 2,
+ "creditos_usados": 0,
  "restantes": 426,
  "consultas": {
   "soccer_epl": "sin partidos cerca",
@@ -8,7 +8,7 @@
   "soccer_italy_serie_a": "sin partidos cerca",
   "soccer_germany_bundesliga": "sin partidos cerca",
   "soccer_france_ligue_one": "sin partidos cerca",
-  "soccer_efl_champ": "actualizada",
+  "soccer_efl_champ": "copia",
   "soccer_portugal_primeira_liga": "sin partidos cerca",
   "soccer_netherlands_eredivisie": "sin partidos cerca",
   "soccer_chile_campeonato": "sin partidos cerca",
@@ -22,13 +22,11 @@
   "soccer_conmebol_copa_sudamericana": "sin partidos cerca",
   "soccer_mexico_ligamx": "sin partidos cerca",
   "soccer_turkey_super_league": "sin partidos cerca",
-  "soccer_spl": "error",
+  "soccer_spl": "sin partidos cerca",
   "soccer_belgium_first_div": "copia"
  },
- "errores": [
-  "soccer_spl events: HTTP Error 429: Too Many Requests"
- ],
+ "errores": [],
  "ligas": {},
  "partidos_con_cuota": 44,
- "actualizado": "2026-11-04T04:53+00:00"
+ "actualizado": "2026-11-04T04:58+00:00"
 }
