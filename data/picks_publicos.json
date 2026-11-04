@@ -759,9 +759,9 @@
      "prob": 0.782,
      "cuota": 1.256,
      "cierre": 1.263,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 1,
+     "ag": 2
     },
     {
      "id": "401915306",
@@ -774,9 +774,9 @@
      "prob": 0.249,
      "cuota": 5.25,
      "cierre": 5.25,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 2,
+     "ag": 3,
      "mercado": 0.1743,
      "ev": 0.3073
     },
@@ -808,9 +808,9 @@
      "prob": 0.2816,
      "cuota": 4.2,
      "cierre": 4.4,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "G",
+     "hg": 2,
+     "ag": 0,
      "mercado": 0.2207,
      "ev": 0.1827
     }
@@ -927,5 +927,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-04T21:00Z"
+ "actualizado": "2026-11-04T22:57Z"
 }
