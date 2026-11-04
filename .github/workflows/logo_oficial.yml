@@ -25,8 +25,13 @@ jobs:
           python3 - <<'PY'
           import os, re, urllib.request, urllib.parse
           u = os.environ["URL"]
-          req = lambda x: urllib.request.urlopen(urllib.request.Request(x, headers={"User-Agent": "Mozilla/5.0"}), timeout=30).read()
-          html = req(u).decode("utf-8", "ignore")
+          req = lambda x: urllib.request.urlopen(urllib.request.Request(x, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36", "Accept": "text/html,image/*,*/*", "Accept-Language": "es-CL,es;q=0.9"}), timeout=30).read()
+          try:
+              html = req(u).decode("utf-8", "ignore")
+          except Exception as e:
+              html = ""
+              open("error.txt", "w").write(repr(e))
+          open("pagina.html", "w").write(html[:400000])
           srcs = set(re.findall(r'(?:src|href|content|data-src)=["\']([^"\']+\.(?:png|svg|webp|jpg|jpeg)(?:\?[^"\']*)?)', html, re.I))
           srcs |= set(re.findall(r'https?://[^"\'\s)]+\.(?:png|svg|webp)', html, re.I))
           lista = sorted(urllib.parse.urljoin(u, s) for s in srcs)
