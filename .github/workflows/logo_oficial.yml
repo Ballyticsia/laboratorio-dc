@@ -37,6 +37,7 @@ jobs:
           lista = sorted(urllib.parse.urljoin(u, s) for s in srcs)
           open("lista.txt", "w").write("\n".join(lista))
           n = 0
+          lista.sort(key=lambda s: (not re.search(r"ascenso|primera|liga-de", s, re.I), s))   # primero los de la liga
           for s in lista:
               if re.search(r"ascenso|caixun|logo|liga", s, re.I) and n < 25:
                   try:
