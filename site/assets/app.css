@@ -1934,3 +1934,5 @@ svg .gnum{font-family:var(--f-display);font-size:12px;font-weight:700;fill:var(-
 .qf-c{grid-column:3/5;font-size:11px;margin-top:-2px}
 @media (max-width:560px){.qodds-r b{font-size:16px}}
 .qf.h2h{border:0;padding:0}
+.aplz-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-bottom:1px dashed rgba(148,163,184,.14);font-weight:600;font-size:14px}
+.aplz-r:last-child{border-bottom:0}.aplz-r small{flex-basis:100%;font-weight:500;padding-left:2px}

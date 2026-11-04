@@ -1086,7 +1086,9 @@ def main():
                    modelo=mj, modelo_corners=mc.to_json() if mc else None, modelo_tarjetas=mt.to_json() if mt else None,
                    props_liga={k: dict(h=r(v["h"], 2), a=r(v["a"], 2), disp=v["disp"]) for k, v in pliga.items()},
                    slug=L["s1"], grupos=grupos, equipos=info, tabla=tabla, stats=stats_eq, rachas=rachas, goleadores=goleadores, amonestados=amonestados,
-                   partidos=partidos, resultados=resultados, copa=copa)
+                   partidos=partidos, resultados=resultados, copa=copa,
+                   aplazados=[dict(home=x.home, away=x.away, kickoff=x.kickoff) for x in cur[(cur.estado == "otro") & cur.hg.isna() & (cur.date >= hoy - pd.Timedelta(days=45))].itertuples()
+                              if not ((rest.home == x.home) & (rest.away == x.away) & (rest.date > x.date)).any()])
         # partidos jugados de la liga en las últimas temporadas, para el historial de los árbitros
         hist_arb = []
         for x in p1.itertuples():

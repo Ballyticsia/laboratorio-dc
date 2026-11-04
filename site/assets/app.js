@@ -1238,7 +1238,11 @@ function weekWidget(L, sel) {
   const fx = wkd.fx.map(p => matchRow(p, false)).join("");
   return `<div class="wnav">${nav(i - 1, "Semana anterior")}<b>Semana del ${esc(lab)}</b>${nav(i + 1, "Semana siguiente")}</div>${res ? `<div class="rlist">${res}</div>` : ""}${fx}`;
 }
-function lPartidos(L) { return `<div class="panel flush">${weekWidget(L, R.wk)}</div>`; }
+function lPartidos(L) {
+  const ap = (L.aplazados || []);
+  const apl = ap.length ? `<div class="panel stack aplz"><h3>Partidos aplazados</h3><div class="rlist">${ap.map(x => `<div class="aplz-r">${badge(L, x.home, "sm")}<span>${esc(corto(L, x.home))}</span><span class="faint">vs</span><span>${esc(corto(L, x.away))}</span>${badge(L, x.away, "sm")}<small class="faint">era el ${esc(fecha(x.kickoff))} · sin fecha nueva todavía</small></div>`).join("")}</div></div>` : "";
+  return `${apl}<div class="panel flush">${weekWidget(L, R.wk)}</div>`;
+}
 function scorersTable(L, n = 25, team = null, mini = false) {
   const gs = (L.goleadores || []).filter(g => !team || g.equipo === team).slice(0, n);
   if (!gs.length) return `<div class="empty">Sin goles registrados todavía.</div>`;
