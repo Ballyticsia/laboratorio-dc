@@ -744,9 +744,9 @@
      "prob": 0.7943,
      "cuota": 1.222,
      "cierre": 1.19,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 2,
+     "ag": 3
     },
     {
      "id": "401915381",
@@ -790,7 +790,7 @@
      "lado": "A",
      "prob": 0.2617,
      "cuota": 4.8,
-     "cierre": 5.25,
+     "cierre": 5.5,
      "res": null,
      "hg": null,
      "ag": null,
@@ -815,6 +815,108 @@
      "ev": 0.1827
     }
    ]
+  },
+  "2026-11-05": {
+   "fijado": "2026-11-04T21:00Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401915827",
+     "liga": "conference",
+     "kickoff": "2026-11-05T17:45Z",
+     "home": "Red Star Belgrade",
+     "away": "Inter D'Escaldes",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.9314,
+     "cuota": 1.071,
+     "cierre": 1.071,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401915830",
+     "liga": "conference",
+     "kickoff": "2026-11-05T17:45Z",
+     "home": "Atalanta",
+     "away": "Kairat Almaty",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8528,
+     "cuota": 1.167,
+     "cierre": 1.167,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401915525",
+     "liga": "europaleague",
+     "kickoff": "2026-11-05T20:00Z",
+     "home": "Benfica",
+     "away": "Lech Poznan",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8452,
+     "cuota": 1.167,
+     "cierre": 1.167,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401915537",
+     "liga": "europaleague",
+     "kickoff": "2026-11-05T17:45Z",
+     "home": "Real Sociedad",
+     "away": "Lyon",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.3601,
+     "cuota": 4.4,
+     "cierre": 4.4,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2107,
+     "ev": 0.5844
+    },
+    {
+     "id": "401915527",
+     "liga": "europaleague",
+     "kickoff": "2026-11-05T17:45Z",
+     "home": "Lillestrom",
+     "away": "Viktoria Plzen",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.6913,
+     "cuota": 2.2,
+     "cierre": 2.2,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.4426,
+     "ev": 0.5209
+    },
+    {
+     "id": "401915524",
+     "liga": "europaleague",
+     "kickoff": "2026-11-05T20:00Z",
+     "home": "SK Sturm Graz",
+     "away": "NK Celje",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.2659,
+     "cuota": 5.5,
+     "cierre": 5.5,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1643,
+     "ev": 0.4625
+    }
+   ]
   }
  },
  "reglas": {
@@ -825,5 +927,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-04T19:09Z"
+ "actualizado": "2026-11-04T21:00Z"
 }
