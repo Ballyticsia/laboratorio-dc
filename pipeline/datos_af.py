@@ -21,6 +21,11 @@ DIR = os.path.join(RAIZ, "data", "api_football", "ligas")
 # liga de ESPN (slug que usa el sitio) -> id de liga en API-Football
 FUENTE = {"chi.2": 266}
 NOMBRE = {"chi.2": "Liga de Ascenso"}
+# API-Football escribe sin tildes o abreviado: nombres como los usa el campeonato chileno
+EQUIPO = {"Antofagasta": "Deportes Antofagasta", "Curico Unido": "Curicó Unido", "D. Puerto Montt": "Deportes Puerto Montt",
+          "Deportes Copiapo": "Deportes Copiapó", "Recoleta": "Deportes Recoleta", "Union Espanola": "Unión Española",
+          "Union San Felipe": "Unión San Felipe", "Universidad de Concepcion": "Universidad de Concepción", "Concepción": "Deportes Concepción",
+          "Rangers de Talca": "Rangers", "Nublense": "Ñublense", "Huachipato": "Huachipato", "O'Higgins": "O'Higgins"}
 MAX_DET = int(os.environ.get("AF_LIGAS_MAX", "15"))   # consultas de detalle por liga y corrida (20 partidos cada una)
 ESPERA = float(os.environ.get("AF_ESPERA", "6.5"))
 _ultima = [0.0]
@@ -148,9 +153,10 @@ def _filas(slug, filas, det):
         row = {"id": f"af{f['id']}", "kickoff": _kick(f["k"]), "estado": "jugado" if done else ("pendiente" if st in ("NS", "TBD") else ("en_vivo" if st in VIVO else "otro"))}
         row["date"] = row["kickoff"][:10]
         for side, t in (("home", f["h"]), ("away", f["a"])):
-            row[side] = t.get("name")
-            row[side + "_corto"] = t.get("name")
-            row[side + "_abr"] = "".join(ch for ch in (t.get("name") or "")[:3].upper())
+            n = EQUIPO.get(t.get("name"), t.get("name"))
+            row[side] = n
+            row[side + "_corto"] = n.replace("Deportes ", "") if n and n.startswith("Deportes ") and len(n) > 16 else n
+            row[side + "_abr"] = (n.replace("Deportes ", "").replace("Unión ", "U").replace("Universidad de ", "U")[:3] if n else "").upper()
             row[side + "_color"] = None
             row[side + "_logo"] = t.get("logo")
         row["hg"] = f["g"].get("home") if done else None
