@@ -861,9 +861,9 @@
      "prob": 0.8452,
      "cuota": 1.167,
      "cierre": 1.222,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 3,
+     "ag": 1
     },
     {
      "id": "401915537",
@@ -910,11 +910,68 @@
      "prob": 0.2659,
      "cuota": 5.5,
      "cierre": 5.75,
+     "res": "G",
+     "hg": 2,
+     "ag": 3,
+     "mercado": 0.1643,
+     "ev": 0.4625
+    }
+   ]
+  },
+  "2026-11-06": {
+   "fijado": "2026-11-05T22:56Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401882809",
+     "liga": "laliga",
+     "kickoff": "2026-11-06T20:00Z",
+     "home": "Sevilla",
+     "away": "Alavés",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.3058,
+     "cuota": 4.2,
+     "cierre": 4.2,
      "res": null,
      "hg": null,
      "ag": null,
-     "mercado": 0.1643,
-     "ev": 0.4625
+     "mercado": 0.2239,
+     "ev": 0.2844
+    },
+    {
+     "id": "401841665",
+     "liga": "argentina",
+     "kickoff": "2026-11-06T22:15Z",
+     "home": "Independiente",
+     "away": "Deportivo Riestra",
+     "est": "valor",
+     "lado": "D",
+     "prob": 0.3449,
+     "cuota": 3.65,
+     "cierre": 3.65,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2542,
+     "ev": 0.2589
+    },
+    {
+     "id": "401875556",
+     "liga": "eredivisie",
+     "kickoff": "2026-11-06T19:00Z",
+     "home": "Willem II",
+     "away": "PEC Zwolle",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.5355,
+     "cuota": 2.3,
+     "cierre": 2.3,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.4205,
+     "ev": 0.2316
     }
    ]
   }
@@ -927,5 +984,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-05T20:59Z"
+ "actualizado": "2026-11-05T22:56Z"
 }
