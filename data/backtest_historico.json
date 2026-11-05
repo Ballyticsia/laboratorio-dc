@@ -1,5 +1,5 @@
 {
- "actualizado": "2026-10-30T04:48+00:00",
+ "actualizado": "2026-11-05T08:39+00:00",
  "fuente": "Football-Data.co.uk",
  "penaltyblog": "1.13.1",
  "ligas": [
@@ -23,57 +23,56 @@
   "Serie B"
  ],
  "temporadas": [
-  "2020-21",
   "2021-22",
   "2022-23",
   "2023-24",
   "2024-25",
   "2025-26"
  ],
- "partidos_descargados": 41382,
+ "partidos_descargados": 41448,
  "metodo_margen": "potencia",
  "margen": {
   "log_loss": {
    "multiplicativo": {
-    "Bet365 (cierre)": 0.99301,
+    "Bet365 (cierre)": 0.99289,
     "Pinnacle (cierre)": 0.99894,
-    "Promedio de casas (cierre)": 1.00012
+    "Promedio de casas (cierre)": 1.00003
    },
    "aditivo": {
-    "Bet365 (cierre)": 0.99241,
+    "Bet365 (cierre)": 0.99228,
     "Pinnacle (cierre)": 0.99871,
-    "Promedio de casas (cierre)": 0.99957
+    "Promedio de casas (cierre)": 0.99947
    },
    "potencia": {
-    "Bet365 (cierre)": 0.99238,
+    "Bet365 (cierre)": 0.99225,
     "Pinnacle (cierre)": 0.99871,
-    "Promedio de casas (cierre)": 0.99958
+    "Promedio de casas (cierre)": 0.99949
    },
    "shin": {
-    "Bet365 (cierre)": 0.99248,
+    "Bet365 (cierre)": 0.99235,
     "Pinnacle (cierre)": 0.99874,
-    "Promedio de casas (cierre)": 0.99965
+    "Promedio de casas (cierre)": 0.99955
    },
    "odds_ratio": {
-    "Bet365 (cierre)": 0.9925,
+    "Bet365 (cierre)": 0.99237,
     "Pinnacle (cierre)": 0.99877,
-    "Promedio de casas (cierre)": 0.99971
+    "Promedio de casas (cierre)": 0.99962
    },
    "diferencial": {
-    "Bet365 (cierre)": 0.99241,
+    "Bet365 (cierre)": 0.99228,
     "Pinnacle (cierre)": 0.99871,
-    "Promedio de casas (cierre)": 0.99957
+    "Promedio de casas (cierre)": 0.99947
    },
    "logaritmico": {
-    "Bet365 (cierre)": 0.9925,
+    "Bet365 (cierre)": 0.99237,
     "Pinnacle (cierre)": 0.99877,
-    "Promedio de casas (cierre)": 0.99971
+    "Promedio de casas (cierre)": 0.99962
    }
   },
   "partidos": {
-   "Bet365 (cierre)": 32186,
+   "Bet365 (cierre)": 32252,
    "Pinnacle (cierre)": 36871,
-   "Promedio de casas (cierre)": 41368
+   "Promedio de casas (cierre)": 41434
   },
   "control_penaltyblog": {
    "multiplicativo": 0.0,
@@ -86,15 +85,15 @@
  "modelos": {
   "total": {
    "modelo_propio": {
-    "n": 29274,
+    "n": 29269,
     "ll": 1.0185,
     "acierto": 0.4915,
     "brier": 0.6102,
-    "n_o25": 29274,
+    "n_o25": 29269,
     "ll_o25": 0.6838
    },
    "pinnacle": {
-    "n": 29274,
+    "n": 29269,
     "ll": 0.9966,
     "acierto": 0.5063,
     "brier": 0.5958,
@@ -102,19 +101,19 @@
     "ll_o25": 0.672
    },
    "penaltyblog": {
-    "n": 29272,
-    "ll": 1.0227,
-    "acierto": 0.4892,
-    "brier": 0.6127,
-    "n_o25": 29272,
-    "ll_o25": 0.6878
+    "n": 29267,
+    "ll": 1.0226,
+    "acierto": 0.4893,
+    "brier": 0.6126,
+    "n_o25": 29267,
+    "ll_o25": 0.6877
    },
    "mezcla": {
-    "n": 29272,
+    "n": 29267,
     "ll": 1.0199,
     "acierto": 0.49,
-    "brier": 0.6111,
-    "n_o25": 29272,
+    "brier": 0.611,
+    "n_o25": 29267,
     "ll_o25": 0.6853
    }
   },
@@ -288,38 +287,6 @@
      "n_o25": 2728,
      "ll_o25": 0.6956
     }
-   },
-   "2020-21": {
-    "modelo_propio": {
-     "n": 5,
-     "ll": 1.2865,
-     "acierto": 0.4,
-     "brier": 0.7651,
-     "n_o25": 5,
-     "ll_o25": 0.9029
-    },
-    "pinnacle": {
-     "n": 5,
-     "ll": 1.0122,
-     "acierto": 0.4,
-     "brier": 0.5994
-    },
-    "penaltyblog": {
-     "n": 5,
-     "ll": 1.3502,
-     "acierto": 0.4,
-     "brier": 0.7907,
-     "n_o25": 5,
-     "ll_o25": 0.9221
-    },
-    "mezcla": {
-     "n": 5,
-     "ll": 1.3162,
-     "acierto": 0.4,
-     "brier": 0.7777,
-     "n_o25": 5,
-     "ll_o25": 0.9123
-    }
    }
   },
   "liga": {
@@ -391,34 +358,34 @@
    },
    "Brasil": {
     "modelo_propio": {
-     "n": 1747,
-     "ll": 1.0255,
-     "acierto": 0.4894,
-     "brier": 0.6143,
-     "n_o25": 1747,
-     "ll_o25": 0.6905
+     "n": 1742,
+     "ll": 1.0248,
+     "acierto": 0.4897,
+     "brier": 0.6139,
+     "n_o25": 1742,
+     "ll_o25": 0.6899
     },
     "pinnacle": {
-     "n": 1747,
+     "n": 1742,
      "ll": 0.9951,
-     "acierto": 0.5169,
+     "acierto": 0.5172,
      "brier": 0.5945
     },
     "penaltyblog": {
-     "n": 1747,
-     "ll": 1.0244,
-     "acierto": 0.4877,
-     "brier": 0.6134,
-     "n_o25": 1747,
-     "ll_o25": 0.6903
+     "n": 1742,
+     "ll": 1.0234,
+     "acierto": 0.4879,
+     "brier": 0.6129,
+     "n_o25": 1742,
+     "ll_o25": 0.6896
     },
     "mezcla": {
-     "n": 1747,
-     "ll": 1.0246,
-     "acierto": 0.4883,
-     "brier": 0.6136,
-     "n_o25": 1747,
-     "ll_o25": 0.6901
+     "n": 1742,
+     "ll": 1.0238,
+     "acierto": 0.4885,
+     "brier": 0.6132,
+     "n_o25": 1742,
+     "ll_o25": 0.6895
     }
    },
    "Bundesliga": {
