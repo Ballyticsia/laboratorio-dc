@@ -2133,3 +2133,4 @@ nav.main button,.dd > button,.dd > .nav-i{font-family:var(--f-body);font-size:14
 @media (max-width:560px){.mact-b{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;scrollbar-width:none;padding-bottom:2px}.mact-b .btn{flex:none}}
 .vsb{grid-template-columns:24px auto minmax(0,1fr) auto auto!important}
 .vsb>span:not(.pface):not(.vrt):not(.vjn2){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tagm{font:700 11px/1.25 var(--f-body);letter-spacing:0;padding:2px 7px}
