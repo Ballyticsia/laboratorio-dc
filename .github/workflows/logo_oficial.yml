@@ -31,7 +31,7 @@ jobs:
           except Exception as e:
               html = ""
               open("error.txt", "w").write(repr(e))
-          open("pagina.html", "w").write(html[:400000])
+          open("pagina.html", "w").write(html[:6000000])
           srcs = set(re.findall(r'(?:src|href|content|data-src)=["\']([^"\']+\.(?:png|svg|webp|jpg|jpeg)(?:\?[^"\']*)?)', html, re.I))
           srcs |= set(re.findall(r'https?://[^"\'\s)]+\.(?:png|svg|webp)', html, re.I))
           lista = sorted(urllib.parse.urljoin(u, s) for s in srcs)
