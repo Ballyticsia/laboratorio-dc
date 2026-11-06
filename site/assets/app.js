@@ -1373,9 +1373,8 @@ function vPartido() {
   const evCalc = `<div class="panel stack evcalc"><div class="row" style="justify-content:space-between;align-items:baseline"><h3>¿Tu cuota tiene valor? ${help(TIPS.ev)}</h3><button class="link" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}" data-tab="mercados" data-keep>Todos los mercados →</button></div>
     <div class="evq">${quick.map(([key, n, pr]) => `<label class="evi"><span class="lbl">${esc(n)}</span><span class="evp num">${pct(pr, 0)} · justa ${dec(1 / pr)}</span><input class="odd" inputmode="decimal" aria-label="Tu cuota para ${esc(n)}" data-k="${key}" data-p="${pr}" value="${st[key] ? String(st[key]).replace(".", ",") : ""}" placeholder="Tu cuota"><span class="evr" data-ev="${key}"></span></label>`).join("")}</div>
     <p class="note">Escribe la cuota que te ofrece tu casa. Si es mayor que la cuota justa, el valor esperado (EV) sale positivo según Ballytics. Ojo: en el backtest, apostar solo por valor del modelo perdió plata; es una referencia, no una recomendación.</p></div>`;
-  const side = (s, t, cls) => `<div class="side ${cls}">${badge(L, t, "lg")}<button class="tn" data-go="equipo" data-liga="${L.id}" data-team="${esc(t)}">${esc(corto(L, t))}</button>
-      <span class="xgv">${dec(cls === "l" ? lh : la)}</span><span class="lbl">goles previstos ${cls === "l" ? help(TIPS.xg) : ""}</span>
-      <span class="row" style="gap:8px;${cls === "r" ? "justify-content:flex-end" : ""}">${s.pos ? `<span class="muted num" style="font-size:12px">${s.pos}º · ${s.pts} pts</span>` : ""}${formHtml(s.forma)}</span></div>`;
+  const side = (s, t, cls) => `<div class="mh-t ${cls}"><button class="mh-crest" data-go="equipo" data-liga="${L.id}" data-team="${esc(t)}" aria-label="${esc(corto(L, t))}">${badge(L, t, "xl")}</button><button class="tn" data-go="equipo" data-liga="${L.id}" data-team="${esc(t)}">${esc(corto(L, t))}</button>
+      <span class="mh-st">${s.pos ? `<span class="muted num">${s.pos}º · ${s.pts} pts</span>` : ""}${formHtml(s.forma)}</span></div>`;
   const cmp = seasonCmp(L, p.home, p.away);
   const scorers = (p.goleadores || []).length ? (p.goleadores || []).map(g => `<div class="srow" data-go="jugador" data-liga="${L.id}" data-id="${esc(g.jid)}">${face(L, g.lado === "h" ? p.home : p.away, g.jid, g.jugador)}<span><b>${esc(g.jugador)}</b><small>${g.goles} goles en la temporada</small></span><span class="sn num">${pct(g.p)}</span></div>`).join("") : `<p class="note">Sin goleadores registrados todavía.</p>`;
   const h2h = (p.h2h || []).length ? p.h2h.map(x => resultRow(L, x)).join("") : `<p class="note">No se enfrentaron en las últimas temporadas.</p>`;
@@ -1426,14 +1425,19 @@ function vPartido() {
     <h1 id="h-p" class="sr">${esc(H)} vs ${esc(A)}</h1>
     <div class="panel match">
       <div class="livebox" data-live-box="${esc(p.id)}" hidden></div>
-      <div class="meta">${leagueMark(L, "sm")}<span>${esc(L.nombre)}</span><span>·</span><span>${new Date(p.kickoff).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })} ${hhmm(p.kickoff)}</span><span class="cdown" data-cd="${esc(p.kickoff)}"></span></div>
-      <div class="mact"><button class="btn ghost sm" data-sharelink>Compartir enlace</button><button class="btn ghost sm" data-share data-liga="${L.id}" data-mid="${esc(p.id)}">Compartir imagen</button><button class="btn ghost sm" data-share data-fmt="story" data-liga="${L.id}" data-mid="${esc(p.id)}" title="Formato vertical 9:16 para historias de Instagram o WhatsApp">Imagen para historias</button><button class="btn ghost sm" data-ics="match" data-liga="${L.id}" data-mid="${esc(p.id)}">Agregar al calendario</button></div>
-      <div class="face">${side(sh, p.home, "l")}<span class="vs">VS</span>${side(sa, p.away, "r")}</div>
-      <div class="probs">
-        <div class="pt h"><span class="lbl">${esc(H)}</span><span class="v">${pct(k.H, 1)}</span><div class="tr"><i style="width:${100 * k.H}%"></i></div></div>
-        <div class="pt d"><span class="lbl">Empate</span><span class="v">${pct(k.D, 1)}</span><div class="tr"><i style="width:${100 * k.D}%"></i></div></div>
-        <div class="pt a"><span class="lbl">${esc(A)}</span><span class="v">${pct(k.A, 1)}</span><div class="tr"><i style="width:${100 * k.A}%"></i></div></div>
+      <div class="meta">${leagueMark(L, "sm")}<button class="link" data-go="liga" data-liga="${L.id}" data-tab="resumen">${esc(L.nombre)}</button></div>
+      
+      <div class="mh">
+        ${side(sh, p.home, "l")}
+        <div class="mh-c"><span class="mh-time">${hhmm(p.kickoff)}</span><span class="mh-date">${esc(new Date(p.kickoff).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "short" }))}</span><span class="cdown mh-cd" data-cd="${esc(p.kickoff)}"></span></div>
+        ${side(sa, p.away, "r")}
       </div>
+      <div class="mh-prob" role="img" aria-label="Probabilidad: ${esc(H)} ${pct(k.H, 1)}, empate ${pct(k.D, 1)}, ${esc(A)} ${pct(k.A, 1)}">
+        <div class="mh-bar"><i class="h" style="flex:${k.H}"></i><i class="d" style="flex:${k.D}"></i><i class="a" style="flex:${k.A}"></i></div>
+        <div class="mh-pl"><span class="h"><b>${pct(k.H, 1)}</b>${esc(H)}</span><span class="d"><b>${pct(k.D, 1)}</b>Empate</span><span class="a"><b>${pct(k.A, 1)}</b>${esc(A)}</span></div>
+      </div>
+      <div class="mh-xg"><span>Goles previstos ${help(TIPS.xg)}</span><b class="h">${dec(lh)}</b><span class="mh-xs">–</span><b class="a">${dec(la)}</b></div>
+      <div class="mact mact-b"><button class="btn ghost sm" data-sharelink>Compartir enlace</button><button class="btn ghost sm" data-share data-liga="${L.id}" data-mid="${esc(p.id)}">Compartir imagen</button><button class="btn ghost sm" data-share data-fmt="story" data-liga="${L.id}" data-mid="${esc(p.id)}" title="Formato vertical 9:16 para historias de Instagram o WhatsApp">Imagen para historias</button><button class="btn ghost sm" data-ics="match" data-liga="${L.id}" data-mid="${esc(p.id)}">Agregar al calendario</button></div>
       <div class="kpis mini">${kpi("", "Más de 2,5 goles", pct(k.O25), "")}${kpi("", "Ambos marcan", pct(k.B), "")}${ct != null ? kpi("", "Córners esperados", dec(ct, 1), `${dec(p.ch, 1)} – ${dec(p.ca, 1)}`) : ""}${tt != null ? kpi("", "Tarjetas esperadas", dec(tt, 1), `${dec(p.th, 1)} – ${dec(p.ta, 1)}`) : ""}</div>
       ${tab !== "mercados" ? mkt : ""}
       ${reg ? `<p class="note" style="margin-top:14px">Predicción guardada en el registro público el ${fecha(reg.predicho)}; se califica al terminar el partido.</p>` : ""}
@@ -3598,20 +3602,24 @@ async function vFillMatch(force) {
   const H = vHeader(j), evs = vEvents(j, H), c = VV.byId[H.lid], comp = c ? c.n : H.league, m = vModel(id); VV.state = H.state;
   const q = H.state === "pre" && !m ? await withTimeout(vQuick(H), 6000).catch(() => null) : null;
   if (R.v !== "envivo" || R.id !== id) return;
-  const goals = l => evs.filter(e => (e.kind === "goal" && e.lado === l) || (e.kind === "og" && e.lado && e.lado !== l)).map(e => `${esc((e.who[0] || "").split(" ").slice(-1)[0])} ${esc(e.min)}${e.kind === "og" ? " (ec)" : e.pen ? " (p)" : ""}`).join(", ");
+  const goals = l => { const g = evs.filter(e => (e.kind === "goal" && e.lado === l) || (e.kind === "og" && e.lado && e.lado !== l)).map(e => `<span class="vh-ev"><i>⚽</i>${esc((e.who[0] || "").split(" ").slice(-1)[0])} <em>${esc(e.min)}${e.kind === "og" ? " (ec)" : e.pen ? " (p)" : ""}</em></span>`);
+    const r = evs.filter(e => e.kind === "red" && e.lado === l).map(e => `<span class="vh-ev"><i class="rcard"></i>${esc((e.who[0] || "").split(" ").slice(-1)[0])} <em>${esc(e.min)}</em></span>`);
+    return g.concat(r).join(""); };
   const pens = H.h.so != null && H.a.so != null && (H.h.so || H.a.so || /pen/i.test(H.detail) || H.period >= 5);
-  const status = H.state === "in" && (/pen|shootout/i.test(H.detail) || H.period >= 5) ? `<span class="vmin live big">Penales</span>` : H.state === "in" ? `<span class="vmin live big">${esc(/half|HT/i.test(H.detail) ? "Entretiempo" : H.clock || H.detail)}</span>` : H.state === "post" ? `<span class="vmin big">${esc(finalEs(H.detail))}</span>` : `<span class="vmin big">${esc(new Date(H.date).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" }))} · ${hhmm(H.date)}</span>`;
+  const status = H.state === "in" && (/pen|shootout/i.test(H.detail) || H.period >= 5) ? `<span class="vmin live big">Penales</span>` : H.state === "in" ? `<span class="vmin live big">${esc(/half|HT/i.test(H.detail) ? "Entretiempo" : H.clock || H.detail)}</span>` : H.state === "post" ? `<span class="vmin big">${esc(finalEs(H.detail))}</span>` : `<span class="vmin big pre">Por jugar</span>`;
   await vSel();
   const tslug = t => VV.selById[t.id] ? "sel" : H.slug;
   // tras una tanda de penales: el que clasifica se destaca y el otro se atenúa
   const ganP = H.state === "post" && pens && +H.h.so !== +H.a.so ? (+H.h.so > +H.a.so ? "h" : "a") : null;
   const ex = cls => ganP ? (ganP === cls ? " pwin" : " plose") : "";
   const cup = cls => ganP === cls ? `<span class="vh-cup">${ICO.trophy} Clasifica</span>` : "";
-  const tl = (t, cls) => tslug(t) && t.id ? `<button class="vhteam tbtn${ex(cls)}" data-go="club" data-liga="${esc(tslug(t))}" data-id="${esc(t.id)}">${vLogo(t, "xl")}<b>${esc(t.short)}</b>${cup(cls)}<small>${goals(cls)}</small></button>` : `<div class="vhteam${ex(cls)}">${vLogo(t, "xl")}<b>${esc(t.short)}</b>${cup(cls)}<small>${goals(cls)}</small></div>`;
+  const nomL = t => t.name && t.name.length <= 20 ? t.name : t.short;   // en el encabezado cabe el nombre completo
+  const tl = (t, cls) => tslug(t) && t.id ? `<button class="vhteam tbtn${ex(cls)}" data-go="club" data-liga="${esc(tslug(t))}" data-id="${esc(t.id)}">${vLogo(t, "xl")}<b>${esc(nomL(t))}</b>${cup(cls)}<span class="vh-evs">${goals(cls)}</span></button>` : `<div class="vhteam${ex(cls)}">${vLogo(t, "xl")}<b>${esc(nomL(t))}</b>${cup(cls)}<span class="vh-evs">${goals(cls)}</span></div>`;
   const f = followed()[id];
   head.innerHTML = `<div class="vhcomp">${H.slug ? `<button class="link" data-go="comp" data-liga="${esc(H.slug)}">${esc(comp)}</button>` : esc(comp)}${H.note ? ` · ${esc(H.note)}` : ""}</div>
     <div class="vhrow">${tl(H.h, "h")}
-      <div class="vhmid">${H.state === "pre" ? `<span class="vhsc num">vs</span>` : `<span class="vhsc num">${esc(H.h.score ?? 0)} – ${esc(H.a.score ?? 0)}</span>`}${pens ? `<span class="vhpen num">Penales ${esc(H.h.so)} – ${esc(H.a.so)}</span>` : ""}${ganP ? `<span class="vhpen-w">${esc((ganP === "h" ? H.h : H.a).short)} gana en penales</span>` : ""}${status}</div>
+      <div class="vhmid">${H.state === "pre" ? `<span class="vhsc vhpre">${esc(hhmm(H.date))}</span>` : `<span class="vhsc num">${esc(H.h.score ?? 0)}<i>–</i>${esc(H.a.score ?? 0)}</span>`}${pens ? `<span class="vhpen num">Penales ${esc(H.h.so)} – ${esc(H.a.so)}</span>` : ""}${ganP ? `<span class="vhpen-w">${esc((ganP === "h" ? H.h : H.a).short)} gana en penales</span>` : ""}${status}
+        <span class="vh-meta">${esc(new Date(H.date).toLocaleDateString("es-CL", { weekday: "short", day: "numeric", month: "short" }))}${((j.gameInfo || {}).venue || {}).fullName ? ` · ${esc(j.gameInfo.venue.fullName)}` : ""}</span></div>
       ${tl(H.a, "a")}</div>
     <div class="row" style="justify-content:center;margin-top:10px;gap:8px">${H.state !== "post" ? `<button class="btn ghost sm vbell2${f ? " on" : ""}" data-follow="${esc(id)}">${f ? `${ICO.bell} Siguiendo` : `${ICO.belloff} Avisarme de goles`}</button>` : ""}${m ? `<button class="btn ghost sm" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">Análisis de Ballytics →</button>` : ""}</div>`;
   const tab = R.tab || "resumen";
@@ -3947,10 +3955,10 @@ function vCurvePanel(j, H, evs, m) {
   const cd = curveData(L0.lh, L0.la, evs, H.state === "pre" ? 0 : min, done), last = cd.pts[cd.pts.length - 1], pre = cd.pts[0];
   const H1 = H.h.short, A1 = H.a.short;
   return `<div class="panel stack cpanel"><div class="row" style="justify-content:space-between;align-items:baseline"><h3>${H.state === "pre" ? "Probabilidad antes del partido" : done ? "Cómo cambió la probabilidad" : "Probabilidad en vivo"} ${help("Se parte de los goles esperados antes del partido y, minuto a minuto, se considera el marcador y el tiempo que queda: los goles que faltan se reparten según los goles esperados de cada equipo. Una tarjeta roja baja los goles esperados de ese equipo y sube los del rival.")}</h3><span class="note">Base: ${esc(L0.src)}</span></div>
-    <div class="cnums"><span class="h"><b>${pct(last.H)}</b>${esc(H1)}</span><span class="d"><b>${pct(last.D)}</b>Empate</span><span class="a"><b>${pct(last.A)}</b>${esc(A1)}</span></div>
+    ${done ? `<p class="note cpre">Probabilidad antes del partido</p>` : ""}<div class="cnums">${(o => `<span class="h"><b>${pct(o.H)}</b>${esc(H1)}</span><span class="d"><b>${pct(o.D)}</b>Empate</span><span class="a"><b>${pct(o.A)}</b>${esc(A1)}</span>`)(done ? pre : last)}</div>
     ${H.state === "pre" ? "" : curveSvg(cd, H1, A1)}
     ${done && H.h.so != null && H.a.so != null && +H.h.so !== +H.a.so ? `<div class="cpen">El resultado (1X2) se define en el tiempo reglamentario: <b>empate</b>. Clasificó <b>${esc(+H.h.so > +H.a.so ? H1 : A1)}</b>, que ganó ${Math.max(+H.h.so, +H.a.so)}–${Math.min(+H.h.so, +H.a.so)} en los penales.</div>` : ""}
-    <p class="note">${H.state === "pre" ? "" : `Antes del partido: ${pct(pre.H)} · ${pct(pre.D)} · ${pct(pre.A)}.`} No considera el dominio ni las ocasiones; solo marcador, minutos y expulsiones.</p></div>`;
+    <p class="note">${H.state === "pre" || done ? "" : `Antes del partido: ${pct(pre.H)} · ${pct(pre.D)} · ${pct(pre.A)}.`} No considera el dominio ni las ocasiones; solo marcador, minutos y expulsiones.</p></div>`;
 }
 
 /* ---------- tabla en vivo ---------- */

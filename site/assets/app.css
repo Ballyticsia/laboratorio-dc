@@ -1983,3 +1983,139 @@ svg .gnum{font-family:var(--f-display);font-size:12px;font-weight:700;fill:var(-
 .vcb i{font-style:normal;font-size:9px;margin-right:5px}.vcb i.in{color:var(--good)}.vcb i.out{color:var(--bad)}
 .vso:has(small){width:auto;border-radius:999px;padding:0 5px;gap:2px;display:flex;align-items:center;right:-10px}
 .vso small{font:700 9.5px var(--f-display);color:#1b2333}
+
+/* =====================================================================
+   v40 · Sistema de diseño
+   Una sola familia para la interfaz (Plus Jakarta Sans) en tipo oración, números tabulares sin
+   monoespaciada, y Chakra Petch solo para los marcadores y cifras grandes (el "tablero del estadio").
+   ===================================================================== */
+:root{--f-score:"Chakra Petch","Arial Narrow",sans-serif;--f-display:"Jakarta",system-ui,sans-serif;--f-mono:"Jakarta",system-ui,sans-serif;
+  --bg:#0b1019;--panel:#121925;--panel2:#18212f;--ink:#eef2f8;--muted:#9aa6ba;--faint:#7d889c;--line:rgba(160,174,198,.12);
+  --t-xs:12px;--t-sm:13px;--t-md:14.5px;--t-lg:16px;--t-xl:20px}
+:root[data-theme="light"]{--bg:#f3f5f9;--panel:#ffffff;--panel2:#f6f8fb}
+h1,
+h2,
+h3,
+.lbl,
+nav.main button,
+.chip-btn,
+.day,
+.mrow .t .lg,
+.pick .l,
+table.t th,
+.tabs2 button,
+.side .tn,
+table.mk th,
+table.mk tr.grp td,
+.val,
+.dd > button,
+.hero-top,
+.ht b,
+.tag,
+.fp-name,
+.wnav b,
+.dd > .nav-i,
+.tabbar button,
+.fttag,
+.cmp-team b,
+.dbtn .dn,
+.mb-t,
+.mtabs button,
+.bt,
+.vch b,
+.vhcomp,
+.vhteam b,
+.vhub button,
+.vchn .link,
+.vchn b,
+.vday .lbl,
+.fh-k span,
+.pmh>div b,
+.pmrt small,
+.pms h4,
+.rp small,
+.rm-src,
+.pp-e,
+.pp-kh,
+.pp-link b,
+.arb-chip,
+.arb-sub,
+.pso-st,
+.pso-tm b,
+.pso-cup,
+.pso-h4,
+.pso-res em,
+.pso-gk em,
+.vh-cup,
+.pr-kick,
+.pr-stats small,
+.pr-duel-s small,
+.pp-hero-s small,
+.pp-n small,
+.eqs-g h4,
+.vst-g{text-transform:none!important;letter-spacing:normal!important}
+.num{font-family:var(--f-body);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+body{font-feature-settings:"tnum" 0}
+/* títulos */
+h1{letter-spacing:-.01em;font-weight:800}
+h2{font-size:var(--t-xl);font-weight:800;letter-spacing:-.005em}
+h3{font-size:var(--t-lg);font-weight:700;color:var(--ink);letter-spacing:-.005em;line-height:1.25}
+.lbl{font-family:var(--f-body);font-size:var(--t-xs);font-weight:600;color:var(--muted)}
+table.t th,table.mk th{font-family:var(--f-body);font-size:var(--t-xs);font-weight:600}
+table.mk tr.grp td{font-family:var(--f-body);font-size:var(--t-sm);font-weight:700}
+.tag,.fttag,.val,.bt{font-family:var(--f-body);font-size:11.5px;font-weight:700}
+.day,.vday .lbl{font-family:var(--f-body);font-size:var(--t-sm);font-weight:700;color:var(--ink)}
+.day::first-letter,.vday .lbl::first-letter{text-transform:uppercase}
+.mrow .t .lg,.pick .l{font-family:var(--f-body);font-size:11.5px;font-weight:600}
+nav.main button,.dd > button,.dd > .nav-i{font-family:var(--f-body);font-size:14px;font-weight:600}
+.mtabs button,.vhub button,.tabs2 button{font-family:var(--f-body);font-size:14px;font-weight:600}
+.chip-btn{font-family:var(--f-body);font-size:13px;font-weight:600}
+/* cifras grandes y marcadores: el único lugar con Chakra Petch */
+.kpi .v,.eqs-v,.xgv,.cnums b,.sm-res-t b,.vhsc,.pso-sc,.qodds-r b,.fp-big,.hs-score,.fh-k b,.rscore b,.score{font-family:var(--f-score)}
+/* encabezado del partido (análisis): escudos grandes, hora al centro y una sola barra de probabilidad */
+.mh{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;gap:16px;margin-top:18px}
+.mh-t{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;min-width:0}
+.mh-crest{background:none;border:0;padding:0;cursor:pointer;line-height:0}
+.mh-t .badge.xl,.mh-t .cimg.xl{width:76px;height:76px}
+.mh-t .tn{font:800 clamp(17px,2.4vw,22px)/1.15 var(--f-body);background:none;border:0;color:var(--ink);cursor:pointer;padding:0;overflow-wrap:anywhere}
+.mh-t .tn:hover{color:var(--pitch)}
+.mh-st{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;font-size:12.5px}
+.mh-c{display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:10px;min-width:120px}
+.mh-time{font:700 clamp(34px,5vw,46px)/1 var(--f-score);letter-spacing:.01em}
+.mh-date{font-size:13px;color:var(--muted);font-weight:600}.mh-date::first-letter{text-transform:uppercase}
+.mh-cd:empty{display:none}
+.mh-prob{margin-top:22px;display:flex;flex-direction:column;gap:8px}
+.mh-bar{display:flex;gap:3px;height:10px;border-radius:999px;overflow:hidden}
+.mh-bar i{display:block;min-width:4px}.mh-bar i.h{background:var(--pitch)}.mh-bar i.d{background:var(--draw)}.mh-bar i.a{background:var(--away)}
+.mh-pl{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;font-size:13px;color:var(--muted)}
+.mh-pl span{display:flex;align-items:baseline;gap:7px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mh-pl .d{justify-content:center}.mh-pl .a{justify-content:flex-end}
+.mh-pl b{font:700 20px/1 var(--f-score);color:var(--ink)}.mh-pl .h b{color:var(--pitch)}.mh-pl .a b{color:var(--away)}
+.mh-xg{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;font-size:13px;color:var(--muted)}
+.mh-xg b{font:700 18px var(--f-score)}.mh-xg b.h{color:var(--pitch)}.mh-xg b.a{color:var(--away)}.mh-xs{opacity:.5}
+@media (max-width:560px){.mh{gap:8px}.mh-t .badge.xl,.mh-t .cimg.xl{width:56px;height:56px}.mh-c{min-width:84px}.mh-pl{grid-template-columns:1fr;gap:4px}.mh-pl .d,.mh-pl .a{justify-content:flex-start}}
+/* rótulos en tipo oración: mayúscula inicial */
+.lbl{display:inline-block}.lbl::first-letter,.dbtn .dn::first-letter,.cdown::first-letter{text-transform:uppercase}
+.mact-b{margin:16px 0 4px;padding-top:14px;border-top:1px solid var(--line)}
+.mact-b .btn{font-size:12.5px;padding:6px 11px}
+@media (max-width:560px){.mh-pl{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px}.mh-pl span{flex-direction:column;align-items:flex-start;gap:2px;font-size:12px}.mh-pl .d{align-items:center}.mh-pl .a{align-items:flex-end}
+  .kpis.mini{grid-template-columns:repeat(2,minmax(0,1fr))}.kpis.mini .kpi{padding:11px}.mact-b{gap:6px}}
+/* encabezado del partido en vivo / terminado */
+.vhrow{align-items:start}
+.vhteam{padding-top:4px}
+.vhteam b{font:800 clamp(15px,2.1vw,20px)/1.15 var(--f-body)}
+.vh-evs{display:flex;flex-direction:column;gap:3px;align-items:center;margin-top:2px}
+.vh-ev{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.vh-ev i{font-style:normal;font-size:11px}.vh-ev em{font-style:normal;font-weight:700;color:var(--ink)}
+.vh-ev .rcard{width:8px;height:11px;border-radius:2px;background:var(--bad);display:inline-block}
+.vhsc{font:700 clamp(44px,7vw,64px)/1 var(--f-score);display:flex;align-items:center;gap:.18em}
+.vhsc i{font-style:normal;opacity:.45;font-weight:500}
+.vhsc.vhpre{font-size:clamp(34px,5vw,46px)}
+.vmin{font-family:var(--f-body)}
+.vmin.big{font:700 12.5px var(--f-body);padding:4px 12px;border-radius:999px;background:rgba(148,163,184,.14);color:var(--ink)}
+.vmin.big.live{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.vmin.big.pre{background:rgba(61,139,255,.14);color:var(--pitch)}
+.vh-meta{font-size:12.5px;color:var(--muted);margin-top:2px;text-align:center}.vh-meta::first-letter{text-transform:uppercase}
+.vhcomp{font:700 13px var(--f-body);color:var(--muted)}
+.cpre{margin:-4px 0 6px}
+@media (max-width:640px){.vh-meta{max-width:120px;font-size:11.5px}.vhmid{min-width:0}.mtabs button,.vhub button{font-size:13px;padding:8px 9px}.vh-ev{font-size:11.5px}}
