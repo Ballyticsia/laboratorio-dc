@@ -392,6 +392,7 @@ function go(r, push = true) {
 function syncRoute() { if (skipHash) { skipHash = false; lastUrl = location.href; return; } if (location.href === lastUrl) return; lastUrl = location.href; R = fromHash(); render(); }
 window.addEventListener("hashchange", syncRoute);
 window.addEventListener("popstate", syncRoute);
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches && e.target.matches('[role="link"][data-go]')) e.target.click(); });
 document.addEventListener("click", e => {
   const el = e.target.closest("[data-go]"); if (!el) return;
   const v = el.dataset.go;
@@ -507,8 +508,11 @@ function matchRow(p, showLeague, isFav, showDate, met) {
     <span class="pick" data-live-s="${esc(p.id)}"><span class="s">${esc(p.top)}</span><span class="l">Pick ${pick}</span></span>
   </button>`;
 }
+// un partido jugado se abre en su página (estadísticas, alineaciones, mapa de tiros), no en la del equipo
+const vivoId = id => /^\d+$/.test(String(id || "")) ? String(id) : null;
 function resultRow(L, x) {
-  return `<div class="rrow"><span class="num muted">${fecha(x.kickoff)}</span>
+  const vid = vivoId(x.id);
+  return `<div class="rrow${vid ? " click" : ""}"${vid ? ` data-go="envivo" data-id="${vid}" role="link" tabindex="0" aria-label="${esc(`${corto(L, x.home)} ${x.hg}-${x.ag} ${corto(L, x.away)}: ver el partido`)}"` : ""}><span class="num muted">${fecha(x.kickoff)}</span>
     <span class="rt r">${esc(corto(L, x.home))}${badge(L, x.home)}</span>
     <b class="score num">${x.hg} – ${x.ag}</b>
     <span class="rt">${badge(L, x.away)}${esc(corto(L, x.away))}</span></div>`;
@@ -616,12 +620,13 @@ const HSORT = [
 document.addEventListener("click", e => { if (e.target.id === "home-more") { VV.homeLim = (VV.homeLim || 40) + 40; go({ ...R, keepScroll: true }, false); } });
 document.addEventListener("click", e => { const b = e.target.closest("[data-hsort]"); if (!b) return; VV.hsort = b.dataset.hsort; lsSet("bt_hsort", VV.hsort); go({ ...R, keepScroll: true }, false); });
 function resRow(x, showLeague, fav) {
-  const L = x.L, hw = x.hg > x.ag, aw = x.ag > x.hg;
-  return `<div class="mrow res ${fav ? "isfav" : ""}">
+  const L = x.L, hw = x.hg > x.ag, aw = x.ag > x.hg, vid = vivoId(x.id);
+  const go = t => vid ? `data-go="envivo" data-id="${vid}"` : `data-go="equipo" data-liga="${L.id}" data-team="${esc(t)}"`;
+  return `<div class="mrow res ${fav ? "isfav" : ""}${vid ? " click" : ""}"${vid ? ` data-go="envivo" data-id="${vid}"` : ""}>
     <span class="t"><span class="fttag">Final</span>${showLeague ? `<span class="lg">${esc(L.nombre)}</span>` : ""}</span>
     <span class="teams">
-      <button class="tline" data-go="equipo" data-liga="${L.id}" data-team="${esc(x.home)}">${badge(L, x.home)}<span class="n ${hw ? "fav" : "und"}">${esc(corto(L, x.home))}</span></button>
-      <button class="tline" data-go="equipo" data-liga="${L.id}" data-team="${esc(x.away)}">${badge(L, x.away)}<span class="n ${aw ? "fav" : "und"}">${esc(corto(L, x.away))}</span></button>
+      <button class="tline" ${go(x.home)}>${badge(L, x.home)}<span class="n ${hw ? "fav" : "und"}">${esc(corto(L, x.home))}</span></button>
+      <button class="tline" ${go(x.away)}>${badge(L, x.away)}<span class="n ${aw ? "fav" : "und"}">${esc(corto(L, x.away))}</span></button>
     </span>
     <span class="rscore num"><b class="${hw ? "w" : ""}">${x.hg}</b><b class="${aw ? "w" : ""}">${x.ag}</b></span>
     <span class="pick"><span class="l">${(x.goles || []).length ? esc(x.goles.map(g => (g.jug || "").split(" ").slice(-1)[0]).slice(0, 3).join(", ")) : ""}</span></span>
@@ -3610,7 +3615,7 @@ async function vFillMatch(force) {
       ${tl(H.a, "a")}</div>
     <div class="row" style="justify-content:center;margin-top:10px;gap:8px">${H.state !== "post" ? `<button class="btn ghost sm vbell2${f ? " on" : ""}" data-follow="${esc(id)}">${f ? `${ICO.bell} Siguiendo` : `${ICO.belloff} Avisarme de goles`}</button>` : ""}${m ? `<button class="btn ghost sm" data-go="partido" data-liga="${m.L.id}" data-id="${esc(m.p.id)}">Análisis de Ballytics →</button>` : ""}</div>`;
   const tab = R.tab || "resumen";
-  if (tab === "resumen") { body.innerHTML = videosHtml(j) + vShootout(j, H) + (pens && H.state === "in" ? "" : q && q.ok ? "" : vCurvePanel(j, H, evs, m)) + qPanel(j, H, q) + (H.state === "pre" ? vH2H(j, H) : "") + (H.state !== "post" || true ? voteBox(id, H.date, H.h.short, H.a.short, m ? [m.p.pH, m.p.pD, m.p.pA] : null) : "") + vKeyStats(j, H) + vTimeline(evs, H) + vInfo(j, H, m) + vArbEnVivo(j, H, m); hydrateVotes(); arbLlenar(); }
+  if (tab === "resumen") { body.innerHTML = videosHtml(j) + vShootout(j, H) + (pens && H.state === "in" ? "" : q && q.ok ? "" : vCurvePanel(j, H, evs, m)) + qPanel(j, H, q) + (H.state === "pre" ? vH2H(j, H) : "") + (H.state !== "post" || true ? voteBox(id, H.date, H.h.short, H.a.short, m ? [m.p.pH, m.p.pD, m.p.pA] : null) : "") + vKeyStats(j, H) + (H.state !== "pre" ? smPanel(j, H) : "") + vTimeline(evs, H) + vInfo(j, H, m) + vArbEnVivo(j, H, m); hydrateVotes(); arbLlenar(); }
   const hasXI = (j.rosters || []).some(t => (t.roster || []).some(x => x.starter));
   if (tab === "alineaciones" && !hasXI && m && m.p.xi_prob) { VV.lastPitch = null; body.innerHTML = vPitch({ rosters: xiRosters(m.p.xi_prob), keyEvents: [] }, H, null).replace("<h3>Alineaciones", "<h3>Alineación probable") + `<div class="panel stack">${xiProbNote(m.p.xi_prob, m.p.bajas, k => k === "h" ? H.h.short : H.a.short)}</div>`; }
   else if (tab === "alineaciones") { body.innerHTML = vPitch(j, H, id); loadMatchPlayers(id, H, j).then(ch => { if (ch && R.v === "envivo" && R.id === id && (R.tab || "resumen") === "alineaciones") body.innerHTML = vPitch(j, H, id); }); }
@@ -3732,7 +3737,84 @@ function vPreStats(j, H, m) {
   if (f1 || f2) out += `<div class="panel stack"><h3>Últimos 5 partidos</h3>${f1}${f2}</div>`;
   return out || `<div class="panel stack"><h3>Estadísticas</h3><p class="note">Las estadísticas aparecen cuando empieza el partido.</p></div>`;
 }
-function vStats(j, H, m) { const r = vStatRows(j, H); if (!r && H.state === "pre") return vPreStats(j, H, m); return `<div class="panel stack"><h3>Estadísticas</h3><div data-xg="${esc(R.id)}">${xgRow(R.id)}</div>${r || `<p class="note">Todavía no hay estadísticas de este partido.</p>`}</div>`; }
+/* ---------- mapa de tiros (posiciones del relato de ESPN/Opta) ---------- */
+VV.sm = VV.sm || {};
+const SM_RES = { "Goal": "Gol", "Shot On Target": "Atajado", "Shot Off Target": "Afuera", "Shot Blocked": "Bloqueado" };
+function smShots(j, H) {
+  const T = (j.commentary || []).map(c => c.play).filter(p => p && SM_RES[(p.type || {}).text] && p.fieldPositionX != null);
+  const lado = p => { const n = ((p.team || {}).displayName || ""); return n === H.h.name || n === H.h.short || arbIgual(n, H.h.name) && !arbIgual(n, H.a.name) ? "h" : n === H.a.name || n === H.a.short || arbIgual(n, H.a.name) ? "a" : null; };
+  return T.map(p => { const t = String(p.text || ""), low = t.toLowerCase(), r = (p.type || {}).text;
+    const asis = t.match(/Assisted by ([^.]+?)(?: with| following|\.|$)/);
+    return { lado: lado(p), r, res: r === "Shot Off Target" && /post|bar\b|crossbar/.test(low) ? "Al palo" : SM_RES[r], x: +p.fieldPositionX, y: +p.fieldPositionY, x2: p.fieldPosition2X != null ? +p.fieldPosition2X : null, y2: p.fieldPosition2Y != null ? +p.fieldPosition2Y : null,
+      gy: p.goalPositionY != null ? +p.goalPositionY : null, gz: p.goalPositionZ != null ? +p.goalPositionZ : null, min: ((p.clock || {}).displayValue || ""), per: (p.period || {}).number || 1,
+      who: ((p.participants || [])[0] || {}).athlete ? p.participants[0].athlete.displayName : "", wid: ((p.participants || [])[0] || {}).athlete ? String(p.participants[0].athlete.id || "") : "",
+      pie: /left footed/.test(low) ? "Pie izquierdo" : /right footed/.test(low) ? "Pie derecho" : /header/.test(low) ? "Cabeza" : "",
+      sit: /penalty/.test(low) ? "Penal" : /fast break/.test(low) ? "Contraataque" : /corner/.test(low) ? "Tras un córner" : /direct free kick|free kick/.test(low) ? "Tiro libre" : /set piece/.test(low) ? "Balón parado" : "Jugada",
+      zona: /six yard box|very close range/.test(low) ? "Área chica" : /outside the box|long range|more than \d+ yards/.test(low) ? "Fuera del área" : /box/.test(low) ? "Dentro del área" : "",
+      alto: /too high|over the bar|high and wide/.test(low), arriba: /top (left|right|centre)|high centre|top corner/.test(low), abajo: /bottom (left|right|centre)|low/.test(low),
+      asis: asis ? asis[1].trim() : "" }; }).filter(x => x.lado);
+}
+function smPanel(j, H) {
+  const all = smShots(j, H); if (all.length < 3) return "";
+  VV.sm[R.id] = { all, H, i: 0, per: 0, eq: "" };
+  return `<div class="panel stack smap" data-smap="${esc(R.id)}">${smInner(R.id)}</div>`;
+}
+function smInner(id) {
+  const S = VV.sm[id]; if (!S) return ""; const { all, H } = S;
+  const lista = all.filter(x => (!S.per || x.per === S.per || (S.per === 2 && x.per > 2)) && (!S.eq || x.lado === S.eq));
+  if (S.i >= lista.length) S.i = 0;
+  const cur = lista[S.i];
+  const W = 105, Hh = 68, P = (x, lado) => lado === "h" ? [x.x * 1.05, x.y * .68] : [W - x.x * 1.05, Hh - x.y * .68];
+  const col = l => l === "h" ? "var(--pitch)" : "var(--away)";
+  let g = `<svg class="sm-pitch" viewBox="-2 -2 ${W + 4} ${Hh + 4}" role="img" aria-label="Mapa de tiros">
+    <rect x="0" y="0" width="${W}" height="${Hh}" class="sm-grass"/>${[...Array(10).keys()].map(k => k % 2 ? `<rect x="${k * 10.5}" y="0" width="10.5" height="${Hh}" class="sm-str"/>` : "").join("")}
+    <g class="sm-ln"><rect x="0" y="0" width="${W}" height="${Hh}"/><line x1="${W / 2}" y1="0" x2="${W / 2}" y2="${Hh}"/><circle cx="${W / 2}" cy="${Hh / 2}" r="9.15"/>
+    <rect x="0" y="${Hh / 2 - 20.16}" width="16.5" height="40.32"/><rect x="${W - 16.5}" y="${Hh / 2 - 20.16}" width="16.5" height="40.32"/>
+    <rect x="0" y="${Hh / 2 - 9.16}" width="5.5" height="18.32"/><rect x="${W - 5.5}" y="${Hh / 2 - 9.16}" width="5.5" height="18.32"/>
+    <rect x="-1.6" y="${Hh / 2 - 3.66}" width="1.6" height="7.32"/><rect x="${W}" y="${Hh / 2 - 3.66}" width="1.6" height="7.32"/>
+    <path d="M16.5 ${Hh / 2 - 7.3} A9.15 9.15 0 0 1 16.5 ${Hh / 2 + 7.3}"/><path d="M${W - 16.5} ${Hh / 2 - 7.3} A9.15 9.15 0 0 0 ${W - 16.5} ${Hh / 2 + 7.3}"/></g>`;
+  if (cur && cur.x2 != null) { const [a, b] = P(cur, cur.lado), [c, d] = P({ x: cur.x2, y: cur.y2 }, cur.lado); g += `<line x1="${a}" y1="${b}" x2="${c}" y2="${d}" class="sm-tray" style="stroke:${col(cur.lado)}"/>`; }
+  lista.forEach((x, k) => { const [a, b] = P(x, x.lado), on = k === S.i, c = col(x.lado);
+    g += x.r === "Goal" ? `<g class="sm-dot g${on ? " on" : ""}" data-smi="${k}"><circle cx="${a}" cy="${b}" r="${on ? 2.6 : 2.1}" style="fill:${c}"/><circle cx="${a}" cy="${b}" r="${on ? 1.1 : .9}" fill="#fff"/></g>`
+      : x.r === "Shot Blocked" ? `<g class="sm-dot b${on ? " on" : ""}" data-smi="${k}"><rect x="${a - 1.3}" y="${b - 1.3}" width="2.6" height="2.6" rx=".5" style="fill:none;stroke:${c}"/></g>`
+      : `<g class="sm-dot${x.r === "Shot On Target" ? " t" : " o"}${on ? " on" : ""}" data-smi="${k}"><circle cx="${a}" cy="${b}" r="${on ? 2.1 : 1.6}" style="${x.r === "Shot On Target" ? `fill:${c}` : `fill:none;stroke:${c}`}"/></g>`; });
+  g += `</svg>`;
+  // arco visto de frente: el ancho del arco va de 44,6 a 55,4 en la escala de ESPN (7,32 m de 68 m)
+  let arco = "";
+  if (cur) { const L0 = 34, L1 = 66, gx = v => 6 + (Math.max(L0, Math.min(L1, v)) - L0) / (L1 - L0) * 148, py = cur.alto ? 6 : cur.arriba ? 22 : cur.abajo ? 50 : 38;
+    const gy = cur.gy != null ? cur.gy : 50, onT = cur.r === "Goal" || cur.r === "Shot On Target";
+    arco = `<svg class="sm-goal" viewBox="0 0 160 66" role="img" aria-label="Dónde fue el remate"><line x1="0" y1="60" x2="160" y2="60" class="sm-gl"/><path d="M${gx(44.6)} 60 V14 H${gx(55.4)} V60" class="sm-gf"/>
+      ${cur.r === "Shot Blocked" ? "" : `<circle cx="${gx(gy)}" cy="${onT ? Math.max(18, Math.min(56, py)) : py}" r="4" style="fill:${cur.r === "Goal" ? "var(--good)" : onT ? col(cur.lado) : "none"};stroke:${col(cur.lado)};stroke-width:1.6"/>`}</svg>`; }
+  const tm = l => l === "h" ? H.h : H.a, cuenta = l => { const z = all.filter(x => x.lado === l); return { n: z.length, t: z.filter(x => x.r === "Goal" || x.r === "Shot On Target").length, g: z.filter(x => x.r === "Goal").length, a: z.filter(x => x.zona !== "Fuera del área").length }; };
+  const ch = cuenta("h"), ca = cuenta("a");
+  const seg = (k, v, n) => `<button data-sm-${k}="${v}" aria-pressed="${S[k === "per" ? "per" : "eq"] === v}">${n}</button>`;
+  return `<div class="sm-top"><h3>Mapa de tiros</h3><div class="sm-f"><div class="pr-seg sm-seg">${seg("per", 0, "Partido")}${seg("per", 1, "1.er tiempo")}${seg("per", 2, "2.º tiempo")}</div>
+      <div class="pr-seg sm-seg">${seg("eq", "", "Ambos")}${seg("eq", "h", esc(H.h.short))}${seg("eq", "a", esc(H.a.short))}</div></div></div>
+    <div class="sm-body"><div class="sm-cancha"><div class="sm-tags"><span>${vLogo(H.h, "sm")} ${esc(H.h.short)} →</span><span>← ${esc(H.a.short)} ${vLogo(H.a, "sm")}</span></div>${g}
+      <div class="sm-ley"><span><i class="g"></i>Gol</span><span><i class="t"></i>Al arco</span><span><i class="o"></i>Afuera</span><span><i class="b"></i>Bloqueado</span></div></div>
+      ${cur ? `<div class="sm-det"><div class="sm-nav"><button data-sm-mv="-1" aria-label="Remate anterior">‹</button><span class="num">${S.i + 1} / ${lista.length}</span><button data-sm-mv="1" aria-label="Remate siguiente">›</button></div>
+        <div class="sm-who">${face(null, null, cur.wid, cur.who, "")}<span><b>${esc(cur.who)}</b><small>${esc(tm(cur.lado).short)} · ${esc(cur.min)}</small></span><em class="sm-res ${cur.r === "Goal" ? "g" : ""}">${esc(cur.res)}</em></div>
+        ${arco}
+        <div class="sm-kv">${[["Situación", cur.sit], ["Remate", cur.pie], ["Zona", cur.zona], ["Asistencia", cur.asis]].filter(x => x[1]).map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join("")}</div></div>` : `<div class="sm-det"><p class="note">Sin remates con este filtro.</p></div>`}</div>
+    <div class="sm-res-t">${[["Remates", "n"], ["Al arco", "t"], ["Goles", "g"], ["Dentro del área", "a"]].map(([n, k]) => `<div><b class="num h">${ch[k]}</b><span>${n}</span><b class="num a">${ca[k]}</b></div>`).join("")}</div>
+    <p class="note">Posición de cada remate según el relato de ESPN (Opta). Toca un punto para ver el detalle.</p>`;
+}
+document.addEventListener("click", e => {
+  const box = e.target.closest("[data-smap]"); if (!box) return;
+  const S = VV.sm[box.dataset.smap]; if (!S) return;
+  const d = e.target.closest("[data-smi]"), mv = e.target.closest("[data-sm-mv]"), pe = e.target.closest("[data-sm-per]"), eq = e.target.closest("[data-sm-eq]");
+  if (d) S.i = +d.dataset.smi; else if (mv) { const n = box.querySelectorAll("[data-smi]").length || 1; S.i = (S.i + +mv.dataset.smMv + n) % n; }
+  else if (pe) { S.per = +pe.dataset.smPer; S.i = 0; } else if (eq) { S.eq = eq.dataset.smEq; S.i = 0; } else return;
+  box.innerHTML = smInner(box.dataset.smap);
+});
+const STAT_G = [["Remates", ["totalShots", "shotsOnTarget", "blockedShots"]], ["Juego", ["possessionPct", "totalPasses", "accuratePasses", "passPct", "totalCrosses", "totalLongBalls", "wonCorners", "offsides"]],
+  ["Defensa", ["totalTackles", "interceptions", "totalClearance", "saves"]], ["Disciplina", ["foulsCommitted", "yellowCards", "redCards"]]];
+function vStats(j, H, m) {
+  const r = vStatRows(j, H); if (!r && H.state === "pre") return vPreStats(j, H, m);
+  const cab = `<div class="cmph vst-cab"><span>${vLogo(H.h, "sm")} ${esc(H.h.short)}</span><span>${esc(H.a.short)} ${vLogo(H.a, "sm")}</span></div>`;
+  const grupos = STAT_G.map(([n, ks]) => { const x = vStatRows(j, H, ks); return x ? `<h4 class="vst-g">${n}</h4>${x}` : ""; }).join("");
+  return smPanel(j, H) + `<div class="panel stack"><h3>Estadísticas</h3>${r ? cab : ""}<div data-xg="${esc(R.id)}">${xgRow(R.id)}</div>${grupos || r || `<p class="note">Todavía no hay estadísticas de este partido.</p>`}</div>`;
+}
 function vTimeline(evs, H) {
   if (!evs.length) return `<div class="panel stack"><h3>Incidencias</h3><p class="note">${H.state === "pre" ? "El partido aún no empieza." : "Sin goles ni tarjetas por ahora."}</p></div>`;
   return `<div class="panel stack"><h3>Incidencias</h3><div class="vtl">${evs.slice().reverse().map(e => `<div class="vev ${e.lado}"><span class="vem num">${esc(e.min)}</span><span class="vei ${e.kind}">${ICON[e.kind]}</span><span class="vew"><b>${esc(e.who[0] || "")}</b>${e.kind === "sub" && e.who[1] ? `<small>sale ${esc(e.who[1])}</small>` : e.kind === "goal" && e.who[1] ? `<small>asistencia ${esc(e.who[1])}</small>` : e.kind === "og" ? "<small>en contra</small>" : ""}</span></div>`).join("")}</div></div>`;
@@ -3765,17 +3847,27 @@ function vPitch(j, H, mid) {
   if (rowsN.reduce((s, n) => s + n, 0) !== out.length) { const g = {}; out.forEach(x => { const r = lineRank((x.position || {}).abbreviation); g[r] = (g[r] || 0) + 1; }); rowsN = Object.keys(g).sort().map(k => g[k]); }
   const rows = [gk.length ? gk : st.slice(0, 1)]; let i = 0; rowsN.forEach(n => { rows.push(out.slice(i, i + n)); i += n; });
   const ev = (j.keyEvents || []);
+  const salio = {}; ev.filter(e => /substitution/i.test(((e.type || {}).type || "") + ((e.type || {}).text || ""))).forEach(e => { const o = ((e.participants || [])[1] || {}).athlete; if (o && o.id) salio[String(o.id)] = (e.clock || {}).displayValue || ""; });
   const chip = x => { const a = x.athlete || {}, id = String(a.id || ""), nm = a.shortName || a.displayName || "";
     const g = ev.filter(e => /goal|scored/i.test((e.type || {}).type || "") && !/own/i.test((e.type || {}).type || "") && ((e.participants || [])[0] || {}).athlete && String(e.participants[0].athlete.id) === id).length;
     const card = ev.some(e => /red/i.test((e.type || {}).type || "") && ((e.participants || [])[0] || {}).athlete && String(e.participants[0].athlete.id) === id) ? "red" : ev.some(e => /yellow/i.test((e.type || {}).type || "") && ((e.participants || [])[0] || {}).athlete && String(e.participants[0].athlete.id) === id) ? "yellow" : "";
     const af = PM[id];
-    return `<button class="vpl" data-pm="${esc(id)}" data-mid="${esc(mid || "")}">${face(Lf, team.name, id, a.displayName, "lg", af && af.foto)}<span class="vjn num">${esc(x.jersey || "")}</span>${af && af.r ? `<span class="vrt" style="background:${rtColor(af.r)}">${af.r.toFixed(1)}</span>` : ""}${g ? `<span class="vgl">${"⚽".repeat(Math.min(g, 3))}</span>` : ""}${card ? `<i class="${card === "red" ? "rcard" : "ycard"} vcd"></i>` : ""}${x.subbedOut ? `<span class="vso">⇄</span>` : ""}<b>${esc(nm.split(" ").slice(-1)[0] || nm)}</b></button>`; };
+    return `<button class="vpl" data-pm="${esc(id)}" data-mid="${esc(mid || "")}">${face(Lf, team.name, id, a.displayName, "lg", af && af.foto)}<span class="vjn num">${esc(x.jersey || "")}</span>${af && af.r ? `<span class="vrt" style="background:${rtColor(af.r)}">${af.r.toFixed(1)}</span>` : ""}${g ? `<span class="vgl">${"⚽".repeat(Math.min(g, 3))}</span>` : ""}${card ? `<i class="${card === "red" ? "rcard" : "ycard"} vcd"></i>` : ""}${x.subbedOut ? `<span class="vso">⇄${salio[id] ? `<small>${esc(salio[id])}</small>` : ""}</span>` : ""}<b>${esc(nm.split(" ").slice(-1)[0] || nm)}</b></button>`; };
   const pitch = `<div class="vpitch"><div class="vlines"><i class="c"></i><i class="b t"></i><i class="b bt"></i></div>${rows.slice().reverse().map(r => `<div class="vprow">${r.map(chip).join("")}</div>`).join("")}</div>`;
   return `<div class="panel stack"><div class="row" style="justify-content:space-between"><h3>Alineaciones ${T.formation ? `<span class="tag">${esc(T.formation)}</span>` : ""}</h3>
       <div class="tabs2" role="group" aria-label="Equipo">${[["h", H.h], ["a", H.a]].map(([k, t]) => `<button data-vteam="${k}" aria-pressed="${(VV.team === "a" ? "a" : "h") === k}">${esc(t.short)}</button>`).join("")}</div></div>
     ${pitch}
     ${pmNote(mid, H)}
+    ${cambiosHtml(j, T, team, Lf, PM, mid)}
     ${subs.length ? `<h3 style="margin-top:6px">Suplentes</h3><div class="vsubs">${subs.map(x => { const sid = String((x.athlete || {}).id || ""), af = PM[sid]; return `<button class="vsb ${x.subbedIn ? "in" : ""}" data-pm="${esc(sid)}" data-mid="${esc(mid || "")}"><span class="num vjn2">${esc(x.jersey || "")}</span>${face(Lf, team.name, sid, (x.athlete || {}).displayName, "sm", af && af.foto)}<span>${esc((x.athlete || {}).displayName || "")}</span>${x.subbedIn ? `<small>entró</small>` : ""}${af && af.r && af.min ? `<span class="vrt sm" style="background:${rtColor(af.r)}">${af.r.toFixed(1)}</span>` : ""}</button>`; }).join("")}</div>` : ""}</div>`;
+}
+// cambios del equipo: minuto, quién entró y quién salió (eventos clave de ESPN)
+function cambiosHtml(j, T, team, Lf, PM, mid) {
+  const tid = String((T.team || {}).id || ""), ev = (j.keyEvents || []).filter(e => /substitution/i.test(((e.type || {}).type || "") + ((e.type || {}).text || "")) && (!tid || String((e.team || {}).id || "") === tid));
+  if (!ev.length) return "";
+  return `<h3 style="margin-top:6px">Cambios</h3><div class="vcamb">${ev.map(e => { const [a, b] = (e.participants || []).map(p => p.athlete || {}); if (!a) return "";
+    const fa = PM[String(a.id || "")];
+    return `<button class="vcb" data-pm="${esc(String(a.id || ""))}" data-mid="${esc(mid || "")}"><span class="vcb-m num">${esc((e.clock || {}).displayValue || "")}</span>${face(Lf, team.name, String(a.id || ""), a.displayName, "", fa && fa.foto)}<span class="vcb-t"><b><i class="in">▲</i>${esc(a.displayName || "")}</b>${b ? `<small><i class="out">▼</i>${esc(b.displayName || "")}</small>` : ""}</span></button>`; }).join("")}</div>`;
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-vteam]"); if (!b) return; VV.team = b.dataset.vteam;
   const lp = VV.lastPitch; if (lp && R.v !== "envivo" && document.getElementById(lp.box)) { document.getElementById(lp.box).innerHTML = lp.render(); return; } vFillMatch(); });
