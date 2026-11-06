@@ -2131,3 +2131,5 @@ nav.main button,.dd > button,.dd > .nav-i{font-family:var(--f-body);font-size:14
 .vjn{box-shadow:0 1px 3px rgba(0,0,0,.35)}
 .vlines .c::after{left:-100vw!important;right:-100vw!important}
 @media (max-width:560px){.mact-b{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;scrollbar-width:none;padding-bottom:2px}.mact-b .btn{flex:none}}
+.vsb{grid-template-columns:24px auto minmax(0,1fr) auto auto!important}
+.vsb>span:not(.pface):not(.vrt):not(.vjn2){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

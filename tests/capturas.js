@@ -41,7 +41,10 @@ function rutas() {
       try {
         await pg.goto(BASE + r, { waitUntil: "load", timeout: 40000 });
         await pg.waitForFunction(() => { const a = document.getElementById("app"); return a && !a.querySelector(".boot") && a.textContent.trim().length > 60; }, null, { timeout: 20000 });
-        await pg.waitForTimeout(3500);   // ESPN, escudos y fotos
+        await pg.waitForTimeout(1500);
+        // se baja hasta el final de a poco: hay bloques que se cargan al aparecer en pantalla
+        await pg.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 700) { scrollTo(0, y); await new Promise(r => setTimeout(r, 120)); } scrollTo(0, 0); });
+        await pg.waitForTimeout(2000);   // ESPN, escudos y fotos
         const seg = (Date.now() - t0) / 1000;
         const m = await pg.evaluate(() => {
           const imgs = [...document.querySelectorAll("#app img")].filter(i => i.getBoundingClientRect().width > 0);
@@ -52,7 +55,7 @@ function rutas() {
         if (m.ancho > 1) prob.push(`se sale ${m.ancho} px por el costado`);
         if (m.rotas) prob.push(`${m.rotas} de ${m.imgs} imágenes no cargaron`);
         if (m.sinDatos) prob.push("dice que no pudo cargar los datos");
-        if (m.vacios > 3) prob.push(`${m.vacios} bloques siguen "cargando" después de 3,5 s`);
+        if (m.vacios > 3) prob.push(`${m.vacios} bloques siguen "cargando" después de abrir`);
         if (seg > 12) prob.push(`tardó ${seg.toFixed(1)} s en abrir`);
         await pg.screenshot({ path: path.join(OUT, `${k}-${dev}.png`), fullPage: true });
         filas.push({ dev, k, n, seg: +seg.toFixed(1), ...m, prob });
