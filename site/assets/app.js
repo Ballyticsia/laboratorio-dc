@@ -3011,7 +3011,7 @@ function vModel(id) {
 }
 const isLive = e => e.state === "in";
 const enPenales = e => /pens|penal|shootout/i.test(e.detail || "") || e.period >= 5;
-const vClock = e => enPenales(e) ? "Penales" : /half|HT|Entretiempo/i.test(e.detail) ? "ET" : (e.clock && e.clock !== "0'" ? e.clock : e.detail);
+const vClock = e => enPenales(e) ? "Penales" : /half|HT|Entretiempo/i.test(e.detail) ? "Descanso" : (e.clock && e.clock !== "0'" ? e.clock : e.detail);
 function vTeam(e, k, cls) {
   const t = e[k], ya = t.logo && LOK.has(IMG(t.logo, 26));
   const img = t.logo ? `<img${isrc(t.logo, 26)}${ya ? ` class="ok"` : ""} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-n="${esc(t.short || t.name)}" onload="this.classList.add('ok');window.__lok.add(this.getAttribute('src'))" onerror="bfb(this)">` : fbSpan(t.name, t.abr);
