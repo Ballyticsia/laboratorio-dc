@@ -1,0 +1,60 @@
+name: Revisión visual
+
+# Todos los días (y a mano): abre el sitio publicado en teléfono y computador, saca capturas de las pantallas
+# principales y anota lo que se ve mal (errores, páginas que se salen por el costado, imágenes rotas, lentitud).
+# Las capturas y el informe quedan en la rama "capturas". Si hay problemas, abre o actualiza un aviso (issue).
+on:
+  schedule:
+    - cron: "23 13 * * *"    # 10:23 en Chile
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: capturas
+  cancel-in-progress: true
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('tests/package-lock.json') }}
+      - name: Preparar navegador
+        run: cd tests && npm ci --no-audit --no-fund && npx playwright install --with-deps chromium >/dev/null
+      - name: Revisar el sitio
+        run: node tests/capturas.js /tmp/capturas
+      - name: Guardar capturas en la rama "capturas"
+        run: |
+          cd /tmp/capturas
+          git init -q && git checkout -q -b capturas
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp informe.md README.md
+          git add . && git commit -qm "Revisión visual $(date -u +'%Y-%m-%d %H:%M') UTC"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" HEAD:capturas
+      - name: Avisar si algo se ve mal
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          titulo="Revisión visual: pantallas con problemas"
+          malas=$(node -e "const j=require('/tmp/capturas/informe.json');console.log(j.filas.filter(f=>f.prob.length).length)")
+          abierto=$(gh issue list --repo "${{ github.repository }}" --state open --search "$titulo in:title" --json number --jq '.[0].number')
+          if [ "$malas" != "0" ]; then
+            cuerpo="$(head -c 60000 /tmp/capturas/informe.md)
+
+          Capturas: https://github.com/${{ github.repository }}/tree/capturas"
+            if [ -z "$abierto" ]; then gh issue create --repo "${{ github.repository }}" --title "$titulo" --body "$cuerpo"; else gh issue comment "$abierto" --repo "${{ github.repository }}" --body "$cuerpo"; fi
+          elif [ -n "$abierto" ]; then
+            gh issue close "$abierto" --repo "${{ github.repository }}" --comment "La revisión de hoy salió sin problemas."
+          fi
