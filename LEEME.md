@@ -173,6 +173,18 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - En partidos de competiciones sin modelo (por ejemplo la AFC Champions League), la página del partido muestra una estimación rápida (1X2, goles, más de 2,5, ambos marcan) con los últimos 10 partidos de cada equipo de todas sus competiciones, cuotas si ESPN las trae, cara a cara, estadio con capacidad y árbitro.
 - `site/assets/equipos.json` (lo arma cada lunes `pipeline/competiciones.py`): unos 3.000 equipos de todas las competiciones activas para el buscador.
 
+## Diseño (sistema de diseño)
+- Una sola familia para la interfaz: Plus Jakarta Sans (`--f-body`), en tipo oración. Nada de rótulos en MAYÚSCULAS espaciadas.
+- Chakra Petch (`--f-score`) solo para marcadores y cifras grandes (resultado, hora del partido, porcentajes destacados).
+- Números con `font-variant-numeric: tabular-nums` (clase `.num`), sin fuente monoespaciada.
+- Títulos de panel: 16 px, 700, color de texto. Rótulos: 12 px, 600, gris (`.lbl`).
+- Colores: fondo `--bg #0b1019`, paneles `--panel #121925`, local `--pitch #3d8bff`, visita `--away #b18cff`, bien/mal `--good`/`--bad`.
+- La capa está al final de `site/assets/app.css` ("v40 · Sistema de diseño"): lo nuevo debe usar esas variables.
+
+## Revisión visual diaria
+- `.github/workflows/capturas.yml` abre el sitio publicado todos los días (10:23 en Chile) en teléfono y computador, saca capturas de ~18 pantallas y anota errores, desbordes, imágenes rotas y lentitud (`tests/capturas.js`).
+- Las capturas y el informe quedan en la rama `capturas`. Si algo se ve mal, abre o actualiza el aviso "Revisión visual: pantallas con problemas".
+
 ## Catálogo de competiciones
 `pipeline/competiciones.py` (workflow "Revisar competiciones", los lunes) pregunta a ESPN qué competiciones tienen partidos cerca: "activa", "pausa" (receso o fin de temporada) o "inactiva" (nada en más de un año, no se muestra). Las en pausa salen al final y en gris, y su página explica cuándo vuelve. A mano con la opción "grilla" arma una imagen con el logo actual y el de ESPN de cada una (rama `revision-logos`) para revisar logos viejos.
 
