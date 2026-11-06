@@ -933,9 +933,9 @@
      "prob": 0.3058,
      "cuota": 4.2,
      "cierre": 4.2,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 0,
+     "ag": 0,
      "mercado": 0.2239,
      "ev": 0.2844
     },
@@ -974,6 +974,108 @@
      "ev": 0.2316
     }
    ]
+  },
+  "2026-11-07": {
+   "fijado": "2026-11-06T22:52Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401876407",
+     "liga": "ligue1",
+     "kickoff": "2026-11-07T20:05Z",
+     "home": "Paris Saint-Germain",
+     "away": "Troyes",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8802,
+     "cuota": 1.125,
+     "cierre": 1.125,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401878760",
+     "liga": "premier",
+     "kickoff": "2026-11-07T15:00Z",
+     "home": "Arsenal",
+     "away": "Hull City",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8507,
+     "cuota": 1.167,
+     "cierre": 1.167,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401885395",
+     "liga": "portugal",
+     "kickoff": "2026-11-07T20:30Z",
+     "home": "Sporting CP",
+     "away": "Moreirense",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8433,
+     "cuota": 1.167,
+     "cierre": 1.167,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "761942",
+     "liga": "mls",
+     "kickoff": "2026-11-08T00:00Z",
+     "home": "Austin FC",
+     "away": "Portland Timbers",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.3715,
+     "cuota": 4.0,
+     "cierre": 4.0,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2148,
+     "ev": 0.486
+    },
+    {
+     "id": "401841666",
+     "liga": "argentina",
+     "kickoff": "2026-11-07T18:00Z",
+     "home": "Gimnasia (Mendoza)",
+     "away": "Independiente Rivadavia",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.4067,
+     "cuota": 3.35,
+     "cierre": 3.35,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2696,
+     "ev": 0.3624
+    },
+    {
+     "id": "761948",
+     "liga": "mls",
+     "kickoff": "2026-11-08T00:00Z",
+     "home": "Seattle Sounders FC",
+     "away": "LAFC",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.3733,
+     "cuota": 3.6,
+     "cierre": 3.6,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2484,
+     "ev": 0.3439
+    }
+   ]
   }
  },
  "reglas": {
@@ -984,5 +1086,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-06T20:55Z"
+ "actualizado": "2026-11-06T22:52Z"
 }
