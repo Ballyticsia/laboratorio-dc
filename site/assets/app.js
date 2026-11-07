@@ -2070,6 +2070,7 @@ async function loadSummary() {
   const fail = `<h3>Alineaciones</h3><p class="note">Aún no publicadas. Las alineaciones suelen salir cerca de una hora antes del partido.</p>`;
   try {
     const sj = await vget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${L.slug}/summary?event=${encodeURIComponent(p.id)}`);
+    VV.sum[String(p.id)] = { t: Date.now(), j: sj };   // así al tocar un jugador se abren sus números de este partido
     const r = { ok: true, json: async () => sj };
     const j = await r.json();
     if (R.v !== "partido" || R.id !== want) return;
@@ -2086,10 +2087,12 @@ async function loadSummary() {
     const adj = ros.length ? lineupAdj(L, p, ros) : "";
     const HH = modelH(L, p);
     if (box && (ros.length || p.xi_prob)) {
-      const render = ros.length ? () => vPitch({ rosters: ros, keyEvents: j.keyEvents || [] }, HH, null).replace(/^<div class="panel stack">/, "").replace(/<\/div>$/, "")
+      const render = ros.length ? () => vPitch({ rosters: ros, keyEvents: j.keyEvents || [] }, vHeader(j), String(p.id)).replace(/^<div class="panel stack">/, "").replace(/<\/div>$/, "")
         : () => vPitch({ rosters: xiRosters(p.xi_prob), keyEvents: [] }, HH, null).replace("<h3>Alineaciones", "<h3>Alineación probable").replace(/^<div class="panel stack">/, "").replace(/<\/div>$/, "") + xiProbNote(p.xi_prob, p.bajas, k => corto(L, k === "h" ? p.home : p.away));
       box.innerHTML = adj + `<div id="lu-pitch">${render()}</div>` + (meta ? `<p class="note">${meta}</p>` : "");
       VV.lastPitch = { box: "lu-pitch", render };
+      // notas y estadísticas por jugador (API-Football), igual que en la página en vivo
+      if (ros.length) loadMatchPlayers(String(p.id), vHeader(j), j).then(ch => { const b2 = document.getElementById("lu-pitch"); if (ch && b2 && R.v === "partido" && R.id === want) b2.innerHTML = render(); }).catch(() => {});
     } else if (box) box.innerHTML = `<h3>Alineaciones</h3>${adj}${html}${meta ? `<p class="note">${meta}</p>` : ""}`;
     if (mini && adj) { mini.innerHTML = `<div class="panel stack">${adj}</div>`; }
   } catch (e) { if (box && R.v === "partido" && R.id === want) box.innerHTML = fail; }
@@ -4346,7 +4349,9 @@ function pmNote(mid, H) {
   if (Object.keys(c.map || {}).length) return `<p class="note">Toca un jugador para ver sus estadísticas en este partido. Nota de 0 a 10 (API-Football)${c.data && c.data.actualizado && !c.fin ? `, actualizada a las ${hhmm(new Date(c.data.actualizado).toISOString())}` : ""}.</p>`;
   return `<p class="note">Toca un jugador para ver sus estadísticas en este partido.${c.motivo === "pendiente" ? " Las notas, los pases y las fotos se están pidiendo: aparecen en unos minutos." : c.motivo === "sin_cruce" || c.motivo === "sin_datos" ? " Este partido no tiene notas ni pases disponibles; se muestran los datos de ESPN." : ""}</p>`;
 }
-function pmModal(pid, mid) {
+async function pmModal(pid, mid) {
+  // en vivo: los números del jugador se actualizan antes de abrir (como mucho cada 30 s)
+  const c0 = VV.sum[mid]; if (!c0 || Date.now() - c0.t > 30000) { try { await vSummary(mid, true); } catch (e) {} }
   const j = (VV.sum[mid] || {}).j; if (!j) { go({ v: "ficha", id: pid }); return; }
   const H = vHeader(j); let x = null, T = null;
   (j.rosters || []).forEach(t => (t.roster || []).forEach(y => { if (String((y.athlete || {}).id) === String(pid)) { x = y; T = t; } }));
