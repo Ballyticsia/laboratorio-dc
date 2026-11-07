@@ -990,9 +990,9 @@
      "prob": 0.8802,
      "cuota": 1.125,
      "cierre": 1.154,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 1,
+     "ag": 0
     },
     {
      "id": "401878760",
@@ -1020,9 +1020,9 @@
      "prob": 0.8433,
      "cuota": 1.167,
      "cierre": 1.133,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 1,
+     "ag": 0
     },
     {
      "id": "761942",
@@ -1068,12 +1068,114 @@
      "lado": "A",
      "prob": 0.3733,
      "cuota": 3.6,
-     "cierre": 3.45,
+     "cierre": 3.25,
      "res": null,
      "hg": null,
      "ag": null,
      "mercado": 0.2484,
      "ev": 0.3439
+    }
+   ]
+  },
+  "2026-11-08": {
+   "fijado": "2026-11-07T22:47Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401886140",
+     "liga": "peru",
+     "kickoff": "2026-11-09T01:30Z",
+     "home": "Universitario",
+     "away": "Deportivo Moquegua",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8553,
+     "cuota": 1.133,
+     "cierre": 1.133,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401878343",
+     "liga": "escocia",
+     "kickoff": "2026-11-08T16:00Z",
+     "home": "Celtic",
+     "away": "Kilmarnock",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8465,
+     "cuota": 1.154,
+     "cierre": 1.154,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401888251",
+     "liga": "turquia",
+     "kickoff": "2026-11-08T18:00Z",
+     "home": "Besiktas",
+     "away": "Genclerbirligi",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8181,
+     "cuota": 1.2,
+     "cierre": 1.2,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401888372",
+     "liga": "turquia",
+     "kickoff": "2026-11-08T13:00Z",
+     "home": "Çorum FK",
+     "away": "Fenerbahce",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.3117,
+     "cuota": 4.4,
+     "cierre": 4.4,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2105,
+     "ev": 0.3715
+    },
+    {
+     "id": "401875548",
+     "liga": "eredivisie",
+     "kickoff": "2026-11-08T15:45Z",
+     "home": "AZ Alkmaar",
+     "away": "FC Groningen",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.2438,
+     "cuota": 5.5,
+     "cierre": 5.5,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1668,
+     "ev": 0.3409
+    },
+    {
+     "id": "401850687",
+     "liga": "chile",
+     "kickoff": "2026-11-08T15:30Z",
+     "home": "Universidad Católica",
+     "away": "Deportes Limache",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.2539,
+     "cuota": 5.25,
+     "cierre": 5.25,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.165,
+     "ev": 0.333
     }
    ]
   }
@@ -1086,5 +1188,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-07T20:48Z"
+ "actualizado": "2026-11-07T22:47Z"
 }
