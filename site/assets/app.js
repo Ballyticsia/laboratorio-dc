@@ -472,7 +472,7 @@ function centrarActivos() {
 })();
 // para las pruebas automáticas (tests/): ruta actual, enlace limpio y datos cargados
 window.__bt = { route: () => R, cleanUrl: () => cleanUrl(R), data: () => D,
-  ia: { dia: async q => { const { ctx, idmap } = await iaCtxDia(q); return { ctx, dias: Object.fromEntries(Object.entries(idmap).map(([k, c]) => [k, iaDia(new Date(c.t).toISOString())])),
+  ia: { dia: async (q, prev) => { const { ctx, idmap } = await iaCtxDia(q, prev || []); return { ctx, dias: Object.fromEntries(Object.entries(idmap).map(([k, c]) => [k, iaDia(new Date(c.t).toISOString())])),
       mids: Object.fromEntries(Object.entries(idmap).map(([k, c]) => [k, iaEvId(c)])),
       picks: ((D.picksPub || {}).dias || []).filter(d => d.dia === isoDay(new Date())).flatMap(d => d.picks.map(f => String(f.id))) }; },
     partido: async (liga, id) => { await ensureDet(liga); const L = D.ligas[liga], p = findMatch(liga, id); return L && p ? iaCtxPartido(L, p) : null; } } };
@@ -775,16 +775,38 @@ async function iaCandidatos(al) {
   }
   return { out: out.sort((x, y) => x.t - y.t), live, evs };
 }
-async function iaCtxDia(q) {
+// ---- qué liga pide el usuario ("partidos de la MLS", "la Premier"…): solo esos partidos van a la IA
+const IA_ALIAS = { mls: ["mls", "major league soccer", "liga de estados unidos", "futbol estadounidense"], premier: ["premier", "liga inglesa"], laliga: ["laliga", "la liga", "liga espanola"],
+  seriea: ["serie a", "liga italiana", "calcio"], bundesliga: ["bundesliga", "liga alemana"], ligue1: ["ligue 1", "liga francesa"], championship: ["championship"], portugal: ["primeira liga", "liga portuguesa", "liga de portugal"],
+  eredivisie: ["eredivisie", "liga holandesa", "liga de paises bajos"], chile: ["liga de primera", "primera division de chile", "futbol chileno", "campeonato chileno", "campeonato nacional"],
+  chile2: ["primera b", "liga de ascenso", "ascenso chileno"], argentina: ["liga profesional", "liga argentina", "futbol argentino"], brasil: ["brasileirao", "liga brasilena", "futbol brasileno"],
+  champions: ["champions"], libertadores: ["libertadores"], europaleague: ["europa league"], conference: ["conference"], sudamericana: ["sudamericana"], ligamx: ["liga mx", "liga mexicana", "futbol mexicano"],
+  colombia: ["liga betplay", "liga colombiana", "futbol colombiano"], uruguay: ["liga uruguaya", "futbol uruguayo"], peru: ["liga 1 de peru", "liga peruana", "futbol peruano"], ecuador: ["ligapro", "liga ecuatoriana"],
+  paraguay: ["liga paraguaya", "futbol paraguayo"], turquia: ["super lig", "liga turca"], escocia: ["liga escocesa", "premiership de escocia"], belgica: ["pro league", "liga belga"], arabia: ["liga saudi", "liga de arabia"] };
+function iaLigaPedida(texts) {
+  for (const t of texts) {   // primero la pregunta actual; si no nombra liga, la anterior ("¿y la MLS?" → "sí hay partidos")
+    const s = iaNorm(t); if (!s) continue;
+    const ids = ligasIds().filter(id => (IA_ALIAS[id] || []).some(a => reWord(a).test(s)));
+    const comps = (VV.comps || []).filter(c => c.n && iaNorm(c.n).length > 4 && reWord(c.n).test(s) && !ids.some(id => modelBySlug(c.s) && modelBySlug(c.s).id === id));
+    if (ids.length || comps.length) return { ids, comps: comps.map(c => iaNorm(c.n)), nombre: [...ids.map(id => (D.ligas[id] || {}).nombre || id), ...comps.map(c => c.n)].join(", ") };
+  }
+  return null;
+}
+async function iaCtxDia(q, previas = []) {
   await loadAll(); await Promise.all([vComps(), vSel()]);
-  let al = iaAlcance(q), C = await iaCandidatos(al), nota = "";
+  const LP = iaLigaPedida([q, ...previas.slice().reverse()]);
+  const filtra = C0 => { if (!LP) return C0; C0.out = C0.out.filter(c => (c.kind === "liga" && LP.ids.includes(c.L.id)) || (c.kind !== "liga" && (LP.comps.includes(iaNorm(c.comp)) || (c.L && LP.ids.includes(c.L.id))))); return C0; };
+  let al = iaAlcance(q), C = filtra(await iaCandidatos(al)), nota = "";
   const now = Date.now(), sinEmpezar = cs => cs.filter(c => c.kind !== "mercado" && !C.live[iaEvId(c)] && c.t > now).length;
-  if (al.auto && sinEmpezar(C.out) < 6) {
-    const n = sinEmpezar(C.out); al = { a: 0, b: 2, nombre: "hoy y mañana" }; C = await iaCandidatos(al);
+  if (LP && al.auto && !C.out.length) {   // esa liga no juega hoy: se buscan sus próximos partidos
+    al = { a: 0, b: 7, nombre: "los próximos 7 días" }; C = filtra(await iaCandidatos(al));
+    nota = `Hoy no hay partidos de ${LP.nombre} sin empezar. Van sus próximos partidos de los próximos 7 días: dilo claramente con el día de cada uno.`;
+  } else if (al.auto && sinEmpezar(C.out) < (LP ? 1 : 6)) {
+    const n = sinEmpezar(C.out); al = { a: 0, b: 2, nombre: "hoy y mañana" }; C = filtra(await iaCandidatos(al));
     nota = `Hoy quedan solo ${n} partidos con probabilidades de Ballytics sin empezar. También van los de mañana (marcados MAÑANA): dilo claramente y separa hoy de mañana.`;
   }
   const idmap = {}; let nm = 0, nx = 0;
-  const modelo = C.out.filter(c => c.kind !== "mercado").slice(0, 80), merc = C.out.filter(c => c.kind === "mercado").slice(0, 30);
+  const modelo = C.out.filter(c => c.kind !== "mercado").slice(0, 140), merc = C.out.filter(c => c.kind === "mercado").slice(0, 30);
   modelo.forEach(c => { c.id = "m" + (++nm); idmap[c.id] = c; }); merc.forEach(c => { c.id = "x" + (++nx); idmap[c.id] = c; });
   const est = c => { const e = C.live[iaEvId(c)]; if (!e) return ""; const sc = `${e.h.score ?? 0}-${e.a.score ?? 0}`; return e.state === "in" ? ` | EN VIVO ${e.clock || e.detail} ${sc}` : ` | TERMINADO ${sc}`; };
   const cuando = c => `${iaDia(new Date(c.t).toISOString())} ${hhmm(new Date(c.t).toISOString())}`;
@@ -838,6 +860,7 @@ async function iaCtxDia(q) {
   const ctx = {
     ahora: `${ahora.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}, ${hhmm(ahora.toISOString())} (hora de Chile)`,
     alcance: al.nombre, nota_alcance: nota || (al.auto ? "El usuario no dijo el día: se usan los partidos de HOY." : ""),
+    filtro_liga: LP ? `El usuario pregunta por ${LP.nombre}: aquí van SOLO los partidos de esa competición (${modelo.length + merc.length} en total). Si hay partidos, no digas que no hay.` : undefined,
     cobertura: `${modelo.length} partidos con probabilidades de Ballytics y ${merc.length} solo con cuota de mercado para ${al.nombre}`,
     formato: "id | día y hora | competición | partido (y estado si empezó) | probabilidades local/empate/visita | xG previsto | +2,5 | ambos marcan | marcador más probable | tiros al arco | córners | tarjetas | bajas confirmadas | Pinnacle o mercado sin margen",
     partidos: modelo.map(linea), solo_mercado: merc.map(linea), rankings,
@@ -848,6 +871,10 @@ async function iaCtxDia(q) {
       clv: g.clv && g.clv.n ? `En ${g.clv.n} partidos donde el modelo veía más que la cuota temprana, el mercado se movió hacia el modelo el ${pct(g.clv.a_favor, 0)} de las veces (movimiento medio ${dec(g.clv.mov_pts, 1)} puntos)` : "el CLV recién empieza a medirse" } : null,
     picks_publicos: iaCtxPicks(),
   };
+  const tam = () => JSON.stringify(ctx).length;
+  while (tam() > 44000 && ctx.solo_mercado.length) ctx.solo_mercado.pop();
+  while (tam() > 44000 && ctx.partidos.length > 15) ctx.partidos.pop();
+  if (tam() > 44000) { delete ctx.picks_publicos; delete ctx.resultados_de_hoy; }
   return { ctx, idmap };
 }
 // picks públicos (regla fija, calificados gane o pierda): la IA los cita si preguntan por "los picks de hoy" o por el récord
@@ -949,7 +976,7 @@ async function iaAsk(scope, q) {
     box.querySelector(".ia-f button").disabled = true; const sc = box.querySelector(".ia-scroll"); sc.scrollTop = sc.scrollHeight; }
   try {
     let ctx, tipo, idmap = {}; const mp = iaMatchOf(scope);
-    if (mp) { await ensureDet(mp.L.id); const L = D.ligas[mp.L.id]; ctx = iaCtxPartido(L, findMatch(L.id, mp.p.id) || mp.p); tipo = "partido"; } else { ({ ctx, idmap } = await iaCtxDia(q)); tipo = "dia"; }
+    if (mp) { await ensureDet(mp.L.id); const L = D.ligas[mp.L.id]; ctx = iaCtxPartido(L, findMatch(L.id, mp.p.id) || mp.p); tipo = "partido"; } else { ({ ctx, idmap } = await iaCtxDia(q, h.filter(m => m.r === "yo").slice(0, -1).slice(-2).map(m => m.t))); tipo = "dia"; }
     const url = await pushCfg(); if (!url) throw new Error("No pude conectar con la IA. Prueba de nuevo.");
     const r = await (await fetch(url + "/ia", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ q, uid: myUid(), tipo, ctx, hist: h.slice(0, -1).slice(-4).map(m => ({ r: m.r, t: m.t })) }) })).json();
     if (!r.ok) throw new Error(r.error || "La IA no respondió. Prueba de nuevo.");

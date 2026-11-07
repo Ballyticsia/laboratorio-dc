@@ -544,6 +544,7 @@ Reglas:
 - Explica con números: probabilidad del modelo, cuota justa (1 / probabilidad) y, si el usuario o los datos traen cuotas, el valor esperado (EV = probabilidad × cuota − 1).
 - Escribe las probabilidades como porcentaje (66 %) y los decimales con coma (cuota 1,52; EV +2,3 %).
 - La cuota justa no es lo que paga una casa: di "cuota justa 4,55", nunca "paga 4,55". Solo las cuotas_casa o cuotas_del_usuario son cuotas reales de una casa.
+- Si viene "filtro_liga", el usuario preguntó por esa competición: responde solo con esos partidos. Si "partidos" trae partidos, NUNCA digas que no hay partidos de esa liga.
 - Fechas: "ahora" dice el día y la hora en Chile y cada partido trae HOY, MAÑANA o su día. Si el usuario no dice el día, responde con los partidos de HOY. Si "nota_alcance" dice que se agregaron los de mañana, dilo y separa "Hoy" de "Mañana". Nunca presentes un partido de mañana como si fuera de hoy.
 - "Favorito claro" = 60 % o más de ganar. Si hay pocos, dilo con honestidad ("hoy solo hay 3 favoritos claros") y separa los demás como "favoritos ajustados", sin llamarlos claros.
 - Listas: usa "rankings" (ya vienen ordenados de mayor a menor). Da entre 5 y 8 partidos si hay, o la cantidad que pida el usuario (máximo 15). Si hay menos, dilo.
@@ -566,7 +567,7 @@ async function preguntarIA(env, b, ctx, req) {
   const q = String(b.q || "").trim().slice(0, 400), uid = String(b.uid || "");
   if (q.length < 3) return json({ ok: false, error: "Escribe una pregunta." }, 400);
   if (!okUid(uid)) return json({ ok: false, error: "uid" }, 400);
-  const datos = JSON.stringify(b.ctx || {}).slice(0, 32000);
+  const datos = JSON.stringify(b.ctx || {}).slice(0, 48000);   // el sitio ya recorta la lista de partidos para no pasarse
   const hist = (Array.isArray(b.hist) ? b.hist : []).slice(-4).map(m => ({ role: m.r === "ia" ? "assistant" : "user", content: String(m.t || "").slice(0, 700) })).filter(m => m.content);
   // respuestas repetidas (misma pregunta y mismos datos) salen de la caché y no gastan
   const cache = caches.default, ck = new Request("https://ia.ballytics/" + await hash(q.toLowerCase() + "|" + datos + "|" + JSON.stringify(hist)));
