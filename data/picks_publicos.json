@@ -1091,7 +1091,7 @@
      "lado": "H",
      "prob": 0.8553,
      "cuota": 1.133,
-     "cierre": 1.211,
+     "cierre": 1.222,
      "res": null,
      "hg": null,
      "ag": null
@@ -1178,6 +1178,78 @@
      "ev": 0.333
     }
    ]
+  },
+  "2026-11-09": {
+   "fijado": "2026-11-08T22:47Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401877901",
+     "liga": "colombia",
+     "kickoff": "2026-11-10T00:00Z",
+     "home": "Atlético Junior",
+     "away": "Cúcuta Deportivo",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.6176,
+     "cuota": 1.541,
+     "cierre": 1.541,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401921367",
+     "liga": "ecuador",
+     "kickoff": "2026-11-09T20:30Z",
+     "home": "Técnico Universitario",
+     "away": "Manta F.C.",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.2379,
+     "cuota": 4.6,
+     "cierre": 4.6,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1848,
+     "ev": 0.0943
+    },
+    {
+     "id": "401888647",
+     "liga": "paraguay",
+     "kickoff": "2026-11-09T20:00Z",
+     "home": "Sportivo San Lorenzo",
+     "away": "Rubio Ñú",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.2734,
+     "cuota": 4.0,
+     "cierre": 4.0,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2133,
+     "ev": 0.0936
+    },
+    {
+     "id": "401921368",
+     "liga": "ecuador",
+     "kickoff": "2026-11-09T18:00Z",
+     "home": "Mushuc Runa",
+     "away": "Delfín",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.242,
+     "cuota": 4.4,
+     "cierre": 4.4,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1938,
+     "ev": 0.0648
+    }
+   ]
   }
  },
  "reglas": {
@@ -1188,5 +1260,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-08T20:47Z"
+ "actualizado": "2026-11-08T22:47Z"
 }
