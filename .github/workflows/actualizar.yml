@@ -95,8 +95,11 @@ jobs:
 
       - name: Achicar el código y prueba de humo (abre las pantallas en un navegador; si algo se rompe, no se publica)
         run: |
-          cd tests && npm ci --no-audit --no-fund && npx playwright install --with-deps chromium >/dev/null
-          node minificar.js
+          cd tests
+          npm ci --no-audit --no-fund > /tmp/npm.txt 2>&1 || { tail -5 /tmp/npm.txt | while IFS= read -r l; do echo "::error title=npm ci::$l"; done; exit 1; }
+          npx playwright install --with-deps chromium > /tmp/pw.txt 2>&1 || { tail -5 /tmp/pw.txt | while IFS= read -r l; do echo "::error title=playwright::$l"; done; exit 1; }
+          node minificar.js > /tmp/min.txt 2>&1 || { tail -8 /tmp/min.txt | while IFS= read -r l; do echo "::error title=minificar::$l"; done; exit 1; }
+          cat /tmp/min.txt
           # si falla, cada problema queda como anotación (se lee sin abrir el registro completo)
           node humo.js > /tmp/humo.txt 2>&1 || { cat /tmp/humo.txt; grep -E "^- |Error|error" /tmp/humo.txt | head -20 | while IFS= read -r l; do echo "::error title=Prueba de humo::$l"; done; exit 1; }
           cat /tmp/humo.txt
