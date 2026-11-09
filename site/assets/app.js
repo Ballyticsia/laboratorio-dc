@@ -442,7 +442,7 @@ function render() {
   bindCarousels();
   paintLive();
   paintCountdown();
-  if (R.v === "inicio") vigilarMas();
+  if (R.v === "inicio") { vigilarMas(); homeSel(); }
   if (["registro", "metodo", "partido", "picks"].includes(R.v)) loadExtras();
   if (["partido", "jugador", "equipo", "envivo", "arbitro", "liga"].includes(R.v)) loadFotos();
   centrarActivos();
@@ -606,7 +606,23 @@ function dayList(sel) {
   } else rows = items.map(it => fila(it, sel === "todas")).join("");
   const more = !D.allLoaded && !D.agenda ? `<div class="skel-row"><span class="skel" style="width:40%"></span></div>` : "";
   const sortBar = byDay[dia].fx.length > 1 ? `<div class="hsort" role="group" aria-label="Ordenar partidos"><span class="lbl">Ordenar</span>${HSORT.map(x => `<button data-hsort="${x[0]}" aria-pressed="${x === so}">${x[1]}</button>`).join("")}</div>` : "";
-  return `${strip}${sortBar}${so[0] === "mercado" ? `<p class="note hs-note">Diferencia entre el modelo propio y el mercado sin margen. Es una comparación, no un consejo: en el backtest el mercado fue más preciso.</p>` : ""}<div class="panel flush daypanel">${rows || `<div class="empty">No hay partidos ${dayLabel(dia) === "Hoy" ? "hoy" : "este día"}${sel !== "todas" ? " en esta liga" : ""}.</div>`}${more}</div>`;
+  return `${strip}${sortBar}${so[0] === "mercado" ? `<p class="note hs-note">Diferencia entre el modelo propio y el mercado sin margen. Es una comparación, no un consejo: en el backtest el mercado fue más preciso.</p>` : ""}<div class="panel flush daypanel">${rows || `<div class="empty">No hay partidos ${sel === "todas" ? "de las ligas con probabilidades de Ballytics" : "en esta liga"} ${dayLabel(dia) === "Hoy" ? "hoy" : "este día"}.</div>`}${more}</div>${sel === "todas" ? `<div id="home-sel" data-dia="${dia}"></div>` : ""}`;
+}
+// partidos de selecciones del día (Nations League, amistosos, eliminatorias): no tienen modelo propio, se abren con la estimación rápida
+async function homeSel() {
+  const el = document.getElementById("home-sel"); if (!el || el.dataset.ok === el.dataset.dia) return;
+  const dia = el.dataset.dia; el.dataset.ok = dia;
+  let evs = [];
+  try { await Promise.all([vComps(), vSel()]); evs = await withTimeout(vFetchDay(dia.replace(/-/g, "")), 9000); } catch (e) { return; }
+  const nat = t => VV.selById && VV.selById[t.id];
+  const sel = evs.filter(e => nat(e.h) && nat(e.a) && !vModel(e.id) && localDay(e.date) === dia.replace(/-/g, ""));
+  if (R.v !== "inicio" || !document.contains(el) || el.dataset.dia !== dia) return;
+  if (!sel.length) { el.innerHTML = ""; return; }
+  const grupos = new Map(); sel.sort((a, b) => a.date.localeCompare(b.date)).forEach(e => { const k = e.slug || e.comp; if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(e); });
+  const orden = k => ((VV.bySlug || {})[k] || {}).o ?? 999;
+  el.innerHTML = `<div class="hsel-h"><h3>Selecciones</h3><span class="note">${sel.length} partido${sel.length === 1 ? "" : "s"} · toca uno para ver la estimación de Ballytics</span></div>
+    <div class="panel flush daypanel hsel">${[...grupos.entries()].sort((a, b) => orden(a[0]) - orden(b[0])).map(([k, g]) => { const c = (VV.bySlug || {})[k];
+      return `<div class="lgroup"><button class="lgh" ${c ? `data-go="comp" data-liga="${esc(c.s)}"` : `data-go="vivo"`}>${compImg(c || { f: "🌍" })}<span class="lgh-n"><b>${esc(c ? c.n : g[0].comp)}</b><small>${esc(c ? c.p : "")}</small></span>${g.some(isLive) ? `<span class="livetag">EN VIVO</span>` : ""}<span class="lgh-c">${g.length}</span><svg class="lgh-a" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 3 7.5 6 4.5 9"/></svg></button>${g.map(vRow).join("")}</div>`; }).join("")}</div>`;
 }
 const mktDif = p => { const q = mktOf(p); if (!q || !p.modelo) return null; const own = [p.modelo.pH, p.modelo.pD, p.modelo.pA];
   const i = [0, 1, 2].sort((a, b) => Math.abs(own[b] - q.p[b]) - Math.abs(own[a] - q.p[a]))[0]; return { i, d: own[i] - q.p[i] }; };
