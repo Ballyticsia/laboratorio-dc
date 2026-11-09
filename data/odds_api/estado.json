@@ -11,7 +11,7 @@
   "soccer_efl_champ": "sin partidos cerca",
   "soccer_portugal_primeira_liga": "sin partidos cerca",
   "soccer_netherlands_eredivisie": "sin partidos cerca",
-  "soccer_chile_campeonato": "copia",
+  "soccer_chile_campeonato": "sin partidos cerca",
   "soccer_argentina_primera_division": "sin partidos cerca",
   "soccer_brazil_campeonato": "sin partidos cerca",
   "soccer_usa_mls": "sin partidos cerca",
@@ -28,5 +28,5 @@
  "errores": [],
  "ligas": {},
  "partidos_con_cuota": 0,
- "actualizado": "2026-11-09T17:22+00:00"
+ "actualizado": "2026-11-09T19:10+00:00"
 }
