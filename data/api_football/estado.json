@@ -1,21 +1,21 @@
 {
  "activa": true,
- "consultas": 1,
- "restantes": 7486,
+ "consultas": 10,
+ "restantes": 7475,
  "errores": [],
  "fechas": {
   "2026-11-09": {
    "filas": 0,
-   "desde_cache": true
+   "desde_cache": false
   },
   "2026-11-10": {
    "filas": 0,
-   "desde_cache": true
+   "desde_cache": false
   },
   "2026-11-11": {
    "filas": 0,
-   "desde_cache": true
+   "desde_cache": false
   }
  },
- "actualizado": "2026-11-09T03:01+00:00"
+ "actualizado": "2026-11-09T05:20+00:00"
 }
