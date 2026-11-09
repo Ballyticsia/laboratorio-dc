@@ -1243,13 +1243,18 @@
      "prob": 0.242,
      "cuota": 4.4,
      "cierre": 4.9,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 2,
+     "ag": 1,
      "mercado": 0.1938,
      "ev": 0.0648
     }
    ]
+  },
+  "2026-11-10": {
+   "fijado": "2026-11-09T21:01Z",
+   "tarde": false,
+   "picks": []
   }
  },
  "reglas": {
@@ -1260,5 +1265,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-09T19:06Z"
+ "actualizado": "2026-11-09T21:01Z"
 }
