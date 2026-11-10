@@ -19,16 +19,14 @@
   "soccer_conmebol_copa_libertadores": "sin partidos cerca",
   "soccer_uefa_europa_league": "sin partidos cerca",
   "soccer_uefa_europa_conference_league": "sin partidos cerca",
-  "soccer_conmebol_copa_sudamericana": "error",
+  "soccer_conmebol_copa_sudamericana": "sin partidos cerca",
   "soccer_mexico_ligamx": "sin partidos cerca",
   "soccer_turkey_super_league": "sin partidos cerca",
   "soccer_spl": "sin partidos cerca",
   "soccer_belgium_first_div": "sin partidos cerca"
  },
- "errores": [
-  "soccer_conmebol_copa_sudamericana events: HTTP Error 429: Too Many Requests"
- ],
+ "errores": [],
  "ligas": {},
  "partidos_con_cuota": 0,
- "actualizado": "2026-11-10T19:09+00:00"
+ "actualizado": "2026-11-10T20:58+00:00"
 }
