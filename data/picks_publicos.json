@@ -1255,6 +1255,11 @@
    "fijado": "2026-11-09T21:01Z",
    "tarde": false,
    "picks": []
+  },
+  "2026-11-11": {
+   "fijado": "2026-11-10T22:53Z",
+   "tarde": false,
+   "picks": []
   }
  },
  "reglas": {
@@ -1265,5 +1270,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-10T20:55Z"
+ "actualizado": "2026-11-10T22:53Z"
 }
