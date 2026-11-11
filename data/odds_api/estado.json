@@ -22,13 +22,11 @@
   "soccer_conmebol_copa_sudamericana": "sin partidos cerca",
   "soccer_mexico_ligamx": "sin partidos cerca",
   "soccer_turkey_super_league": "sin partidos cerca",
-  "soccer_spl": "error",
+  "soccer_spl": "sin partidos cerca",
   "soccer_belgium_first_div": "sin partidos cerca"
  },
- "errores": [
-  "soccer_spl events: HTTP Error 429: Too Many Requests"
- ],
+ "errores": [],
  "ligas": {},
  "partidos_con_cuota": 0,
- "actualizado": "2026-11-11T15:06+00:00"
+ "actualizado": "2026-11-11T17:09+00:00"
 }
