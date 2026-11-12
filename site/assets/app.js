@@ -2085,7 +2085,7 @@ async function loadSummary() {
   if ((!box && !mini) || !L || !p || !L.slug) return;
   const fail = `<h3>Alineaciones</h3><p class="note">Aún no publicadas. Las alineaciones suelen salir cerca de una hora antes del partido.</p>`;
   try {
-    const sj = await vget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${L.slug}/summary?event=${encodeURIComponent(p.id)}`);
+    const sj = await vget(`https://site.api.espn.com/apis/site/v2/sports/soccer/all/summary?event=${encodeURIComponent(p.id)}`);
     VV.sum[String(p.id)] = { t: Date.now(), j: sj };   // así al tocar un jugador se abren sus números de este partido
     const r = { ok: true, json: async () => sj };
     const j = await r.json();

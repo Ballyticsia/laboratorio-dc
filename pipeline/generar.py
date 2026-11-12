@@ -122,6 +122,11 @@ LIGAS = [
     dict(id="escocia", peso=0.8, nombre="Premiership", pais="Escocia", region=EUROPA, s1="sco.1", s2=["sco.2"], inicio=7,
          zonas=[(1, 1, "Champions League", "cl"), (2, 2, "Champions (previa)", "cl"), (3, 3, "Europa League", "el"), (11, 11, "Promoción", "promo"), (12, 12, "Descenso", "desc")]),
     dict(id="belgica", peso=0.8, nombre="Pro League", pais="Bélgica", region=EUROPA, s1="bel.1", s2=[], inicio=7, tabla=False, oficial=True),
+    # selecciones mayores: amistosos (s1) y torneos y eliminatorias (s1b); todas juntas en un solo modelo
+    dict(id="selecciones", peso=1.0, nombre="Selecciones", pais="FIFA", region="Selecciones", s1="fifa.friendly",
+         s1b=["uefa.nations", "fifa.worldq.uefa", "fifa.worldq.conmebol", "fifa.worldq.concacaf", "fifa.worldq.afc", "fifa.worldq.caf", "fifa.worldq.ofc",
+              "fifa.world", "uefa.euro", "uefa.euroq", "conmebol.america", "concacaf.nations.league", "concacaf.gold", "afc.asian.cup", "caf.nations"],
+         s2=[], inicio=1, tabla=False, sel=True),
     dict(id="arabia", peso=0.75, nombre="Liga Profesional Saudí", pais="Arabia Saudita", region="Asia", s1="ksa.1", s2=[], inicio=7,
          zonas=[(1, 2, "AFC Champions League Elite", "cl"), (16, 18, "Descenso", "desc")]),
 ]
@@ -260,6 +265,30 @@ def streaks(df, teams):
             if n >= 3:
                 out.append(dict(equipo=t, tipo=key, texto=label, n=n, de=len(ms)))
     return sorted(out, key=lambda s: -s["n"])
+
+
+SEL_ES = None
+
+
+def nombres_selecciones(df):
+    """Selecciones con su nombre en español (site/assets/selecciones.json); ESPN las entrega en inglés."""
+    global SEL_ES
+    if SEL_ES is None:
+        try:
+            with open(os.path.join(RAIZ, "site", "assets", "selecciones.json"), encoding="utf-8") as f:
+                eq = json.load(f)["equipos"]
+            SEL_ES = {t["en"]: t["n"] for t in eq if t.get("en")}
+        except (OSError, ValueError, KeyError):
+            SEL_ES = {}
+    if df.empty or not SEL_ES:
+        return df
+    df = df.copy()
+    for side in ("home", "away"):
+        nuevo = df[side].map(lambda n: SEL_ES.get(n, n))
+        cambia = nuevo != df[side]
+        df.loc[cambia, side + "_corto"] = nuevo[cambia]
+        df[side] = nuevo
+    return df
 
 
 def tarjetas_de(x, lado, tipo):
@@ -896,6 +925,11 @@ def main():
         print(f"{L['nombre']}: descargando…", flush=True)
         start, cur_start, season_end = season_bounds(L, today)
         d1 = (datos_af.load if L["s1"] in datos_af.FUENTE else datos.load)(L["s1"], start, season_end, today)
+        if L.get("s1b"):   # selecciones: amistosos + Nations League + eliminatorias + torneos
+            ds = [d1] + [datos.load(s_, start, season_end, today) for s_ in L["s1b"]]
+            d1 = pd.concat([d for d in ds if not d.empty], ignore_index=True).drop_duplicates(["id"]).sort_values("kickoff").reset_index(drop=True)
+        if L.get("sel"):
+            d1 = nombres_selecciones(d1)
         if d1.empty:
             print("  sin datos, la salto")
             continue
