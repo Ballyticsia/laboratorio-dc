@@ -24,6 +24,11 @@ function rutas() {
     if (r) out.push(["envivo", `#/envivo/${r.id}`, "Partido jugado"], ["envivo-est", `#/envivo/${r.id}/estadisticas`, "Partido jugado: estadísticas"], ["envivo-al", `#/envivo/${r.id}/alineaciones`, "Partido jugado: alineaciones"]);
   }
   if (leer("chile2.json")) out.push(["ascenso", "#/liga/chile2/resumen", "Liga de Ascenso"]);
+  const S = leer("selecciones.json"), ps = S && (S.partidos || [])[0];
+  if (ps) out.push(["selecciones", `#/partido/selecciones/${ps.id}`, "Partido de selecciones"]);
+  const L1 = leer("leagueone.json"), p1 = L1 && (L1.partidos || [])[0];
+  if (L1) out.push(["secundaria", "#/liga/leagueone/resumen", "Liga secundaria (League One)"]);
+  if (p1) out.push(["secundaria-partido", `#/partido/leagueone/${p1.id}`, "Partido de liga secundaria"]);
   out.push(["competiciones", "#/competiciones", "Competiciones"], ["picks", "#/picks", "Picks"], ["prode", "#/prode", "Prode"], ["registro", "#/registro", "Resultados del modelo"], ["metodo", "#/metodo", "Cómo funciona"]);
   return out;
 }
