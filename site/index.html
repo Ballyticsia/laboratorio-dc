@@ -36,7 +36,7 @@ try{var h=location.hash;if(!h||h==="#"||h==="#/"||/^#\/inicio\b/.test(h))documen
 var pj=function(p){return fetch(p,{cache:"no-cache"}).then(function(r){if(!r.ok)throw new Error(p+" "+r.status);return r.json()})};
 window.__pre={"data/indice.json":pj("data/indice.json"),"data/agenda.json":pj("data/agenda.json")};
 for(var k in window.__pre)window.__pre[k].catch(function(){})}catch(e){}</script>
-<link rel="stylesheet" href="assets/app.css?v=81">
+<link rel="stylesheet" href="assets/app.css?v=82">
 </head>
 <body>
 <div class="bg" aria-hidden="true"><span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span><span class="field"></span></div>

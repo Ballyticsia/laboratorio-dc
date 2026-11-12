@@ -19,6 +19,7 @@ MAX_NUEVOS = int(os.environ.get("CAJA_MAX", "400"))   # por corrida y por liga (
 CAMPOS = ("yellowCards", "redCards", "offsides", "saves", "totalPasses", "accuratePasses", "totalTackles", "effectiveTackles",
           "interceptions", "totalCrosses", "accurateCrosses", "totalLongBalls", "blockedShots", "totalClearance",
           "foulsCommitted", "wonCorners", "totalShots", "shotsOnTarget", "possessionPct")
+TOTAL = int(os.environ.get("CAJA_TOTAL", "1500"))   # tope global por corrida (ligas nuevas se completan en varias corridas)
 _usados = 0
 
 
@@ -66,7 +67,9 @@ def cargar(slug, ids):
             cache = json.load(f)
     except (OSError, ValueError):
         cache = {}
-    faltan = [str(i) for i in ids if i and not str(i).startswith("af") and str(i) not in cache][:MAX_NUEVOS]   # "af…": API-Football, ya trae todo
+    faltan = [str(i) for i in ids if i and not str(i).startswith("af") and str(i) not in cache]   # "af…": API-Football, ya trae todo
+    cupo = max(0, min(MAX_NUEVOS, TOTAL - _usados))
+    faltan = faltan[-cupo:] if cupo else []   # primero los más recientes
     if faltan:
         with ThreadPoolExecutor(max_workers=8) as ex:
             for eid, r in zip(faltan, ex.map(_bajar, faltan)):

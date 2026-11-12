@@ -158,7 +158,7 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - **Margen de las cuotas:** la misma prueba compara 5 formas de quitarle el margen a la cuota (`pipeline/margen.py`: multiplicativo, aditivo, potencia, Shin y razón de chances; las fórmulas se comparan con las de penaltyblog). El robot usa la que gana (`metodo_margen`).
 
 ## Estadísticas de equipo y mercados de estadísticas
-- `pipeline/caja.py` baja una vez el resumen de ESPN de cada partido jugado y guarda en `data/cache_espn/caja_<liga>.json` amarillas, rojas, fueras de juego, atajadas, pases, entradas, intercepciones, centros, despejes y remates bloqueados (hasta 400 partidos nuevos por liga en cada corrida).
+- `pipeline/caja.py` baja una vez el resumen de ESPN de cada partido jugado y guarda en `data/cache_espn/caja_<liga>.json` amarillas, rojas, fueras de juego, atajadas, pases, entradas, intercepciones, centros, despejes y remates bloqueados (hasta 400 partidos nuevos por liga y 1.500 en total en cada corrida, primero los más recientes; `CAJA_MAX` y `CAJA_TOTAL` lo cambian).
 - La página de equipo muestra promedios por partido en total, de local y de visita, comparados con el promedio de la liga.
 - En la pestaña Mercados de cada partido: remates, remates al arco, córners, faltas, tarjetas y entradas por equipo y en total (amarillas sueltas y fueras de juego no, porque en el backtest de 1.900 partidos no mejoraron al promedio de la liga). Esperado = lo que hace el equipo × lo que concede el rival ÷ promedio de la liga (con 3 partidos "promedio" sumados para no exagerar); remates y al arco se mezclan mitad y mitad con los goles esperados. Probabilidades con binomial negativa (dispersión medida en la liga).
 - ESPN no publica saques de banda ni saques de meta.
@@ -168,6 +168,10 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - Consultas: 1 por corrida (calendario) + 1 cada 20 partidos terminados sin detalle (goles, tarjetas y estadísticas, con caché en `data/api_football/ligas/`).
 - Si API-Football aplaza un partido sin fecha nueva, aparece en "Partidos aplazados" de la liga.
 - El logo de la Liga de Ascenso (`site/assets/logos/chi.2.png`) sale del sitio oficial; la acción "Buscar logo oficial" baja los logos de una página a la rama `diagnostico` para revisarlos.
+
+## Selecciones y ligas secundarias
+- "Selecciones" es una sola liga del modelo con amistosos, Nations League, eliminatorias de todas las confederaciones, Mundial, Euro, Copa América, Copa Oro, Copa Asiática y Copa Africana (`s1b` en `pipeline/generar.py`). Los nombres en español salen de `site/assets/selecciones.json`.
+- Además de las ligas principales, el modelo cubre 30 ligas secundarias (segundas de Inglaterra hasta la National League, Alemania, España, Italia, Francia, Países Bajos y Escocia; Austria, Dinamarca, Grecia, Noruega, Suecia, Rusia, Japón, China, Australia, India, Sudáfrica, Brasil B, Primera Nacional y Primera B de Argentina, Bolivia, Venezuela, Liga de Expansión MX, Costa Rica, El Salvador, Guatemala y Honduras), con peso 0,6 en la tabla de rendimiento. Las de formato con fases muestran la tabla oficial de ESPN.
 
 ## Partidos fuera del modelo y buscador
 - En partidos de competiciones sin modelo (por ejemplo la AFC Champions League), la página del partido muestra una estimación rápida (1X2, goles, más de 2,5, ambos marcan) con los últimos 10 partidos de cada equipo de todas sus competiciones, cuotas si ESPN las trae, cara a cara, estadio con capacidad y árbitro.
