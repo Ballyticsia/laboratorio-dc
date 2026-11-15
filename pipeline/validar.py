@@ -95,9 +95,9 @@ def main():
     pk = os.path.join(DATA, "picks.json")
     if os.path.exists(pk):
         j = leer(pk) or {}
-        malos = [k for k, v in (j.get("picks") or {}).items() if not (str(k).isdigit() and re.fullmatch(r"\d{1,2}-\d{1,2}", str(v)))]
+        malos = [k for k, v in (j.get("picks") or {}).items() if not (re.fullmatch(r"(af)?\d+", str(k)) and re.fullmatch(r"\d{1,2}-\d{1,2}", str(v)))]   # "af…": partidos de API-Football
         if malos:
-            err(f"picks.json: {len(malos)} pronósticos con formato inválido")
+            err(f"picks.json: {len(malos)} pronósticos con formato inválido (p. ej. {malos[0]}: {j['picks'][malos[0]]})")
     pp = os.path.join(DATA, "picks_publicos.json")
     if os.path.exists(pp):
         j = leer(pp) or {}
