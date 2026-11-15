@@ -1295,7 +1295,7 @@
      "lado": "H",
      "prob": 0.6042,
      "cuota": 1.571,
-     "cierre": 1.571,
+     "cierre": 1.541,
      "res": null,
      "hg": null,
      "ag": null
@@ -1352,6 +1352,108 @@
      "ev": 0.1942
     }
    ]
+  },
+  "2026-11-16": {
+   "fijado": "2026-11-15T21:13Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401861184",
+     "liga": "selecciones",
+     "kickoff": "2026-11-16T17:00Z",
+     "home": "Lituania",
+     "away": "Liechtenstein",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8881,
+     "cuota": 1.1,
+     "cierre": 1.1,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401929770",
+     "liga": "selecciones",
+     "kickoff": "2026-11-17T01:00Z",
+     "home": "Canadá",
+     "away": "Guatemala",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8481,
+     "cuota": 1.143,
+     "cierre": 1.143,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401929771",
+     "liga": "selecciones",
+     "kickoff": "2026-11-16T19:00Z",
+     "home": "Guadalupe",
+     "away": "Bermudas",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.7788,
+     "cuota": 1.235,
+     "cierre": 1.235,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401886119",
+     "liga": "peru",
+     "kickoff": "2026-11-16T20:15Z",
+     "home": "Deportivo Moquegua",
+     "away": "Atlético Grau",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.3303,
+     "cuota": 5.75,
+     "cierre": 5.75,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1403,
+     "ev": 0.8992
+    },
+    {
+     "id": "401861187",
+     "liga": "selecciones",
+     "kickoff": "2026-11-16T19:45Z",
+     "home": "Macedonia del Norte",
+     "away": "Eslovenia",
+     "est": "valor",
+     "lado": "D",
+     "prob": 0.3303,
+     "cuota": 3.85,
+     "cierre": 3.85,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2268,
+     "ev": 0.2717
+    },
+    {
+     "id": "401861186",
+     "liga": "selecciones",
+     "kickoff": "2026-11-16T19:45Z",
+     "home": "Suiza",
+     "away": "Escocia",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.6966,
+     "cuota": 1.769,
+     "cierre": 1.769,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.5399,
+     "ev": 0.2323
+    }
+   ]
   }
  },
  "reglas": {
@@ -1362,5 +1464,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-15T20:58Z"
+ "actualizado": "2026-11-15T21:13Z"
 }
