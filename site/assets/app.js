@@ -500,7 +500,7 @@ function matchRow(p, showLeague, isFav, showDate, met) {
   const L = p.L || D.ligas[p.liga], fav = p.pH >= p.pA ? "h" : "a";
   const pick = p.pH >= p.pD && p.pH >= p.pA ? "1" : p.pA >= p.pD ? "2" : "X";
   return `<button class="mrow ${isFav ? "isfav" : ""}" data-go="partido" data-liga="${L.id}" data-id="${esc(p.id)}">
-    <span class="t" data-live-t="${esc(p.id)}">${showDate && p.estado !== "en_vivo" ? `<small class="mdate">${esc(shortDay(p.kickoff))}</small>` : ""}${p.estado === "en_vivo" ? `<span class="livetag">EN VIVO</span>` : hhmm(p.kickoff)}${new Date(p.kickoff).getTime() - Date.now() < 3 * 3600e3 ? `<span class="cdown sm" data-cd="${esc(p.kickoff)}"></span>` : ""}${showLeague ? `<span class="lg">${esc(L.nombre)}</span>` : ""}</span>
+    <span class="t" data-live-t="${esc(p.id)}">${showDate && p.estado !== "en_vivo" ? `<small class="mdate">${esc(shortDay(p.kickoff))}</small>` : ""}${p.estado === "en_vivo" ? `<span class="livetag">En vivo</span>` : hhmm(p.kickoff)}${new Date(p.kickoff).getTime() - Date.now() < 3 * 3600e3 ? `<span class="cdown sm" data-cd="${esc(p.kickoff)}"></span>` : ""}${showLeague ? `<span class="lg">${esc(L.nombre)}</span>` : ""}</span>
     <span class="teams">
       <span class="tline">${badge(L, p.home)}<span class="n ${fav === "h" ? "fav" : "und"}">${esc(corto(L, p.home))}</span></span>
       <span class="tline">${badge(L, p.away)}<span class="n ${fav === "a" ? "fav" : "und"}">${esc(corto(L, p.away))}</span></span>
@@ -600,7 +600,7 @@ function dayList(sel) {
     const ids = [...grupos.keys()].sort((a, b) => (isFavL(b) - isFavL(a)) || (orden.indexOf(a) - orden.indexOf(b)));
     const lim = VV.homeLim || 40; let n = 0;
     rows = ids.map(id => { if (n >= lim) return ""; const L = D.ligas[id], g = grupos.get(id), vivo = g.some(it => !it.r && it.x.estado === "en_vivo");
-      const cab = `<button class="lgh" data-go="liga" data-liga="${id}" data-tab="partidos">${leagueMark(L, "sm")}<span class="lgh-n"><b>${esc(L.nombre)}</b><small>${esc(L.pais || "")}</small></span>${vivo ? `<span class="livetag">EN VIVO</span>` : ""}<span class="lgh-c">${g.length}</span><svg class="lgh-a" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 3 7.5 6 4.5 9"/></svg></button>`;
+      const cab = `<button class="lgh" data-go="liga" data-liga="${id}" data-tab="partidos">${leagueMark(L, "sm")}<span class="lgh-n"><b>${esc(L.nombre)}</b><small>${esc(L.pais || "")}</small></span>${vivo ? `<span class="livetag">En vivo</span>` : ""}<span class="lgh-c">${g.length}</span><svg class="lgh-a" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 3 7.5 6 4.5 9"/></svg></button>`;
       const filas = g.slice(0, Math.max(1, lim - n)); n += filas.length;
       return `<div class="lgroup">${cab}${filas.map(it => fila(it, false)).join("")}</div>`; }).join("");
     if (items.length > lim) rows += `<button class="vmore" id="home-more">Ver ${Math.min(40, items.length - lim)} partidos más (${items.length - lim} restantes)</button>`;
@@ -623,7 +623,7 @@ async function homeSel() {
   const orden = k => ((VV.bySlug || {})[k] || {}).o ?? 999;
   el.innerHTML = `<div class="hsel-h"><h3>Selecciones</h3><span class="note">${sel.length} partido${sel.length === 1 ? "" : "s"} · toca uno para ver la estimación de Ballytics</span></div>
     <div class="panel flush daypanel hsel">${[...grupos.entries()].sort((a, b) => orden(a[0]) - orden(b[0])).map(([k, g]) => { const c = (VV.bySlug || {})[k];
-      return `<div class="lgroup"><button class="lgh" ${c ? `data-go="comp" data-liga="${esc(c.s)}"` : `data-go="vivo"`}>${compImg(c || { f: "🌍" })}<span class="lgh-n"><b>${esc(c ? c.n : g[0].comp)}</b><small>${esc(c ? c.p : "")}</small></span>${g.some(isLive) ? `<span class="livetag">EN VIVO</span>` : ""}<span class="lgh-c">${g.length}</span><svg class="lgh-a" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 3 7.5 6 4.5 9"/></svg></button>${g.map(vRow).join("")}</div>`; }).join("")}</div>`;
+      return `<div class="lgroup"><button class="lgh" ${c ? `data-go="comp" data-liga="${esc(c.s)}"` : `data-go="vivo"`}>${compImg(c || { f: "🌍" })}<span class="lgh-n"><b>${esc(c ? c.n : g[0].comp)}</b><small>${esc(c ? c.p : "")}</small></span>${g.some(isLive) ? `<span class="livetag">En vivo</span>` : ""}<span class="lgh-c">${g.length}</span><svg class="lgh-a" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 3 7.5 6 4.5 9"/></svg></button>${g.map(vRow).join("")}</div>`; }).join("")}</div>`;
 }
 const mktDif = p => { const q = mktOf(p); if (!q || !p.modelo) return null; const own = [p.modelo.pH, p.modelo.pD, p.modelo.pA];
   const i = [0, 1, 2].sort((a, b) => Math.abs(own[b] - q.p[b]) - Math.abs(own[a] - q.p[a]))[0]; return { i, d: own[i] - q.p[i] }; };
@@ -2061,7 +2061,7 @@ function paintLive() {
   document.querySelectorAll("[data-live-t]").forEach(el => {
     const L = LIVE[el.dataset.liveT]; if (!L || L.state === "pre") return;
     const lg = el.querySelector(".lg");
-    el.innerHTML = (L.state === "in" ? `<span class="livetag">${esc(L.clock || "EN VIVO")}</span>` : `<span class="fttag">Final</span>`) + (lg ? lg.outerHTML : "");
+    el.innerHTML = (L.state === "in" ? `<span class="livetag">${esc(L.clock || "En vivo")}</span>` : `<span class="fttag">Final</span>`) + (lg ? lg.outerHTML : "");
   });
   document.querySelectorAll("[data-live-s]").forEach(el => {
     const L = LIVE[el.dataset.liveS]; if (!L || L.state === "pre") return;
@@ -2075,7 +2075,7 @@ function paintLive() {
     const L = LIVE[el.dataset.liveBox];
     if (!L || L.state === "pre") { el.hidden = true; return; }
     el.hidden = false;
-    el.innerHTML = `<span class="${L.state === "in" ? "livetag" : "fttag"}">${L.state === "in" ? "EN VIVO · " + esc(L.clock) : "FINAL"}</span><b class="num">${esc(L.hg)} – ${esc(L.ag)}</b>`;
+    el.innerHTML = `<span class="${L.state === "in" ? "livetag" : "fttag"}">${L.state === "in" ? "En vivo · " + esc(L.clock) : "Final"}</span><b class="num">${esc(L.hg)} – ${esc(L.ag)}</b>`;
   });
 }
 

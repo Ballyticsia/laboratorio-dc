@@ -2202,3 +2202,26 @@ h3{font-family:var(--f-body);font-weight:700;letter-spacing:-.005em}
   html.visto .view>.promise{display:none}   /* la presentación se muestra solo en la primera visita */
 }
 @media (min-width:1000px){.kpis{grid-template-columns:repeat(auto-fit,minmax(128px,1fr))}}
+/* partido jugado o en vivo */
+.vhteam b{font-family:var(--f-wide);font-weight:800;letter-spacing:-.02em}
+.vhsc{font-size:clamp(50px,7vw,64px);letter-spacing:0}
+.pso-sc>span{font-family:var(--f-score)}.pso-sc small{font-family:var(--f-body)}
+/* menú de ligas: filas compactas (país al lado del nombre) y, en computador, columnas a todo el ancho de la página */
+nav.main .dd-item,.dd-item{padding:5px 8px;gap:9px;font-size:13.5px}
+.dd-item>span:last-child{display:block;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dd-item small{display:inline;font-size:11.5px;margin-left:7px}
+.dd-col .lbl{font-weight:700;color:var(--ink);padding:4px 8px 6px}
+@media (min-width:761px){
+  .dd{position:static}
+  .top .wrap{position:relative}
+  .dd-menu{display:block;left:0;right:0;top:calc(100% + 2px);width:auto;max-width:none;columns:5 190px;column-gap:14px;padding:16px;max-height:min(86vh,800px)}
+  .dd-col{display:block;break-inside:avoid;margin-bottom:14px;min-width:0}
+  .dd-all{column-span:all;margin-top:0}
+}
+.livetag{white-space:nowrap;font-size:12px;letter-spacing:0}
+.mrow .t .livetag{font-size:11px;gap:4px}
+.mrow .t .livetag::before{width:6px;height:6px;box-shadow:none}
+@media (max-width:760px){.vrow{grid-template-columns:58px minmax(0,1fr) auto}.vrow .vmin{font-size:11px;white-space:nowrap}}
+/* picks del inicio (tarjeta angosta): sin la hora, para que se lea el pronóstico */
+.pp-hl .pp-f .pp-r{display:none}
+.pp-hl .pp-f{gap:9px;padding:10px 14px}
