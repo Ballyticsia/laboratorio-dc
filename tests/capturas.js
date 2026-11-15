@@ -36,10 +36,14 @@ function rutas() {
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const R = rutas(), b = await chromium.launch(), filas = [];
-  for (const [dev, vp] of [["telefono", { width: 390, height: 844 }], ["computador", { width: 1440, height: 900 }]]) {
+  // el modo claro se revisa en teléfono y solo en las pantallas principales
+  const CLARO = new Set(["inicio", "partido", "liga", "equipo", "envivo"]);
+  for (const [dev, vp, claro] of [["telefono", { width: 390, height: 844 }], ["computador", { width: 1440, height: 900 }], ["claro", { width: 390, height: 844 }, true]]) {
     const ctx = await b.newContext({ viewport: vp, locale: "es-CL", timezoneId: "America/Santiago", deviceScaleFactor: 1 });
+    if (claro) await ctx.addInitScript(() => { try { localStorage.setItem("bt_theme", "light"); } catch (e) {} });
     const pg = await ctx.newPage();
     for (const [k, r, n] of R) {
+      if (claro && !CLARO.has(k)) continue;
       const prob = [], t0 = Date.now();
       const onErr = e => prob.push(`error de JavaScript: ${String(e.message).slice(0, 160)}`);
       pg.on("pageerror", onErr);
