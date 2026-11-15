@@ -1,7 +1,7 @@
 {
  "activa": true,
  "consultas": 1,
- "restantes": 7040,
+ "restantes": 7039,
  "errores": [],
  "fechas": {
   "2026-11-15": {
@@ -17,5 +17,5 @@
    "desde_cache": true
   }
  },
- "actualizado": "2026-11-15T20:42+00:00"
+ "actualizado": "2026-11-15T20:56+00:00"
 }
