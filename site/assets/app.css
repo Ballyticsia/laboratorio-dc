@@ -1821,7 +1821,7 @@ body.ia-open #iafab{display:none}
 .cp-vacia h3{margin:0 0 6px}.cp-vacia p{margin:0 0 12px;max-width:60ch}
 .cp-vacia-ic{flex:none;display:grid;place-items:center;width:64px;height:64px;border-radius:18px;background:var(--pitch-soft);color:var(--pitch)}
 .cp-vacia-ic svg{width:30px;height:30px}
-/* v33 — tipografía: Plus Jakarta Sans en el texto; la letra de máquina (mono) queda solo para números */
+/* v33 — tipografía: una sola familia en el texto; los números van con cifras tabulares (hoy la familia es Archivo, ver v46) */
 .meta{font-family:var(--f-body);font-size:13px;font-weight:600;letter-spacing:.01em}
 .meta span:first-letter{text-transform:uppercase}
 body{font-feature-settings:"ss01" off;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
@@ -1981,8 +1981,8 @@ svg .gnum{font-family:var(--f-display);font-size:12px;font-weight:700;fill:var(-
 
 /* =====================================================================
    v40 · Sistema de diseño
-   Una sola familia para la interfaz (Plus Jakarta Sans) en tipo oración, números tabulares sin
-   monoespaciada, y Chakra Petch solo para los marcadores y cifras grandes (el "tablero del estadio").
+   Una sola familia para la interfaz en tipo oración, números tabulares sin monoespaciada, y una
+   letra angosta solo para los marcadores y cifras grandes (el "tablero del estadio"). Familia actual: Archivo (v46).
    ===================================================================== */
 :root{--f-score:"Archivo Cond","Arial Narrow",sans-serif;--f-display:"Archivo",system-ui,sans-serif;--f-mono:"Archivo",system-ui,sans-serif;
   --bg:#0b1019;--panel:#121925;--panel2:#18212f;--ink:#eef2f8;--muted:#9aa6ba;--faint:#7d889c;--line:rgba(160,174,198,.12);
@@ -2065,7 +2065,7 @@ table.mk tr.grp td{font-family:var(--f-body);font-size:var(--t-sm);font-weight:7
 nav.main button,.dd > button,.dd > .nav-i{font-family:var(--f-body);font-size:14px;font-weight:600}
 .mtabs button,.vhub button,.tabs2 button{font-family:var(--f-body);font-size:14px;font-weight:600}
 .chip-btn{font-family:var(--f-body);font-size:13px;font-weight:600}
-/* cifras grandes y marcadores: el único lugar con Chakra Petch */
+/* cifras grandes y marcadores: el único lugar con la letra angosta */
 .kpi .v,.eqs-v,.xgv,.cnums b,.sm-res-t b,.vhsc,.pso-sc,.qodds-r b,.fp-big,.hs-score,.fh-k b,.rscore b,.score{font-family:var(--f-score)}
 /* encabezado del partido (análisis): escudos grandes, hora al centro y una sola barra de probabilidad */
 .mh{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;gap:16px;margin-top:18px}

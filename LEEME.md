@@ -181,6 +181,7 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - Una sola familia, Archivo, en tres anchos: normal para la interfaz (`--f-body`), ancha para títulos y la marca (`--f-wide`) y angosta para marcadores y cifras (`--f-score`). Todo en tipo oración; nada de rótulos en MAYÚSCULAS espaciadas.
 - La angosta (`--f-score`) va solo en marcadores y cifras grandes (resultado, hora del partido, porcentajes destacados).
 - Marca: una B armada con la barra 1-X-2 (azul = local arriba; gris = empate y violeta = visita abajo). Está en `site/assets/favicon.svg`, en los íconos de la app (`icon-*.png`, `apple-touch-icon.png`), en la imagen para compartir (`og.png`) y dibujada en la cabecera (`.bmark` en `index.html`).
+- Archivos de marca para redes y otros usos en `site/assets/marca/`: la B sola (`ballytics-marca.svg`), el logo con el nombre para fondo oscuro y claro (`ballytics-horizontal-*.svg`) y la imagen de perfil de 1024 px (`ballytics-perfil-1024.png`).
 - Fondo liso, sin cuadrícula ni luces; los escudos van sueltos, sin caja ni resplandor.
 - Números con `font-variant-numeric: tabular-nums` (clase `.num`), sin fuente monoespaciada.
 - Títulos de panel: 16 px, 700, color de texto. Rótulos: 12 px, 600, gris (`.lbl`).
