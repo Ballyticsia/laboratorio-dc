@@ -2033,7 +2033,7 @@ async function pollLive() {
     const d0 = new Date(now - 6 * 3600e3), j = await vget(`${url}/dia?d=${ymd(d0)},${ymd(new Date(now))}`);
     if (!j || !j.ok) throw new Error("dia");
     (j.events || []).forEach(e => { const pens = /pen|shootout/i.test(e.detail || "") || e.period >= 5;
-      LIVE[String(e.id)] = { state: e.state, clock: pens && e.state === "in" ? "Penales" : /half|HT/i.test(e.detail || "") && e.state === "in" ? "Entretiempo" : e.clock || "", hg: e.h.score, ag: e.a.score, sh: e.h.so, sa: e.a.so }; });
+      LIVE[String(e.id)] = { state: e.state, clock: pens && e.state === "in" ? "Penales" : /half|HT/i.test(e.detail || "") && e.state === "in" ? "Descanso" : e.clock || "", hg: e.h.score, ag: e.a.score, sh: e.h.so, sa: e.a.so }; });
     paintLive(); return;
   } catch (e) { /* sigue con ESPN directo */ }
   if (!liveOK) return;
@@ -3657,7 +3657,7 @@ async function vFillMatch(force) {
     const r = evs.filter(e => e.kind === "red" && e.lado === l).map(e => `<span class="vh-ev"><i class="rcard"></i>${esc((e.who[0] || "").split(" ").slice(-1)[0])} <em>${esc(e.min)}</em></span>`);
     return g.concat(r).join(""); };
   const pens = H.h.so != null && H.a.so != null && (H.h.so || H.a.so || /pen/i.test(H.detail) || H.period >= 5);
-  const status = H.state === "in" && (/pen|shootout/i.test(H.detail) || H.period >= 5) ? `<span class="vmin live big">Penales</span>` : H.state === "in" ? `<span class="vmin live big">${esc(/half|HT/i.test(H.detail) ? "Entretiempo" : H.clock || H.detail)}</span>` : H.state === "post" ? `<span class="vmin big">${esc(finalEs(H.detail))}</span>` : `<span class="vmin big pre">Por jugar</span>`;
+  const status = H.state === "in" && (/pen|shootout/i.test(H.detail) || H.period >= 5) ? `<span class="vmin live big">Penales</span>` : H.state === "in" ? `<span class="vmin live big">${esc(/half|HT/i.test(H.detail) ? "Descanso" : H.clock || H.detail)}</span>` : H.state === "post" ? `<span class="vmin big">${esc(finalEs(H.detail))}</span>` : `<span class="vmin big pre">Por jugar</span>`;
   await vSel();
   const tslug = t => VV.selById[t.id] ? "sel" : H.slug;
   // tras una tanda de penales: el que clasifica se destaca y el otro se atenúa

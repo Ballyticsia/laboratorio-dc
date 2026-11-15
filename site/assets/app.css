@@ -2225,3 +2225,6 @@ nav.main .dd-item,.dd-item{padding:5px 8px;gap:9px;font-size:13.5px}
 /* picks del inicio (tarjeta angosta): sin la hora, para que se lea el pronóstico */
 .pp-hl .pp-f .pp-r{display:none}
 .pp-hl .pp-f{gap:9px;padding:10px 14px}
+:root[data-theme="light"] .logo,:root[data-theme="light"] .badge.logo,:root[data-theme="light"] .lmark.logo{box-shadow:none}
+@media (max-width:760px){.mrow{grid-template-columns:58px minmax(0,1fr) 94px}.mrow .t .livetag{font-size:10.5px;gap:3px}}
+.promise{max-width:none}
