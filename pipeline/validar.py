@@ -139,5 +139,6 @@ if __name__ == "__main__":
         print("Datos con problemas, no se publican:")
         for e in errores:
             print("  -", e)
+            print(f"::error title=Datos con problemas::{e}")   # se lee desde la API de GitHub sin abrir el registro
         sys.exit(1)
     print("Datos revisados: todo en orden.")
