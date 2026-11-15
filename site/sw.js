@@ -2,8 +2,8 @@
    - Lo del propio sitio se pide primero a la red y se guarda una copia para abrir sin conexión.
    - Lo de ESPN y otros sitios va directo (no pasa por aquí).
    - Los avisos llegan como "push" sin contenido; aquí se piden los mensajes al servidor de avisos. */
-const CACHE = "bt-v45";   // cambiar al publicar cambios grandes del caparazón
-const SHELL = ["./", "index.html", "assets/app.css", "assets/app.js", "assets/competiciones.json", "assets/selecciones.json", "assets/icon-192.png", "assets/fonts/plus-jakarta-sans-latin-wght-normal.woff2", "assets/fonts/chakra-petch-latin-700-normal.woff2"];
+const CACHE = "bt-v46";   // cambiar al publicar cambios grandes del caparazón
+const SHELL = ["./", "index.html", "assets/app.css", "assets/app.js", "assets/competiciones.json", "assets/selecciones.json", "assets/icon-192.png", "assets/favicon.svg", "assets/fonts/archivo-latin-wght-normal.woff2", "assets/fonts/archivo-cond-latin-wght-normal.woff2", "assets/fonts/archivo-wide-latin-wght-normal.woff2"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {}));

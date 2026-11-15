@@ -249,6 +249,7 @@ function buildMenu() {
   document.addEventListener("click", e => { if (!e.target.closest(".dd-menu") && !e.target.closest(".dd-toggle")) setOpen(false); });
   document.addEventListener("keydown", e => { if (e.key === "Escape") { setOpen(false); document.getElementById("sres").hidden = true; } });
   const q = document.getElementById("q"), res = document.getElementById("sres");
+  if (innerWidth < 480) q.placeholder = "Buscar";   // en teléfono no cabe el texto largo
   let idx = [];
   const norm = x => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const indexAll = () => {
@@ -1480,7 +1481,7 @@ function vPartido() {
         <div class="mh-pl"><span class="h"><b>${pct(k.H, 1)}</b>${esc(H)}</span><span class="d"><b>${pct(k.D, 1)}</b>Empate</span><span class="a"><b>${pct(k.A, 1)}</b>${esc(A)}</span></div>
       </div>
       <div class="mh-xg"><span>Goles previstos ${help(TIPS.xg)}</span><b class="h">${dec(lh)}</b><span class="mh-xs">–</span><b class="a">${dec(la)}</b></div>
-      <div class="mact mact-b"><button class="btn ghost sm" data-sharelink>Compartir enlace</button><button class="btn ghost sm" data-share data-liga="${L.id}" data-mid="${esc(p.id)}">Compartir imagen</button><button class="btn ghost sm" data-share data-fmt="story" data-liga="${L.id}" data-mid="${esc(p.id)}" title="Formato vertical 9:16 para historias de Instagram o WhatsApp">Imagen para historias</button><button class="btn ghost sm" data-ics="match" data-liga="${L.id}" data-mid="${esc(p.id)}">Agregar al calendario</button></div>
+      <div class="mact mact-b"><button class="btn ghost sm" data-sharelink>Compartir enlace</button><button class="btn ghost sm" data-share data-liga="${L.id}" data-mid="${esc(p.id)}">Compartir imagen</button><button class="btn ghost sm" data-share data-fmt="story" data-liga="${L.id}" data-mid="${esc(p.id)}" title="Formato vertical 9:16 para historias de Instagram o WhatsApp">Para historias</button><button class="btn ghost sm" data-ics="match" data-liga="${L.id}" data-mid="${esc(p.id)}">Al calendario</button></div>
       <div class="kpis mini">${kpi("", "Más de 2,5 goles", pct(k.O25), "")}${kpi("", "Ambos marcan", pct(k.B), "")}${ct != null ? kpi("", "Córners esperados", dec(ct, 1), `${dec(p.ch, 1)} – ${dec(p.ca, 1)}`) : ""}${tt != null ? kpi("", "Tarjetas esperadas", dec(tt, 1), `${dec(p.th, 1)} – ${dec(p.ta, 1)}`) : ""}</div>
       ${tab !== "mercados" ? mkt : ""}
       ${reg ? `<p class="note" style="margin-top:14px">Predicción guardada en el registro público el ${fecha(reg.predicho)}; se califica al terminar el partido.</p>` : ""}
@@ -2839,10 +2840,14 @@ async function shareImage(L, p, fmt) {
   x.fillStyle = g; x.fillRect(0, 0, W, H);
   const glow = (cx, cy, r, col) => { const rg = x.createRadialGradient(cx, cy, 0, cx, cy, r); rg.addColorStop(0, col); rg.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = rg; x.fillRect(0, 0, W, H); };
   glow(160, 120, 560, "rgba(61,139,255,.35)"); glow(960, 1250, 600, "rgba(177,140,255,.28)");
-  const D1 = "'Chakra Petch', 'Arial Narrow', sans-serif", D2 = "'Jakarta', system-ui, sans-serif", D3 = "'JetBrains Mono', monospace";
-  x.fillStyle = "#3d8bff"; x.beginPath(); x.roundRect(70, 70, 64, 64, 16); x.fill();
-  x.strokeStyle = "#fff"; x.lineWidth = 7; x.lineCap = "round"; x.lineJoin = "round"; x.beginPath(); x.moveTo(84, 118); x.lineTo(98, 98); x.lineTo(110, 106); x.lineTo(122, 86); x.stroke();
-  x.fillStyle = "#e8edf7"; x.font = `700 44px ${D1}`; x.textBaseline = "middle"; x.fillText("BALLYTICS", 156, 104);
+  const D1 = "'Archivo Cond', 'Arial Narrow', sans-serif", D2 = "'Archivo', system-ui, sans-serif", D3 = "'Archivo Cond', 'Arial Narrow', sans-serif", DW = "'Archivo Wide', 'Archivo', sans-serif";
+  try { await Promise.all([`700 40px ${D1}`, `500 30px ${D2}`, `800 44px ${DW}`].map(f => document.fonts.load(f))); } catch (e) {}
+  // marca: la B de la barra 1-X-2
+  x.save(); x.translate(62, 62); x.scale(1.25, 1.25);
+  [["#3d8bff", "M17 10.5H31a10 10 0 0 1 0 20H17a3 3 0 0 1-3-3v-14a3 3 0 0 1 3-3z"], ["#5d6b85", "M17 33.5h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2h-8a3 3 0 0 1-3-3v-14a3 3 0 0 1 3-3z"], ["#b18cff", "M32 33.5h8a10 10 0 0 1 0 20h-8a2 2 0 0 1-2-2v-16a2 2 0 0 1 2-2z"]]
+    .forEach(([c, d]) => { x.fillStyle = c; x.fill(new Path2D(d)); });
+  x.restore();
+  x.fillStyle = "#f1f4f9"; x.font = `800 44px ${DW}`; x.textBaseline = "middle"; x.fillText("Ballytics", 150, 104);
   x.fillStyle = "#8792a6"; x.font = `600 30px ${D1}`; x.textAlign = "right"; x.fillText(L.nombre.toUpperCase(), W - 70, 104); x.textAlign = "left";
   // formato historia (9:16): el contenido baja y se agregan córners y tarjetas esperados
   const oy = story ? 250 : 0; x.save(); x.translate(0, oy);
@@ -2896,7 +2901,7 @@ document.addEventListener("click", e => {
 (function () {
   const b = document.getElementById("themebtn"); if (!b) return;
   const sync = () => { const light = document.documentElement.dataset.theme === "light"; b.setAttribute("aria-label", light ? "Cambiar a modo oscuro" : "Cambiar a modo claro");
-    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = light ? "#f3f6fb" : "#060912"; };
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = light ? "#f4f6fa" : "#0a0e17"; };
   b.addEventListener("click", () => {
     const light = document.documentElement.dataset.theme !== "light";
     if (light) document.documentElement.dataset.theme = "light"; else delete document.documentElement.dataset.theme;

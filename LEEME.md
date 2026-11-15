@@ -146,7 +146,7 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 
 ## Rendimiento (para que se sienta como una app)
 - **Imágenes:** todos los escudos de ESPN pasan por su redimensionador (`combiner`) y las fotos y logos de API-Football por wsrv.nl (WebP), en el tamaño en que se ven (`IMG()` en `app.js`; si falla, se pide la original). El service worker los guarda (`bt-img-v1`, hasta 700) y en la segunda visita aparecen al instante. Mientras cargan se ve un fondo neutro.
-- **Fuentes propias** en `site/assets/fonts` (licencia SIL OFL: Plus Jakarta Sans para el texto, Chakra Petch para títulos y JetBrains Mono para números), con precarga; nada se pide a Google Fonts.
+- **Fuentes propias** en `site/assets/fonts` (licencia SIL OFL: Archivo en tres anchos: normal para el texto, ancha para títulos y la marca, angosta para marcadores y cifras), con precarga; nada se pide a Google Fonts.
 - **Datos por partes:** el inicio solo baja `indice.json` y `agenda.json` (todos los partidos de ayer a 8 días, liviano). Las ligas completas se bajan al entrar a una liga, partido o equipo, al buscar, al usar la IA, en En vivo o al llegar a "Más análisis" (en el computador, también a los 8 segundos). El detalle de cada partido (goleadores, amarillas, alineación probable, historial y cruces) está en `data/detalle/<liga>.json` y se baja al abrir un partido. El registro y las fotos, solo cuando una pantalla los usa.
 - **Primera pantalla al instante:** `index.html` pide `indice.json` y `agenda.json` apenas abre (en paralelo con `app.js`, que los recoge de `window.__pre`) y trae escrito el texto de bienvenida del inicio, así se ve algo útil antes de que corra el JavaScript.
 - **Código achicado al publicar:** el robot pasa `app.js` (terser) y `app.css` (lightningcss) por `tests/minificar.js` justo antes de la prueba de humo; en el repositorio quedan legibles.
@@ -178,8 +178,10 @@ El robot guarda el xG de los partidos terminados desde las estadísticas de API-
 - `site/assets/equipos.json` (lo arma cada lunes `pipeline/competiciones.py`): unos 3.000 equipos de todas las competiciones activas para el buscador.
 
 ## Diseño (sistema de diseño)
-- Una sola familia para la interfaz: Plus Jakarta Sans (`--f-body`), en tipo oración. Nada de rótulos en MAYÚSCULAS espaciadas.
-- Chakra Petch (`--f-score`) solo para marcadores y cifras grandes (resultado, hora del partido, porcentajes destacados).
+- Una sola familia, Archivo, en tres anchos: normal para la interfaz (`--f-body`), ancha para títulos y la marca (`--f-wide`) y angosta para marcadores y cifras (`--f-score`). Todo en tipo oración; nada de rótulos en MAYÚSCULAS espaciadas.
+- La angosta (`--f-score`) va solo en marcadores y cifras grandes (resultado, hora del partido, porcentajes destacados).
+- Marca: una B armada con la barra 1-X-2 (azul = local arriba; gris = empate y violeta = visita abajo). Está en `site/assets/favicon.svg`, en los íconos de la app (`icon-*.png`, `apple-touch-icon.png`), en la imagen para compartir (`og.png`) y dibujada en la cabecera (`.bmark` en `index.html`).
+- Fondo liso, sin cuadrícula ni luces; los escudos van sueltos, sin caja ni resplandor.
 - Números con `font-variant-numeric: tabular-nums` (clase `.num`), sin fuente monoespaciada.
 - Títulos de panel: 16 px, 700, color de texto. Rótulos: 12 px, 600, gris (`.lbl`).
 - Colores: fondo `--bg #0b1019`, paneles `--panel #121925`, local `--pitch #3d8bff`, visita `--away #b18cff`, bien/mal `--good`/`--bad`.
