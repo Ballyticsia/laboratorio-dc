@@ -1265,6 +1265,93 @@
    "fijado": "2026-11-11T23:00Z",
    "tarde": false,
    "picks": []
+  },
+  "2026-11-15": {
+   "fijado": "2026-11-15T20:25Z",
+   "tarde": true,
+   "picks": [
+    {
+     "id": "401899768",
+     "liga": "elsalvador",
+     "kickoff": "2026-11-15T23:00Z",
+     "home": "Inca Aruba",
+     "away": "Águila",
+     "est": "seguro",
+     "lado": "A",
+     "prob": 0.6465,
+     "cuota": 1.465,
+     "cierre": 1.465,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401929709",
+     "liga": "selecciones",
+     "kickoff": "2026-11-15T23:00Z",
+     "home": "Panamá",
+     "away": "Curazao",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.6042,
+     "cuota": 1.571,
+     "cierre": 1.571,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401932782",
+     "liga": "argentina2",
+     "kickoff": "2026-11-15T23:30Z",
+     "home": "Ferro Carril Oeste",
+     "away": "Gimnasia y Tiro (Salta)",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.2595,
+     "cuota": 5.25,
+     "cierre": 5.25,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1639,
+     "ev": 0.3624
+    },
+    {
+     "id": "401879641",
+     "liga": "guatemala",
+     "kickoff": "2026-11-15T21:00Z",
+     "home": "Deportivo San Pedro",
+     "away": "Marquense",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.6291,
+     "cuota": 1.952,
+     "cierre": 1.952,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.4882,
+     "ev": 0.228
+    },
+    {
+     "id": "401899769",
+     "liga": "elsalvador",
+     "kickoff": "2026-11-15T21:00Z",
+     "home": "C.D. Platense",
+     "away": "Atletico Balboa",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.4048,
+     "cuota": 2.95,
+     "cierre": 2.95,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.3101,
+     "ev": 0.1942
+    }
+   ]
   }
  },
  "reglas": {
@@ -1275,5 +1362,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-12T01:37Z"
+ "actualizado": "2026-11-15T20:25Z"
 }
