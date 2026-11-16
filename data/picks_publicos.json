@@ -1382,7 +1382,7 @@
      "lado": "H",
      "prob": 0.8481,
      "cuota": 1.143,
-     "cierre": 1.174,
+     "cierre": 1.167,
      "res": null,
      "hg": null,
      "ag": null
@@ -1413,9 +1413,9 @@
      "prob": 0.3303,
      "cuota": 5.75,
      "cierre": 4.7,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 2,
+     "ag": 1,
      "mercado": 0.1403,
      "ev": 0.8992
     },
@@ -1430,9 +1430,9 @@
      "prob": 0.3303,
      "cuota": 3.85,
      "cierre": 3.85,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 0,
+     "ag": 3,
      "mercado": 0.2268,
      "ev": 0.2717
     },
@@ -1447,11 +1447,113 @@
      "prob": 0.6966,
      "cuota": 1.769,
      "cierre": 2.05,
+     "res": "G",
+     "hg": 4,
+     "ag": 0,
+     "mercado": 0.5399,
+     "ev": 0.2323
+    }
+   ]
+  },
+  "2026-11-17": {
+   "fijado": "2026-11-16T22:57Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401916335",
+     "liga": "selecciones",
+     "kickoff": "2026-11-17T10:00Z",
+     "home": "Singapur",
+     "away": "Brasil",
+     "est": "seguro",
+     "lado": "A",
+     "prob": 0.9724,
+     "cuota": 1.02,
+     "cierre": 1.02,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401929766",
+     "liga": "selecciones",
+     "kickoff": "2026-11-18T00:00Z",
+     "home": "Estados Unidos",
+     "away": "Haití",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.9339,
+     "cuota": 1.05,
+     "cierre": 1.05,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401932215",
+     "liga": "selecciones",
+     "kickoff": "2026-11-17T23:30Z",
+     "home": "Uruguay",
+     "away": "República Dominicana",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.9036,
+     "cuota": 1.083,
+     "cierre": 1.083,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401929769",
+     "liga": "selecciones",
+     "kickoff": "2026-11-17T19:00Z",
+     "home": "Dominica",
+     "away": "Islas Caimán",
+     "est": "valor",
+     "lado": "D",
+     "prob": 0.3234,
+     "cuota": 4.6,
+     "cierre": 4.6,
      "res": null,
      "hg": null,
      "ag": null,
-     "mercado": 0.5399,
-     "ev": 0.2323
+     "mercado": 0.1784,
+     "ev": 0.4876
+    },
+    {
+     "id": "401930880",
+     "liga": "selecciones",
+     "kickoff": "2026-11-17T12:00Z",
+     "home": "China",
+     "away": "Baréin",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.3578,
+     "cuota": 4.1,
+     "cierre": 4.1,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2275,
+     "ev": 0.467
+    },
+    {
+     "id": "401931956",
+     "liga": "selecciones",
+     "kickoff": "2026-11-17T16:30Z",
+     "home": "Kuwait",
+     "away": "Honduras",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.3493,
+     "cuota": 3.95,
+     "cierre": 3.95,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.235,
+     "ev": 0.3797
     }
    ]
   }
@@ -1464,5 +1566,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-16T20:59Z"
+ "actualizado": "2026-11-16T22:57Z"
 }
