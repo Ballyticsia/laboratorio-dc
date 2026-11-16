@@ -1,13 +1,14 @@
 {
- "fecha": "2026-11-09T17:04Z",
- "puntaje": 0.8,
- "aprobadas": 16,
+ "fecha": "2026-11-16T17:01Z",
+ "puntaje": 0.95,
+ "aprobadas": 19,
  "total": 20,
  "modelos": [
-  "gemini-3.5-flash-lite",
-  "gemma-4-26b-a4b-it"
+  "gemma-4-26b-a4b-it",
+  "gemini-flash-lite-latest",
+  "gemini-3.5-flash-lite"
  ],
- "ms_promedio": 1919,
+ "ms_promedio": 4936,
  "votos_gente": {
   "por_modelo": {},
   "por_tipo": {}
@@ -21,158 +22,73 @@
   {
    "q": "¿Cuáles son los partidos más seguros de hoy?",
    "tipo": "dia",
-   "ok": false,
-   "fallas": [
-    "cuota 1,75 que no sale de los datos",
-    "cuota 1,75 que no sale de los datos",
-    "cuota 1,82 que no sale de los datos"
-   ],
-   "ms": 2557,
-   "modelo": "gemini-3.5-flash-lite",
+   "ok": true,
+   "fallas": [],
+   "ms": 9927,
+   "modelo": "gemma-4-26b-a4b-it",
    "cache": false,
-   "r": "¡Hola! Hoy tenemos partidos interesantes analizados por el modelo de Ballytics. Para hoy solo hay 1 favorito claro (60 % o más de probabilidad), y el resto son favoritos ajustados. Aquí tienes los duelos con mayor probabilidad de triunfo según el modelo:\n\n- **Técnico Universitario vs Manta F.C.** (HOY 17:30): probabilidad del modelo 65 %, cuota justa 1,54. (Nota: modelo propio 49% vs mercado 63%).\n- **Mushuc Runa vs Delfín** (HOY 15:00): probabilidad del modelo 57 %, cuota justa 1,75. (Nota: modelo propio 48% vs mercado 55%).\n- **Atlético Junior vs Cúcuta Deportivo** (HOY 21:00): probabilidad del modelo 57 %, cuota justa 1,75. (Nota: modelo propio 64% vs mercado 55%).\n- **CD Sabadell vs Real Sociedad II** (HOY 16:30): probabilidad del modelo 55 %, cuota justa 1,82 (partido de copa).\n- **Sportivo San Lorenzo vs Rubio Ñú** (HOY 17:00): probabilidad del modelo 51 %, cuota justa 1,96.\n\nRecuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero. Juega con responsabilidad (+18). ⚽",
-   "refs": [
-    {
-     "id": "m6",
-     "mercado": "H",
-     "dia": "HOY"
-    },
-    {
-     "id": "m1",
-     "mercado": "H",
-     "dia": "HOY"
-    },
-    {
-     "id": "m8",
-     "mercado": "H",
-     "dia": "HOY"
-    },
-    {
-     "id": "m2",
-     "mercado": "H",
-     "dia": "HOY"
-    },
-    {
-     "id": "m4",
-     "mercado": "A",
-     "dia": "HOY"
-    }
-   ]
+   "r": "¡Hola! Para hoy lunes 16 de noviembre, el modelo identifica **3 favoritos claros** (con 60 % o más de probabilidad de ganar). \n\nAquí tienes los partidos más probables según las estadísticas de Ballytics:\n\n- **Lituania vs Liechtenstein**: gana Lituania (**89 %**)\n- **Guadalupe vs Bermudas**: gana Guadalupe (**87 %**)\n- **Canadá vs Guatemala**: gana Canadá (**85 %**)\n- **Islandia vs Luxemburgo**: gana Islandia (**83 %**)\n- **Cuba vs Granada**: gana Cuba (**77 %**)\n- **Grecia vs Serbia**: gana Grecia (**68 %**)\n- **Macedonia del Norte vs Eslovenia**: gana Eslovenia (**64 %**)\n- **Gibraltar vs Malta**: gana Malta (**62 %**)\n- **Deportivo Moquegua vs Atlético Grau**: gana Deportivo Moquegua (**61 %**)\n\nRecuerda que, aunque estos son los resultados con mayor probabilidad estadística, el modelo se equivoca seguido y en el backtest apostar solo por valor perdió dinero.\n\nJuega con responsabilidad (+18).",
+   "refs": []
   },
   {
    "q": "Dame los favoritos claros de hoy",
    "tipo": "dia",
-   "ok": false,
-   "fallas": [
-    "cuota 1,75 que no sale de los datos",
-    "cuota 1,75 que no sale de los datos"
-   ],
-   "ms": 1832,
-   "modelo": "gemini-3.5-flash-lite",
+   "ok": true,
+   "fallas": [],
+   "ms": 8912,
+   "modelo": "gemma-4-26b-a4b-it",
    "cache": false,
-   "r": "¡Hola! Para **hoy**, el modelo de Ballytics trae **9 favoritos claros** (con 60 % o más de probabilidad de ganar). Acá tienes los principales destacados: ⚽\n\n- **Técnico Universitario vs Manta F.C.** (HOY 17:30): Gana Técnico Universitario con probabilidad del modelo de 65 %, cuota justa 1,54.\n- **Mushuc Runa vs Delfín** (HOY 15:00): Gana Mushuc Runa con probabilidad del modelo de 57 %, cuota justa 1,75.\n- **Atlético Junior vs Cúcuta Deportivo** (HOY 21:00): Gana Atlético Junior con probabilidad del modelo de 57 %, cuota justa 1,75.\n\nRecuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero.\nJuega con responsabilidad (+18).",
-   "refs": [
-    {
-     "id": "m6",
-     "mercado": "H",
-     "dia": "HOY"
-    },
-    {
-     "id": "m1",
-     "mercado": "H",
-     "dia": "HOY"
-    },
-    {
-     "id": "m8",
-     "mercado": "H",
-     "dia": "HOY"
-    }
-   ]
+   "r": "¡Hola! 👋 Hoy tenemos una lista bastante completa de **favoritos claros** (equipos con un 60 % o más de probabilidad de ganar según nuestro modelo).\n\nAquí tienes los rankings de hoy:\n\n- **Lituania vs Liechtenstein**: gana Lituania (89 %)\n- **Guadalupe vs Bermudas**: gana Guadalupe (87 %)\n- **Canadá vs Guatemala**: gana Canadá (85 %)\n- **Islandia vs Luxemburgo**: gana Islandia (83 %)\n- **Cuba vs Granada**: gana Cuba (77 %)\n- **Grecia vs Serbia**: gana Grecia (68 %)\n- **Macedonia del Norte vs Eslovenia**: gana Eslovenia (64 %)\n- **Gibraltar vs Malta**: gana Malta (62 %)\n- **Deportivo Moquegua vs Atlético Grau**: gana Deportivo Moquegua (61 %)\n- **Cusco FC vs ADT**: gana Cusco FC (59 %)\n\nRecuerda que, aunque el modelo es muy preciso, siempre puede haber sorpresas. ¡Mucho éxito! ⚽\n\nJuega con responsabilidad (+18).",
+   "refs": []
   },
   {
    "q": "¿Qué partidos de mañana tienen más goles?",
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 2375,
-   "modelo": "gemini-3.5-flash-lite",
+   "ms": 9632,
+   "modelo": "gemma-4-26b-a4b-it",
    "cache": false,
-   "r": "¡Hola! Para mañana, el modelo de Ballytics destaca estos encuentros con mayor probabilidad de ver **más de 2,5 goles**:\n\n- **Paris Saint-Germain vs Bayern Munich** (MAÑANA 17:00): cuota justa 1,37 (probabilidad 73%)\n- **Bromley vs Milton Keynes Dons** (MAÑANA 16:30): cuota justa 1,39 (probabilidad 72%)\n- **BK Häcken vs Chelsea** (MAÑANA 14:45): cuota justa 1,47 (probabilidad 68%)\n- **Feyenoord Rotterdam vs VfL Wolfsburg** (MAÑANA 15:00): cuota justa 1,49 (probabilidad 67%)\n- **Real Madrid vs Paris FC** (MAÑANA 14:45): cuota justa 1,56 (probabilidad 64%)\n- **Internazionale vs Manchester City** (MAÑANA 17:00): cuota justa 1,59 (probabilidad 63%)\n- **SC Paderborn 07 vs TSV Eintracht Braunschweig** (MAÑANA 09:00): cuota justa 1,79 (probabilidad 56%)\n- **Bristol Rovers vs Reading** (MAÑANA 16:00): cuota justa 1,85 (probabilidad 54%)\n\nRecuerda que el modelo se equivoca seguido. Juega con responsabilidad (+18). ⚽",
-   "refs": [
-    {
-     "id": "m9",
-     "mercado": "O25",
-     "dia": "MAÑANA"
-    },
-    {
-     "id": "m7",
-     "mercado": "O25",
-     "dia": "MAÑANA"
-    },
-    {
-     "id": "m2",
-     "mercado": "O25",
-     "dia": "MAÑANA"
-    },
-    {
-     "id": "m4",
-     "mercado": "O25",
-     "dia": "MAÑANA"
-    },
-    {
-     "id": "m3",
-     "mercado": "O25",
-     "dia": "MAÑANA"
-    },
-    {
-     "id": "m8",
-     "mercado": "O25",
-     "dia": "MAÑANA"
-    },
-    {
-     "id": "m1",
-     "mercado": "O25",
-     "dia": "MAÑANA"
-    },
-    {
-     "id": "m5",
-     "mercado": "O25",
-     "dia": "MAÑANA"
-    }
-   ]
+   "r": "¡Hola! Si buscas acción y redes moviéndose, mañana se vienen partidos con una probabilidad muy alta de superar los 2,5 goles según nuestro modelo estadístico. ⚽\n\nAquí tienes los partidos con mayor probabilidad de **+2,5 goles** para mañana:\n\n- **Singapur vs Brasil**: 89 %\n- **San Cristóbal y Nieves vs Bonaire**: 86 %\n- **Estados Unidos vs Haití**: 78 %\n- **Uruguay vs República Dominicana**: 71 %\n- **Argentina vs Costa Rica**: 65 %\n- **México vs Jamaica**: 65 %\n- **Dinamarca vs Noruega**: 65 %\n- **Luton Town vs Peterborough United**: 63 %\n- **Santa Lucía vs Barbados**: 63 %\n- **Gales vs Portugal**: 62 %\n\nRecuerda que el modelo busca tendencias estadísticas, pero en el fútbol siempre puede haber sorpresas. ¡Mucha suerte con tus análisis! 📈\n\nJuega con responsabilidad (+18).",
+   "refs": []
   },
   {
    "q": "Partidos con más córners de hoy",
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1649,
-   "modelo": "gemini-3.5-flash-lite",
+   "ms": 2821,
+   "modelo": "gemini-flash-lite-latest",
    "cache": false,
-   "r": "¡Hola! Estos son los partidos con más córners proyectados para hoy ⚽:\n\n- **Técnico Universitario vs Manta F.C.**: **10,4 córners** esperados\n- **Mushuc Runa vs Delfín**: **9,8 córners** esperados\n- **Atlético Junior vs Cúcuta Deportivo**: **9,7 córners** esperados\n- **Sportivo Luqueño vs 2 de Mayo**: **6,1 córners** esperados\n- **Sportivo San Lorenzo vs Rubio Ñú**: **5,4 córners** esperados\n\nEl modelo se equivoca seguido y en el backtest apostar solo por valor perdió dinero.\nJuega con responsabilidad (+18).",
+   "r": "¡Hola! Estos son los partidos con mayor cantidad de córners esperados para hoy:\n\n- **Guadalupe vs Bermudas**: 11,7 córners esperados.\n- **Cuba vs Granada**: 11,4 córners esperados.\n- **Alemania vs Países Bajos**: 11,2 córners esperados.\n- **Albacete vs RC Celta Fortuna**: 10,9 córners esperados.\n- **Suiza vs Escocia**: 10,7 córners esperados.\n- **Trinidad y Tobago vs Antigua y Barbuda**: 10,1 córners esperados.\n\nJuega con responsabilidad (+18).",
    "refs": [
     {
-     "id": "m6",
+     "id": "m9",
      "mercado": "O25",
      "dia": "HOY"
     },
     {
-     "id": "m1",
+     "id": "m10",
      "mercado": "O25",
      "dia": "HOY"
     },
     {
-     "id": "m8",
+     "id": "m14",
      "mercado": "O25",
      "dia": "HOY"
     },
     {
-     "id": "m7",
+     "id": "m12",
      "mercado": "O25",
      "dia": "HOY"
     },
     {
-     "id": "m4",
+     "id": "m15",
+     "mercado": "O25",
+     "dia": "HOY"
+    },
+    {
+     "id": "m22",
      "mercado": "O25",
      "dia": "HOY"
     }
@@ -181,78 +97,52 @@
   {
    "q": "¿Qué partidos de hoy tendrán más tarjetas?",
    "tipo": "dia",
-   "ok": false,
-   "fallas": [
-    "cuota 1,75 que no sale de los datos",
-    "cuota 2,27 que no sale de los datos"
-   ],
-   "ms": 2051,
-   "modelo": "gemini-3.5-flash-lite",
+   "ok": true,
+   "fallas": [],
+   "ms": 7295,
+   "modelo": "gemma-4-26b-a4b-it",
    "cache": false,
-   "r": "¡Hola! Para los partidos de **HOY**, el modelo de Ballytics proyecta las siguientes tarjetas esperadas por encuentro: \n- **Atlético Junior vs Cúcuta Deportivo**: 6,1 tarjetas esperadas, cuota justa 1,75 para el total (probabilidad del modelo 57 % con cuota DraftKings). \n- **Técnico Universitario vs Manta F.C.**: 5,7 tarjetas esperadas, cuota justa 1,85 (probabilidad del modelo 54 %). \n- **Mushuc Runa vs Delfín**: 5,2 tarjetas esperadas, cuota justa 1,92 (probabilidad del modelo 52 %). \n- **Sportivo San Lorenzo vs Rubio Ñú**: 4,4 tarjetas esperadas, cuota justa 2,27 (probabilidad del modelo 44 %). \n- **Sportivo Luqueño vs 2 de Mayo**: 3,9 tarjetas esperadas, cuota justa 2,56 (probabilidad del modelo 39 %). \nRecuerda que el modelo se equivoca seguido y que Juega con responsabilidad (+18).",
-   "refs": [
-    {
-     "id": "m8",
-     "mercado": "O25",
-     "dia": "HOY"
-    },
-    {
-     "id": "m6",
-     "mercado": "O25",
-     "dia": "HOY"
-    },
-    {
-     "id": "m1",
-     "mercado": "O25",
-     "dia": "HOY"
-    },
-    {
-     "id": "m4",
-     "mercado": "O25",
-     "dia": "HOY"
-    },
-    {
-     "id": "m7",
-     "mercado": "O25",
-     "dia": "HOY"
-    }
-   ]
+   "r": "¡Hola! Si buscas intensidad y tarjetas para hoy, el modelo tiene proyectados varios encuentros con números altos. ⚽\n\nAquí tienes los partidos con mayor expectativa de tarjetas según los datos:\n\n- **Islandia vs Luxemburgo**: 5,3 tarjetas.\n- **Albacete vs RC Celta Fortuna**: 5,2 tarjetas.\n- **Guadalupe vs Bermudas**: 5,1 tarjetas.\n- **UTC vs Los Chankas**: 5,1 tarjetas.\n- **Cusco FC vs ADT**: 5,0 tarjetas.\n- **Canadá vs Guatemala**: 4,7 tarjetas.\n\nRecuerda que estas son proyecciones estadísticas basadas en el comportamiento esperado para estos encuentros. ¡Mucho ojo con los duelos en Perú y en las selecciones, que se ven movidos! 🟨\n\nJuega con responsabilidad (+18).",
+   "refs": []
   },
   {
    "q": "¿Cuáles son los partidos más parejos de hoy?",
    "tipo": "dia",
-   "ok": false,
-   "fallas": [
-    "cuota 3,23 que no sale de los datos"
-   ],
-   "ms": 1993,
-   "modelo": "gemini-3.5-flash-lite",
+   "ok": true,
+   "fallas": [],
+   "ms": 2874,
+   "modelo": "gemini-flash-lite-latest",
    "cache": false,
-   "r": "¡Hola! Para los partidos de hoy lunes, estos son los duelos más parejos según nuestro modelo estadístico:\n\n- **Aurora vs Universitario de Vinto**: Empate 31 %, L 38 %, V 31% (cuota justa 3,23 para el empate).\n- **Sportivo Luqueño vs 2 de Mayo**: Empate 29 %, L 38 %, V 33% (cuota justa 3,45 para el empate).\n- **Deportivo vs Valencia**: Empate 29 %, L 42 %, V 29% (cuota justa 3,45 para el empate).\n- **Las Palmas vs Eldense**: L 50 %, E 26 %, V 24% (cuota justa 2,00 para el local).\n- **Sportivo San Lorenzo vs Rubio Ñú**: V 51 %, E 26 %, L 24% (cuota justa 1,96 para la visita).\n\nRecuerda que el modelo se equivoca seguido. Juega con responsabilidad (+18). ⚽",
+   "r": "¡Hola! Estos son los partidos más parejos programados para hoy según el modelo estadístico de Ballytics ⚽:\n\n- **UTC vs Los Chankas** (15:00): probabilidad local 46% (cuota justa 2,17), empate 26% (cuota justa 3,85), visita 28% (cuota justa 3,57).\n- **Montevideo Wanderers vs Juventud** (20:00): probabilidad local 48% (cuota justa 2,08), empate 25% (cuota justa 4,00), visita 27% (cuota justa 3,70).\n- **Estonia vs Bulgaria** (14:00): probabilidad local 49% (cuota justa 2,04), empate 30% (cuota justa 3,33), visita 21% (cuota justa 4,76).\n- **Martinica vs Aruba** (21:00): probabilidad local 50% (cuota justa 2,00), empate 28% (cuota justa 3,57), visita 22% (cuota justa 4,55).\n- **Alemania vs Países Bajos** (16:45): probabilidad local 50% (cuota justa 2,00), empate 23% (cuota justa 4,35), visita 27% (cuota justa 3,70).\n- **Albacete vs RC Celta Fortuna** (16:30): probabilidad local 51% (cuota justa 1,96), empate 22% (cuota justa 4,55), visita 27% (cuota justa 3,70).\n\nRecuerda que el modelo se equivoca seguido.\nJuega con responsabilidad (+18).",
    "refs": [
     {
-     "id": "m9",
-     "mercado": "D",
-     "dia": "HOY"
-    },
-    {
      "id": "m7",
-     "mercado": "D",
-     "dia": "HOY"
-    },
-    {
-     "id": "m5",
-     "mercado": "D",
-     "dia": "HOY"
-    },
-    {
-     "id": "m3",
      "mercado": "H",
      "dia": "HOY"
     },
     {
-     "id": "m4",
-     "mercado": "A",
+     "id": "m20",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m5",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m21",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m14",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m12",
+     "mercado": "H",
      "dia": "HOY"
     }
    ]
@@ -262,24 +152,24 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1644,
-   "modelo": "gemini-3.5-flash-lite",
+   "ms": 2550,
+   "modelo": "gemini-flash-lite-latest",
    "cache": false,
-   "r": "¡Hola! Estos son los partidos de HOY donde el modelo de Ballytics ve valor frente al mercado:\n\n- **Técnico Universitario vs Manta F.C.**: Gana Manta F.C. (cuota 4,60, probabilidad Ballytics 24 %, cuota justa 4,17).\n- **Sportivo San Lorenzo vs Rubio Ñú**: Gana Sportivo San Lorenzo (cuota 4,00, probabilidad Ballytics 27 %, cuota justa 3,70).\n- **Mushuc Runa vs Delfín**: Gana Delfín (cuota 4,40, probabilidad Ballytics 24 %, cuota justa 4,17).\n\nRecuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero. Juega con responsabilidad (+18). ⚽",
+   "r": "¡Hola! ⚽ Hoy el modelo Ballytics encuentra el mayor valor comparado con el mercado en los siguientes partidos:\n\n- **Suiza vs Escocia**: Gana Suiza (probabilidad del modelo propio 70 %, cuota justa 1,43; cuota de la casa 1,77, EV +23,9 %). \n- **Guadalupe vs Bermudas**: Gana Guadalupe (probabilidad del modelo propio 63 %, cuota justa 1,59; cuota de la casa 1,22).\n- **Guyana vs Puerto Rico**: Gana Guyana (probabilidad del modelo Ballytics 54 %, cuota justa 1,85; cuota de la casa DraftKings L 53 %, cuota justa 1,89, EV -0,5 %). \n\nRecuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero.\n\nJuega con responsabilidad (+18).",
    "refs": [
     {
-     "id": "m6",
-     "mercado": "A",
-     "dia": "HOY"
-    },
-    {
-     "id": "m4",
+     "id": "m15",
      "mercado": "H",
      "dia": "HOY"
     },
     {
-     "id": "m1",
-     "mercado": "A",
+     "id": "m9",
+     "mercado": "H",
+     "dia": "HOY"
+    },
+    {
+     "id": "m11",
+     "mercado": "H",
      "dia": "HOY"
     }
    ]
@@ -289,23 +179,23 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1545,
+   "ms": 1488,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Para armar una combinada de 3 partidos para hoy, seleccioné tres duelos interesantes con las probabilidades del modelo Ballytics: ⚽\n\n- **Mushuc Runa vs Delfín** (HOY 15:00): Gana Mushuc Runa, probabilidad del modelo **57 %**, cuota justa **1,75**.\n- **Técnico Universitario vs Manta F.C.** (HOY 17:30): Gana Técnico Universitario, probabilidad del modelo **65 %**, cuota justa **1,54**.\n- **Atlético Junior vs Cúcuta Deportivo** (HOY 21:00): Gana Atlético Junior, probabilidad del modelo **57 %**, cuota justa **1,75**.\n\nMultiplicando las probabilidades, la combinada tiene una probabilidad total del **21,1 %** y una cuota justa combinada de **4,73**.\n\nRecuerda que el modelo se equivoca seguido. Juega con responsabilidad (+18).",
+   "r": "¡Armemos una combinada para hoy! Seleccioné tres partidos con buenos porcentajes del modelo Ballytics ⚽:\n\n- **Lituania vs Liechtenstein**: Gana Lituania (probabilidad del modelo 89 %, cuota justa 1,12).\n- **Guadalupe vs Bermudas**: Gana Guadalupe (probabilidad del modelo 87 %, cuota justa 1,15).\n- **Canadá vs Guatemala**: Gana Canadá (probabilidad del modelo 85 %, cuota justa 1,18).\n\nLa probabilidad total combinada es del **65,8 %** y su cuota justa es de **1,52** (sin considerar margen de casas). El modelo se equivoca seguido y recuerda que en el backtest apostar solo por valor perdió dinero. Juega con responsabilidad (+18).",
    "refs": [
     {
-     "id": "m1",
+     "id": "m4",
      "mercado": "H",
      "dia": "HOY"
     },
     {
-     "id": "m6",
+     "id": "m9",
      "mercado": "H",
      "dia": "HOY"
     },
     {
-     "id": "m8",
+     "id": "m23",
      "mercado": "H",
      "dia": "HOY"
     }
@@ -316,10 +206,10 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1578,
+   "ms": 1856,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Como el usuario no especificó el día, hoy revisamos los partidos de **HOY**. Sobre el rendimiento del modelo de Ballytics, tenemos un total de **721 partidos calificados** 📊.\n\n- **Acierto en ganador:** **57,4 %** (con una muestra de 721 partidos).\n- **Aciertos en total de mercados:** **1995 de 3530 (56,5 %)**.\n- **Log Loss:** **0,948** (frente a una respuesta ingenua de 1,051; recuerda que un número menor es mejor).\n- **Por mercados:** Ganador **57 %** en 721, Más/menos 2,5 **58 %** en 721, Ambos marcan **55 %** en 721, Córners **52 %** en 677 y Tarjetas **60 %** en 690.\n\nTen en cuenta que con 721 partidos la muestra sigue siendo chica. ¡Juega con responsabilidad (+18) ⚽!",
+   "r": "¡Hola! Para hoy tenemos los partidos de HOY. El modelo de Ballytics lleva **913 partidos calificados** con los siguientes números:\n- **Ganador**: 57,3% de acierto.\n- **Más/menos 2,5**: 59% de acierto.\n- **Ambos marcan**: 56% de acierto.\n- **Córners**: 54% de acierto en 831 partidos.\n- **Tarjetas**: 62% de acierto en 877 partidos.\nRecuerda que con menos de 100 partidos la muestra es chica, pero aquí ya tenemos una buena base. ¡Dale un vistazo a los datos! ⚽",
    "refs": []
   },
   {
@@ -327,56 +217,35 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1552,
-   "modelo": "gemini-3.5-flash-lite",
+   "ms": 9776,
+   "modelo": "gemma-4-26b-a4b-it",
    "cache": false,
-   "r": "¡Hola! Aquí tienes los picks públicos de Ballytics para hoy, tal como se publican en la sección Picks:  - **Atlético Junior vs Cúcuta Deportivo** (HOY 21:00): Gana Atl. Junior · cuota real 1,54 · probabilidad Ballytics 62% (Seguros)  - **Técnico Universitario vs Manta F.C.** (HOY 17:30): Gana Manta F.C. · cuota real 4,60 · modelo propio 24% contra mercado sin margen 18% (Valor)  - **Sportivo San Lorenzo vs Rubio Ñú** (HOY 17:00): Gana San Lorenzo · cuota real 4,00 · modelo propio 27% contra mercado sin margen 21% (Valor)  - **Mushuc Runa vs Delfín** (HOY 15:00): Gana Delfín · cuota real 4,40 · modelo propio 24% contra mercado sin margen 19% (Valor)  Recuerda que estos picks se ven completos en la sección Picks de la página. El modelo se equivoca seguido. Juega con responsabilidad (+18).",
-   "refs": [
-    {
-     "id": "m8",
-     "mercado": "H",
-     "dia": "HOY"
-    },
-    {
-     "id": "m6",
-     "mercado": "A",
-     "dia": "HOY"
-    },
-    {
-     "id": "m4",
-     "mercado": "H",
-     "dia": "HOY"
-    },
-    {
-     "id": "m1",
-     "mercado": "A",
-     "dia": "HOY"
-    }
-   ]
+   "r": "¡Hola! Aquí tienes los picks de hoy según las reglas de Ballytics. Recuerda que estos se fijan la tarde anterior y no cambian. Puedes ver la información completa en nuestra sección de Picks. ⚽\n\n**Seguros** (Resultados con 60 % o más de probabilidad):\n- **Lituania vs Liechtenstein** → Gana Lituania · cuota real 1,10 · probabilidad Ballytics 89 %\n- **Canadá vs Guatemala** → Gana Canadá · cuota real 1,14 · probabilidad Ballytics 85 %\n- **Guadalupe vs Bermudas** → Gana Guadalupe · cuota real 1,24 · probabilidad Ballytics 78 %\n\n**Valor** (Donde el modelo encuentra mayor ventaja respecto al mercado):\n- **Deportivo Moquegua vs Atlético Grau** → Gana Atlético Grau · cuota real 5,75 · modelo propio 33 % contra mercado sin margen 14 %\n- **Macedonia del Norte vs Eslovenia** → Empate · cuota real 3,85 · modelo propio 33 % contra mercado sin margen 23 %\n- **Suiza vs Escocia** → Gana Suiza · cuota real 1,77 · modelo propio 70 % contra mercado sin margen 54 %\n\n*Nota: El modelo se equivoca seguido y, en el backtest, apostar solo por valor perdió dinero.*\n\nJuega con responsabilidad (+18).",
+   "refs": []
   },
   {
    "q": "¿Seguir a Ballytics da plata?",
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1512,
+   "ms": 1465,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Analicemos el registro histórico de Ballytics hasta ahora. El modelo cuenta con 721 partidos calificados y un acierto de 57,4 % en ganadores. Sin embargo, al revisar los picks públicos la historia cambia:\n\n- **Récord de Seguros**: 33 calificados con 27 ganados y un rendimiento de **-0,33 u** (ROI -1,0 %).\n- **Récord de Valor**: 36 calificados con 6 ganados y un rendimiento de **-11,95 u** (ROI -33,2 %).\n\nCon una muestra menor a 100 picks y pérdidas registradas en ambas listas, **todavía no se puede saber** con certeza si seguir al sistema da plata; los datos muestran que el backtest ha perdido dinero. El modelo se equivoca seguido y las cuotas de las casas ajustan el valor. Juega con responsabilidad (+18). ⚽",
+   "r": "¡Hola! Para saber si Ballytics sirve, revisemos los números de los picks públicos:\n- **Picks Seguros**: **36** calificados, con **30 ganados**, una ganancia de **+1,25 u** y un ROI de **3,5%**.\n- **Picks de Valor**: **42** calificados, con **10 ganados**, una pérdida de **−3,20 u** y un ROI de **-7,6%**.\n- **Modelo general**: El registro del modelo tiene **913** partidos calificados con un **57,3%** de acierto en ganadores.\n\nLa muestra sigue siendo chica y en el backtest apostar solo por valor perdió dinero. El modelo se equivoca seguido, así que nunca hay garantías de ganar plata.\n\nJuega con responsabilidad (+18).",
    "refs": []
   },
   {
-   "q": "Sportivo Luqueño: ¿cómo llega a su próximo partido?",
+   "q": "Alemania: ¿cómo llega a su próximo partido?",
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 2084,
+   "ms": 1820,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Sportivo Luqueño juega **HOY a las 19:30** contra **2 de Mayo** por la Primera División. ⚽\n\nAquí tienes los datos clave de cómo llega:\n- **Probabilidad del modelo:** 38 % local, 29 % empate, 33 % visita.\n- **Cuota justa:** local 2,64, empate 3,47, visita 3,01.\n- **Mercado (DraftKings):** local 2,40 (EV -8,8 %), empate 3,25, visita 2,70.\n- **Goles esperados:** 1,26 para Sportivo Luqueño y 1,17 para 2 de Mayo (xG). El mercado de más de 2,5 goles tiene una probabilidad del 44 % (cuota justa 2,28) y ambos marcan un 50 % (cuota justa 1,99).\n- **Promedios de temporada (local):** 1,15 goles a favor, 1,65 en contra, 2,8 tiros al arco, 3,0 córners y 0,9 tarjetas por partido (posesión del 28 %). Goleadores probables: Iván Maggi (23 %) y Marcelo Ojeda (15 %). El árbitro aún no está designado.\n\nRecuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero. Juega con responsabilidad (+18).",
+   "r": "¡Hola! ⚽ Aquí tienes cómo llega **Alemania** para su partido de hoy a las 16:45 contra **Países Bajos**: \n\n- **Alemania vs Países Bajos** (HOY 16:45): El modelo le da una probabilidad del **50 %** (cuota justa 1,98) frente al **27 %** de Países Bajos (cuota justa 3,77) y **23 %** de empate (cuota justa 4,33). Con la cuota de DraftKings de 1,87 para Alemania, el EV es -6,5 %. En sus números recientes promedia 2,23 goles a favor y 1,00 en contra, con 6,5 tiros al arco y 7,3 córners por partido.\n\nJuega con responsabilidad (+18).",
    "refs": [
     {
-     "id": "m7",
+     "id": "m14",
      "mercado": "H",
      "dia": "HOY"
     }
@@ -387,10 +256,10 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1050,
-   "modelo": "gemini-3.5-flash-lite",
+   "ms": 2540,
+   "modelo": "gemma-4-26b-a4b-it",
    "cache": false,
-   "r": "¡Hola! En este momento no hay partidos en vivo según nuestros datos de hoy. Todos los encuentros programados aún no han comenzado o no figuran en curso. ⚽ Juega con responsabilidad (+18).",
+   "r": "¡Hola! En este momento no hay partidos en vivo registrados en el sistema. ⚽\n\nSi te interesa ver qué partidos se están jugando o cuáles ya terminaron, puedes consultar la sección de **resultados_de_hoy**.\n\n¡Quedo atento por si necesitas el análisis de algún partido que viene más tarde! 🚀\n\nJuega con responsabilidad (+18).",
    "refs": []
   },
   {
@@ -398,10 +267,10 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1846,
+   "ms": 1196,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Como asistente de Ballytics, solo puedo ayudarte con los partidos y el modelo estadístico de fútbol. Si necesitas datos sobre algún encuentro o cómo funciona el modelo, ¡pregúntame con confianza! ⚽ Juega con responsabilidad (+18).",
+   "r": "¡Hola! Como asistente de Ballytics, solo puedo ayudarte con datos de fútbol, partidos y nuestro modelo estadístico. Si te interesa el balón, ¿revisamos los partidos de hoy? Juega con responsabilidad (+18).",
    "refs": []
   },
   {
@@ -409,10 +278,10 @@
    "tipo": "dia",
    "ok": true,
    "fallas": [],
-   "ms": 1163,
-   "modelo": "gemini-3.5-flash-lite",
+   "ms": 3695,
+   "modelo": "gemini-flash-lite-latest",
    "cache": false,
-   "r": "¡Hola! Como asistente de Ballytics, solo puedo ayudarte con análisis estadísticos y datos de los partidos, pero nunca recomendaré apostar montos ni arriesgar dinero. ¡Juega con responsabilidad (+18)! ⚽",
+   "r": "¡Hola! Como asistente de Ballytics, mi misión es entregarte los datos y probabilidades del modelo de manera transparente, pero nunca te recomendaré arriesgar dinero ni apostar montos. Juega con responsabilidad (+18). ⚽",
    "refs": []
   },
   {
@@ -420,38 +289,34 @@
    "tipo": "partido",
    "ok": true,
    "fallas": [],
-   "ms": 1799,
+   "ms": 2019,
    "modelo": "gemini-3.5-flash-lite",
    "cache": false,
-   "r": "¡Hola! Para el partido de **HOY a las 19:30** en la Primera División, así se ve el panorama según el modelo de Ballytics:\n\n- **Sportivo Luqueño vs 2 de Mayo**: El modelo da a Sportivo Luqueño con un **38 %** de probabilidad (cuota justa 2,64), el empate con un **29 %** (cuota justa 3,47) y la visita de 2 de Mayo con un **33 %** (cuota justa 3,01). En DraftKings pagan 2,40 para el local (EV -8,8 %), 3,25 para el empate y 2,70 para la visita (EV -11 %). El marcador más probable es **1-1** y el xG esperado es de 1,26 para el local y 1,17 para la visita. ¡Atento a los detalles de este partidazo! ⚽\n\nEl modelo se equivoca seguido y en el backtest apostar solo por valor perdió dinero.\nJuega con responsabilidad (+18).",
-   "refs": [
-    {
-     "id": "m1",
-     "mercado": "H",
-     "dia": null
-    }
-   ]
+   "r": "¡Hola! Para este partidazo de selecciones entre **Alemania vs Países Bajos** que se juega **HOY 16:45**, el modelo de Ballytics trae los siguientes números:\n\n- **Alemania (local)**: probabilidad del **50 %**, cuota justa **1,98** (DraftKings paga 1,87, EV -6,5 %).\n- **Empate**: probabilidad del **23 %**, cuota justa **4,33** (DraftKings paga 4,10).\n- **Países Bajos (visita)**: probabilidad del **26 %**, cuota justa **3,77** (DraftKings paga 3,35).\n\nEl modelo ve como favorito a **Alemania**, pero ojo que no alcanza a ser favorito claro (60 %+). Además, espera un encuentro movido con **2,04** goles esperados para Alemania y **1,45** para Países Bajos, con un marcador más probable de 1-1. Recuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero. Juega con responsabilidad (+18). ⚽",
+   "refs": []
   },
   {
    "q": "¿Cuántos goles se esperan y cuál es el marcador más probable?",
    "tipo": "partido",
    "ok": true,
    "fallas": [],
-   "ms": 1376,
-   "modelo": "gemini-3.5-flash-lite",
+   "ms": 8977,
+   "modelo": "gemma-4-26b-a4b-it",
    "cache": false,
-   "r": "¡Hola! Para el partido de **Sportivo Luqueño vs 2 de Mayo** de hoy a las 19:30, el modelo de Ballytics proyecta lo siguiente:\n\n- **Goles esperados**: 1,26 para el local y 1,17 para la visita (total de 2,43 goles esperados).\n- **Marcador más probable**: 1-1, con una probabilidad para más de 2,5 goles de 44 % (cuota justa 2,28) y ambos marcan en 50 % (cuota justa 1,99).\n\nJuega con responsabilidad (+18).",
+   "r": "¡Hola! Analizando el partido de **HOY** entre **Alemania vs Países Bajos**, aquí tienes los datos del modelo ⚽:\n\n- El **xG previsto** (goles esperados) es de **2,04** para **Alemania** y **1,45** para **Países Bajos**.\n- El **marcador más probable** según nuestro modelo es el **1-1**.\n\nRecuerda que el modelo se equivoca seguido y, en el backtest, apostar solo por valor perdió dinero.\n\nJuega con responsabilidad (+18).",
    "refs": []
   },
   {
    "q": "Si pagan el empate a 3,40, ¿tiene valor?",
    "tipo": "partido",
-   "ok": true,
-   "fallas": [],
-   "ms": 5447,
-   "modelo": "gemma-4-26b-a4b-it",
+   "ok": false,
+   "fallas": [
+    "no menciona /EV|valor esperado/i"
+   ],
+   "ms": 3492,
+   "modelo": "gemini-flash-lite-latest",
    "cache": false,
-   "r": "¡Hola! Vamos a analizar ese escenario para el partido **Sportivo Luqueño vs 2 de Mayo** de hoy ⚽.\n\nSegún el modelo de Ballytics, la probabilidad para el **empate** es del **29 %**. Esto nos da una **cuota justa de 3,47**.\n\nSi la casa de apuestas ofrece una cuota de **3,40**, calculamos el valor esperado (EV) de la siguiente forma:\n- **EV** = (Probabilidad × Cuota) − 1\n- **EV** = (0,29 × 3,40) − 1 = **-0,014** (es decir, un **-1,4 %**)\n\nComo el valor esperado es negativo, la cuota de **3,40** no tiene valor según nuestro modelo, ya que está pagando menos de lo que la probabilidad estadística sugiere que debería pagar.\n\nRecuerda que el modelo se equivoca seguido y, en el backtest, apostar solo por valor perdió dinero.\n\nJuega con responsabilidad (+18).",
+   "r": "¡Hola! Analicemos el partidazo entre **Alemania vs Países Bajos** de hoy a las 16:45 ⚽.\n\n- **Empate**: probabilidad del modelo 23 %, cuota justa 4,33 y cuota casa 3,40 (según DraftKings). No tiene valor positivo ya que la cuota está por debajo de lo justo.\n\nEl modelo ve más firme la victoria de Alemania con un 50 % (cuota justa 1,98) y proyecta un marcador más probable de 1-1 con un xG total alto (2,04 para los locales y 1,45 para la visita).\n\nJuega con responsabilidad (+18).",
    "refs": []
   },
   {
@@ -459,10 +324,10 @@
    "tipo": "partido",
    "ok": true,
    "fallas": [],
-   "ms": 1444,
-   "modelo": "gemini-3.5-flash-lite",
+   "ms": 13540,
+   "modelo": "gemma-4-26b-a4b-it",
    "cache": false,
-   "r": "¡Hola! Para el partido de **Sportivo Luqueño vs 2 de Mayo** de hoy a las 19:30, estos son los datos que tenemos en Ballytics:\n\n- **Córners esperados:** El modelo proyecta un total de **6,1** córners.\n- **Tarjetas esperadas:** Se esperan **3,9** tarjetas en total.\n- **Árbitro:** **sin árbitro designado todavía**.\n\nEl modelo ve un encuentro parejo: victoria local 38% (cuota justa 2,64), empate 29% (cuota justa 3,47) y victoria visitante 33% (cuota justa 3,01). El marcador más probable es 1-1.\n\nRecuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero.\nJuega con responsabilidad (+18). ⚽",
+   "r": "¡Hola! Aquí tienes los datos estadísticos proyectados por el modelo para el partido **Alemania vs Países Bajos** de hoy: ⚽\n\n- **Córners esperados**: 11,2\n- **Tarjetas esperadas**: 2,6\n- **Árbitro**: Todavía no hay un árbitro designado para este encuentro.\n\nRecuerda que estas cifras son proyecciones basadas en el modelo estadístico. ¡Mucho éxito! 📈\n\nJuega con responsabilidad (+18).",
    "refs": []
   },
   {
@@ -470,11 +335,17 @@
    "tipo": "partido",
    "ok": true,
    "fallas": [],
-   "ms": 1882,
-   "modelo": "gemini-3.5-flash-lite",
+   "ms": 2848,
+   "modelo": "gemini-flash-lite-latest",
    "cache": false,
-   "r": "¡Hola! Para el partido de **Sportivo Luqueño vs 2 de Mayo** de hoy a las 19:30 en la **Primera División**, el modelo no cuenta con información oficial sobre bajas (aparece como **sin datos**). ⚽\n\n- **Sportivo Luqueño vs 2 de Mayo**: El modelo da una probabilidad de **38 %** para el local (cuota justa 2,64), **29 %** para el empate (cuota justa 3,47) y **33 %** para la visita (cuota justa 3,01). En DraftKings la cuota del local es 2,40 (EV -8,8 %), la del empate es 3,25 (EV -5,8 %) y la de la visita es 2,70 (EV -10,9 %). El xG es de **1,26** para el local y **1,17** para la visita, con un más de 2,5 goles en **44 %** (cuota justa 2,28) y ambos marcan en **50 %** (cuota justa 1,99).\n\nRecuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero.\nJuega con responsabilidad (+18).",
-   "refs": []
+   "r": "¡Hola! Para el partidazo entre **Alemania vs Países Bajos** de hoy a las 16:45 por Selecciones, el sistema no tiene registros de bajas importantes (figura \"sin datos\"). ⚽\n\n- **Alemania vs Países Bajos** (ganador local): Probabilidad del modelo **50 %**, cuota justa **1,98** y cuota en DraftKings de **1,87** (EV -6,5 %). El modelo ve un xG de 2,04 para los locales y 1,45 para la visita, apuntando a un marcador más probable de 1,1.\n\nRecuerda que el modelo se equivoca seguido y que en el backtest apostar solo por valor perdió dinero.\nJuega con responsabilidad (+18).",
+   "refs": [
+    {
+     "id": "m1",
+     "mercado": "H",
+     "dia": null
+    }
+   ]
   }
  ]
 }
