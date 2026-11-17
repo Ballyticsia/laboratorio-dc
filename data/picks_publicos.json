@@ -1499,7 +1499,7 @@
      "lado": "H",
      "prob": 0.9036,
      "cuota": 1.083,
-     "cierre": 1.083,
+     "cierre": 1.071,
      "res": null,
      "hg": null,
      "ag": null
@@ -1515,9 +1515,9 @@
      "prob": 0.3234,
      "cuota": 4.6,
      "cierre": 5.0,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 5,
+     "ag": 0,
      "mercado": 0.1784,
      "ev": 0.4876
     },
@@ -1556,6 +1556,93 @@
      "ev": 0.3797
     }
    ]
+  },
+  "2026-11-18": {
+   "fijado": "2026-11-17T21:02Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401841313",
+     "liga": "brasil",
+     "kickoff": "2026-11-18T23:30Z",
+     "home": "Flamengo",
+     "away": "Athletico-PR",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.785,
+     "cuota": 1.235,
+     "cierre": 1.235,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401841310",
+     "liga": "brasil",
+     "kickoff": "2026-11-18T23:00Z",
+     "home": "Remo",
+     "away": "Chapecoense",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.6145,
+     "cuota": 1.556,
+     "cierre": 1.556,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401841316",
+     "liga": "brasil",
+     "kickoff": "2026-11-19T00:30Z",
+     "home": "Corinthians",
+     "away": "Botafogo",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.2858,
+     "cuota": 4.0,
+     "cierre": 4.0,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.223,
+     "ev": 0.1432
+    },
+    {
+     "id": "401886138",
+     "liga": "peru",
+     "kickoff": "2026-11-18T20:00Z",
+     "home": "Alianza Atlético",
+     "away": "Melgar",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.3329,
+     "cuota": 3.3,
+     "cierre": 3.3,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2675,
+     "ev": 0.0986
+    },
+    {
+     "id": "401841315",
+     "liga": "brasil",
+     "kickoff": "2026-11-18T22:30Z",
+     "home": "Coritiba",
+     "away": "Santos",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.3108,
+     "cuota": 3.4,
+     "cierre": 3.4,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2799,
+     "ev": 0.0567
+    }
+   ]
   }
  },
  "reglas": {
@@ -1566,5 +1653,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-17T19:14Z"
+ "actualizado": "2026-11-17T21:02Z"
 }

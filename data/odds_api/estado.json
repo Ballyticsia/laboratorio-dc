@@ -19,19 +19,14 @@
   "soccer_conmebol_copa_libertadores": "sin partidos cerca",
   "soccer_uefa_europa_league": "sin partidos cerca",
   "soccer_uefa_europa_conference_league": "sin partidos cerca",
-  "soccer_conmebol_copa_sudamericana": "error",
-  "soccer_mexico_ligamx": "error",
-  "soccer_turkey_super_league": "error",
+  "soccer_conmebol_copa_sudamericana": "sin partidos cerca",
+  "soccer_mexico_ligamx": "sin partidos cerca",
+  "soccer_turkey_super_league": "sin partidos cerca",
   "soccer_spl": "sin partidos cerca",
-  "soccer_belgium_first_div": "error"
+  "soccer_belgium_first_div": "sin partidos cerca"
  },
- "errores": [
-  "soccer_conmebol_copa_sudamericana events: HTTP Error 429: Too Many Requests",
-  "soccer_mexico_ligamx events: HTTP Error 429: Too Many Requests",
-  "soccer_turkey_super_league events: HTTP Error 429: Too Many Requests",
-  "soccer_belgium_first_div events: HTTP Error 429: Too Many Requests"
- ],
+ "errores": [],
  "ligas": {},
  "partidos_con_cuota": 7,
- "actualizado": "2026-11-17T19:21+00:00"
+ "actualizado": "2026-11-17T21:08+00:00"
 }
