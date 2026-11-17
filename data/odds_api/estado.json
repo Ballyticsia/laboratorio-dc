@@ -21,14 +21,15 @@
   "soccer_uefa_europa_conference_league": "sin partidos cerca",
   "soccer_conmebol_copa_sudamericana": "sin partidos cerca",
   "soccer_mexico_ligamx": "sin partidos cerca",
-  "soccer_turkey_super_league": "sin partidos cerca",
+  "soccer_turkey_super_league": "error",
   "soccer_spl": "sin partidos cerca",
   "soccer_belgium_first_div": "error"
  },
  "errores": [
+  "soccer_turkey_super_league events: HTTP Error 429: Too Many Requests",
   "soccer_belgium_first_div events: HTTP Error 429: Too Many Requests"
  ],
  "ligas": {},
  "partidos_con_cuota": 7,
- "actualizado": "2026-11-17T13:29+00:00"
+ "actualizado": "2026-11-17T15:09+00:00"
 }
