@@ -1601,7 +1601,7 @@
      "lado": "A",
      "prob": 0.2858,
      "cuota": 4.0,
-     "cierre": 4.7,
+     "cierre": 4.9,
      "res": null,
      "hg": null,
      "ag": null,
@@ -1643,6 +1643,46 @@
      "ev": 0.0567
     }
    ]
+  },
+  "2026-11-19": {
+   "fijado": "2026-11-18T21:04Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401841308",
+     "liga": "brasil",
+     "kickoff": "2026-11-19T22:30Z",
+     "home": "Vasco da Gama",
+     "away": "Internacional",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.2497,
+     "cuota": 4.8,
+     "cierre": 4.8,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1806,
+     "ev": 0.1986
+    },
+    {
+     "id": "401933535",
+     "liga": "mls",
+     "kickoff": "2026-11-20T00:30Z",
+     "home": "Orlando City SC",
+     "away": "FC Cincinnati",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.4574,
+     "cuota": 2.4,
+     "cierre": 2.4,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.3855,
+     "ev": 0.0978
+    }
+   ]
   }
  },
  "reglas": {
@@ -1653,5 +1693,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-18T19:08Z"
+ "actualizado": "2026-11-18T21:04Z"
 }
