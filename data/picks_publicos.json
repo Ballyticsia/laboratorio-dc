@@ -1675,12 +1675,114 @@
      "lado": "H",
      "prob": 0.4574,
      "cuota": 2.4,
-     "cierre": 2.4,
+     "cierre": 2.35,
      "res": null,
      "hg": null,
      "ag": null,
      "mercado": 0.3855,
      "ev": 0.0978
+    }
+   ]
+  },
+  "2026-11-20": {
+   "fijado": "2026-11-19T21:02Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401884736",
+     "liga": "bundesliga",
+     "kickoff": "2026-11-20T19:30Z",
+     "home": "Bayern Munich",
+     "away": "FC Cologne",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.9259,
+     "cuota": 1.062,
+     "cierre": 1.062,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401875841",
+     "liga": "eerste",
+     "kickoff": "2026-11-20T19:00Z",
+     "home": "Heracles Almelo",
+     "away": "Jong PSV",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8487,
+     "cuota": 1.154,
+     "cierre": 1.154,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401877548",
+     "liga": "japon",
+     "kickoff": "2026-11-20T10:00Z",
+     "home": "Vissel Kobe",
+     "away": "Mito Hollyhock",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.6985,
+     "cuota": 1.4,
+     "cierre": 1.4,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401876687",
+     "liga": "ligue2",
+     "kickoff": "2026-11-20T19:00Z",
+     "home": "AS Nancy Lorraine",
+     "away": "Dijon FCO",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.3698,
+     "cuota": 4.2,
+     "cierre": 4.2,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2181,
+     "ev": 0.5532
+    },
+    {
+     "id": "401878519",
+     "liga": "escocia2",
+     "kickoff": "2026-11-20T19:30Z",
+     "home": "Inverness Caledonian Thistle",
+     "away": "Ayr United",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.256,
+     "cuota": 5.25,
+     "cierre": 5.25,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.17,
+     "ev": 0.344
+    },
+    {
+     "id": "401892138",
+     "liga": "australia",
+     "kickoff": "2026-11-20T08:40Z",
+     "home": "Western Sydney Wanderers FC",
+     "away": "Adelaide United FC",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.3105,
+     "cuota": 4.3,
+     "cierre": 4.3,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2132,
+     "ev": 0.3351
     }
    ]
   }
@@ -1693,5 +1795,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-19T19:12Z"
+ "actualizado": "2026-11-19T21:02Z"
 }
