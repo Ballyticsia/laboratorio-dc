@@ -1,17 +1,17 @@
 {
  "activa": true,
- "creditos_usados": 2,
- "restantes": 200,
+ "creditos_usados": 8,
+ "restantes": 192,
  "consultas": {
   "soccer_epl": "sin partidos cerca",
-  "soccer_spain_la_liga": "sin partidos cerca",
+  "soccer_spain_la_liga": "actualizada",
   "soccer_italy_serie_a": "sin partidos cerca",
-  "soccer_germany_bundesliga": "actualizada",
-  "soccer_france_ligue_one": "sin partidos cerca",
+  "soccer_germany_bundesliga": "copia",
+  "soccer_france_ligue_one": "actualizada",
   "soccer_efl_champ": "sin partidos cerca",
   "soccer_portugal_primeira_liga": "sin partidos cerca",
   "soccer_netherlands_eredivisie": "sin partidos cerca",
-  "soccer_chile_campeonato": "sin partidos cerca",
+  "soccer_chile_campeonato": "actualizada",
   "soccer_argentina_primera_division": "sin partidos cerca",
   "soccer_brazil_campeonato": "copia",
   "soccer_usa_mls": "copia",
@@ -20,16 +20,13 @@
   "soccer_uefa_europa_league": "sin partidos cerca",
   "soccer_uefa_europa_conference_league": "sin partidos cerca",
   "soccer_conmebol_copa_sudamericana": "sin partidos cerca",
-  "soccer_mexico_ligamx": "error",
+  "soccer_mexico_ligamx": "sin partidos cerca",
   "soccer_turkey_super_league": "sin partidos cerca",
-  "soccer_spl": "error",
-  "soccer_belgium_first_div": "sin partidos cerca"
+  "soccer_spl": "sin partidos cerca",
+  "soccer_belgium_first_div": "actualizada"
  },
- "errores": [
-  "soccer_mexico_ligamx events: HTTP Error 429: Too Many Requests",
-  "soccer_spl events: HTTP Error 429: Too Many Requests"
- ],
+ "errores": [],
  "ligas": {},
- "partidos_con_cuota": 19,
- "actualizado": "2026-11-19T07:36+00:00"
+ "partidos_con_cuota": 50,
+ "actualizado": "2026-11-19T09:23+00:00"
 }
