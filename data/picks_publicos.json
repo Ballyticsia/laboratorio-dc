@@ -1698,7 +1698,7 @@
      "lado": "H",
      "prob": 0.9259,
      "cuota": 1.062,
-     "cierre": 1.062,
+     "cierre": 1.071,
      "res": null,
      "hg": null,
      "ag": null
@@ -1729,9 +1729,9 @@
      "prob": 0.6985,
      "cuota": 1.4,
      "cierre": 1.444,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "P",
+     "hg": 1,
+     "ag": 2
     },
     {
      "id": "401876687",
@@ -1743,7 +1743,7 @@
      "lado": "A",
      "prob": 0.3698,
      "cuota": 4.2,
-     "cierre": 4.2,
+     "cierre": 4.3,
      "res": null,
      "hg": null,
      "ag": null,
@@ -1795,5 +1795,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-20T11:13Z"
+ "actualizado": "2026-11-20T13:25Z"
 }
