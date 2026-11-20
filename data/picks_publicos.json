@@ -1714,9 +1714,9 @@
      "prob": 0.8487,
      "cuota": 1.154,
      "cierre": 1.133,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 2,
+     "ag": 1
     },
     {
      "id": "401877548",
@@ -1744,9 +1744,9 @@
      "prob": 0.3698,
      "cuota": 4.2,
      "cierre": 4.2,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 1,
+     "ag": 0,
      "mercado": 0.2181,
      "ev": 0.5532
     },
@@ -1785,6 +1785,108 @@
      "ev": 0.3351
     }
    ]
+  },
+  "2026-11-21": {
+   "fijado": "2026-11-20T21:00Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401879613",
+     "liga": "guatemala",
+     "kickoff": "2026-11-21T19:00Z",
+     "home": "Xelajú MC",
+     "away": "Suchitepequez",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8591,
+     "cuota": 1.133,
+     "cierre": 1.133,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401882798",
+     "liga": "laliga",
+     "kickoff": "2026-11-21T20:00Z",
+     "home": "Real Madrid",
+     "away": "Celta Vigo",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8461,
+     "cuota": 1.167,
+     "cierre": 1.167,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401878338",
+     "liga": "escocia",
+     "kickoff": "2026-11-21T15:00Z",
+     "home": "Celtic",
+     "away": "St Mirren",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8417,
+     "cuota": 1.167,
+     "cierre": 1.167,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401841322",
+     "liga": "brasil",
+     "kickoff": "2026-11-21T19:30Z",
+     "home": "Palmeiras",
+     "away": "Flamengo",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.4204,
+     "cuota": 4.2,
+     "cierre": 4.2,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2313,
+     "ev": 0.7657
+    },
+    {
+     "id": "401884728",
+     "liga": "bundesliga",
+     "kickoff": "2026-11-21T14:30Z",
+     "home": "SV Elversberg",
+     "away": "SC Freiburg",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.4563,
+     "cuota": 3.4,
+     "cierre": 3.4,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2587,
+     "ev": 0.5514
+    },
+    {
+     "id": "401881749",
+     "liga": "austria",
+     "kickoff": "2026-11-21T16:00Z",
+     "home": "LASK Linz",
+     "away": "TSV Hartberg",
+     "est": "valor",
+     "lado": "D",
+     "prob": 0.2509,
+     "cuota": 6.0,
+     "cierre": 6.0,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1442,
+     "ev": 0.5054
+    }
+   ]
   }
  },
  "reglas": {
@@ -1795,5 +1897,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-20T19:14Z"
+ "actualizado": "2026-11-20T21:00Z"
 }
