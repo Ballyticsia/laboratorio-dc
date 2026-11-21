@@ -1,7 +1,7 @@
 {
  "activa": true,
- "creditos_usados": 4,
- "restantes": 122,
+ "creditos_usados": 2,
+ "restantes": 120,
  "consultas": {
   "soccer_epl": "copia",
   "soccer_spain_la_liga": "copia",
@@ -19,14 +19,14 @@
   "soccer_conmebol_copa_libertadores": "sin partidos cerca",
   "soccer_uefa_europa_league": "sin partidos cerca",
   "soccer_uefa_europa_conference_league": "sin partidos cerca",
-  "soccer_conmebol_copa_sudamericana": "actualizada",
-  "soccer_mexico_ligamx": "actualizada",
-  "soccer_turkey_super_league": "copia",
+  "soccer_conmebol_copa_sudamericana": "copia",
+  "soccer_mexico_ligamx": "copia",
+  "soccer_turkey_super_league": "actualizada",
   "soccer_spl": "copia",
   "soccer_belgium_first_div": "copia"
  },
  "errores": [],
  "ligas": {},
- "partidos_con_cuota": 126,
- "actualizado": "2026-11-21T07:31+00:00"
+ "partidos_con_cuota": 116,
+ "actualizado": "2026-11-21T16:17+00:00"
 }
