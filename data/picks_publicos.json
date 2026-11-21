@@ -1801,9 +1801,9 @@
      "prob": 0.8591,
      "cuota": 1.133,
      "cierre": 1.19,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 3,
+     "ag": 1
     },
     {
      "id": "401882798",
@@ -1831,9 +1831,9 @@
      "prob": 0.8417,
      "cuota": 1.167,
      "cierre": 1.182,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 4,
+     "ag": 1
     },
     {
      "id": "401841322",
@@ -1846,9 +1846,9 @@
      "prob": 0.4204,
      "cuota": 4.2,
      "cierre": 3.5,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 1,
+     "ag": 1,
      "mercado": 0.2313,
      "ev": 0.7657
     },
@@ -1863,9 +1863,9 @@
      "prob": 0.4563,
      "cuota": 3.4,
      "cierre": 3.4,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 0,
+     "ag": 1,
      "mercado": 0.2587,
      "ev": 0.5514
     },
@@ -1880,11 +1880,113 @@
      "prob": 0.2509,
      "cuota": 6.0,
      "cierre": 5.75,
+     "res": "P",
+     "hg": 2,
+     "ag": 1,
+     "mercado": 0.1442,
+     "ev": 0.5054
+    }
+   ]
+  },
+  "2026-11-22": {
+   "fijado": "2026-11-21T21:40Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401875545",
+     "liga": "eredivisie",
+     "kickoff": "2026-11-22T11:15Z",
+     "home": "FC Twente",
+     "away": "Willem II",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.9119,
+     "cuota": 1.071,
+     "cierre": 1.071,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401888249",
+     "liga": "turquia",
+     "kickoff": "2026-11-22T16:00Z",
+     "home": "Trabzonspor",
+     "away": "Eyupspor",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8777,
+     "cuota": 1.125,
+     "cierre": 1.125,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401875547",
+     "liga": "eredivisie",
+     "kickoff": "2026-11-22T13:30Z",
+     "home": "Ajax Amsterdam",
+     "away": "ADO Den Haag",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8459,
+     "cuota": 1.154,
+     "cierre": 1.154,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401930029",
+     "liga": "bolivia",
+     "kickoff": "2026-11-22T19:00Z",
+     "home": "Real Potosí",
+     "away": "Bolívar",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.3358,
+     "cuota": 5.5,
+     "cierre": 5.5,
      "res": null,
      "hg": null,
      "ag": null,
-     "mercado": 0.1442,
-     "ev": 0.5054
+     "mercado": 0.1478,
+     "ev": 0.8469
+    },
+    {
+     "id": "401885048",
+     "liga": "bundesliga2",
+     "kickoff": "2026-11-22T12:30Z",
+     "home": "Energie Cottbus",
+     "away": "Hertha Berlin",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.3141,
+     "cuota": 4.8,
+     "cierre": 4.8,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1886,
+     "ev": 0.5077
+    },
+    {
+     "id": "401878934",
+     "liga": "belgica",
+     "kickoff": "2026-11-22T18:15Z",
+     "home": "Lommel SK",
+     "away": "Standard Liege",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.4402,
+     "cuota": 3.25,
+     "cierre": 3.25,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2836,
+     "ev": 0.4306
     }
    ]
   }
@@ -1897,5 +1999,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-21T16:10Z"
+ "actualizado": "2026-11-21T21:40Z"
 }
