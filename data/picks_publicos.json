@@ -1948,9 +1948,9 @@
      "prob": 0.3358,
      "cuota": 5.5,
      "cierre": 5.25,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "G",
+     "hg": 1,
+     "ag": 0,
      "mercado": 0.1478,
      "ev": 0.8469
     },
@@ -1982,11 +1982,113 @@
      "prob": 0.4402,
      "cuota": 3.25,
      "cierre": 3.1,
+     "res": "P",
+     "hg": 1,
+     "ag": 2,
+     "mercado": 0.2836,
+     "ev": 0.4306
+    }
+   ]
+  },
+  "2026-11-23": {
+   "fijado": "2026-11-22T23:37Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401842888",
+     "liga": "suecia",
+     "kickoff": "2026-11-23T18:00Z",
+     "home": "Hammarby IF",
+     "away": "IFK Göteborg",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.804,
+     "cuota": 1.211,
+     "cierre": 1.211,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401876686",
+     "liga": "ligue2",
+     "kickoff": "2026-11-23T19:45Z",
+     "home": "Nantes",
+     "away": "Grenoble",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.6677,
+     "cuota": 1.455,
+     "cierre": 1.455,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401930027",
+     "liga": "bolivia",
+     "kickoff": "2026-11-23T19:00Z",
+     "home": "Real Oruro",
+     "away": "Guabirá",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.6042,
+     "cuota": 1.571,
+     "cierre": 1.571,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401876683",
+     "liga": "ligue2",
+     "kickoff": "2026-11-23T19:45Z",
+     "home": "Sochaux",
+     "away": "Dunkerque",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.4692,
+     "cuota": 2.95,
+     "cierre": 2.95,
      "res": null,
      "hg": null,
      "ag": null,
-     "mercado": 0.2836,
-     "ev": 0.4306
+     "mercado": 0.3193,
+     "ev": 0.3841
+    },
+    {
+     "id": "401875836",
+     "liga": "eerste",
+     "kickoff": "2026-11-23T19:00Z",
+     "home": "Jong Ajax",
+     "away": "Jong AZ",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.4843,
+     "cuota": 2.75,
+     "cierre": 2.75,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.3427,
+     "ev": 0.3318
+    },
+    {
+     "id": "401842884",
+     "liga": "suecia",
+     "kickoff": "2026-11-23T18:00Z",
+     "home": "Örgryte IS",
+     "away": "Kalmar FF",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.3899,
+     "cuota": 3.35,
+     "cierre": 3.35,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2796,
+     "ev": 0.3062
     }
    ]
   }
@@ -1999,5 +2101,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-22T17:50Z"
+ "actualizado": "2026-11-22T23:37Z"
 }
