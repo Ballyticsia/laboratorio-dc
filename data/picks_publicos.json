@@ -2020,9 +2020,9 @@
      "prob": 0.6677,
      "cuota": 1.455,
      "cierre": 1.455,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 1,
+     "ag": 0
     },
     {
      "id": "401930027",
@@ -2035,9 +2035,9 @@
      "prob": 0.6042,
      "cuota": 1.571,
      "cierre": 1.588,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "P",
+     "hg": 0,
+     "ag": 3
     },
     {
      "id": "401876683",
@@ -2050,9 +2050,9 @@
      "prob": 0.4692,
      "cuota": 2.95,
      "cierre": 2.95,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "G",
+     "hg": 2,
+     "ag": 3,
      "mercado": 0.3193,
      "ev": 0.3841
     },
@@ -2067,9 +2067,9 @@
      "prob": 0.4843,
      "cuota": 2.75,
      "cierre": 2.75,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 3,
+     "ag": 0,
      "mercado": 0.3427,
      "ev": 0.3318
     },
@@ -2091,6 +2091,108 @@
      "ev": 0.3062
     }
    ]
+  },
+  "2026-11-24": {
+   "fijado": "2026-11-24T04:49Z",
+   "tarde": true,
+   "picks": [
+    {
+     "id": "401915298",
+     "liga": "champions",
+     "kickoff": "2026-11-24T20:00Z",
+     "home": "Real Madrid",
+     "away": "PSV Eindhoven",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8515,
+     "cuota": 1.167,
+     "cierre": 1.167,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401878345",
+     "liga": "escocia",
+     "kickoff": "2026-11-24T20:00Z",
+     "home": "Rangers",
+     "away": "Aberdeen",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.793,
+     "cuota": 1.235,
+     "cierre": 1.235,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401915296",
+     "liga": "champions",
+     "kickoff": "2026-11-24T20:00Z",
+     "home": "Como",
+     "away": "AEK Athens",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.7839,
+     "cuota": 1.256,
+     "cierre": 1.256,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401841335",
+     "liga": "brasil",
+     "kickoff": "2026-11-24T21:00Z",
+     "home": "Chapecoense",
+     "away": "Palmeiras",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.7009,
+     "cuota": 2.1,
+     "cierre": 2.1,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.4845,
+     "ev": 0.4719
+    },
+    {
+     "id": "401915380",
+     "liga": "champions",
+     "kickoff": "2026-11-24T17:45Z",
+     "home": "Bodo/Glimt",
+     "away": "LASK Linz",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.2597,
+     "cuota": 5.5,
+     "cierre": 5.5,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1654,
+     "ev": 0.4284
+    },
+    {
+     "id": "401899539",
+     "liga": "serieb",
+     "kickoff": "2026-11-24T19:00Z",
+     "home": "Benevento",
+     "away": "Empoli",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.2358,
+     "cuota": 5.5,
+     "cierre": 5.5,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.1632,
+     "ev": 0.2969
+    }
+   ]
   }
  },
  "reglas": {
@@ -2101,5 +2203,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-23T20:14Z"
+ "actualizado": "2026-11-24T04:49Z"
 }
