@@ -2107,9 +2107,9 @@
      "prob": 0.8515,
      "cuota": 1.167,
      "cierre": 1.143,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 5,
+     "ag": 1
     },
     {
      "id": "401878345",
@@ -2122,9 +2122,9 @@
      "prob": 0.793,
      "cuota": 1.235,
      "cierre": 1.222,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 3,
+     "ag": 2
     },
     {
      "id": "401915296",
@@ -2137,9 +2137,9 @@
      "prob": 0.7839,
      "cuota": 1.256,
      "cierre": 1.278,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 1,
+     "ag": 0
     },
     {
      "id": "401841335",
@@ -2152,9 +2152,9 @@
      "prob": 0.7009,
      "cuota": 2.1,
      "cierre": 2.2,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 3,
+     "ag": 0,
      "mercado": 0.4845,
      "ev": 0.4719
     },
@@ -2169,9 +2169,9 @@
      "prob": 0.2597,
      "cuota": 5.5,
      "cierre": 5.5,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 1,
+     "ag": 0,
      "mercado": 0.1654,
      "ev": 0.4284
     },
@@ -2186,11 +2186,113 @@
      "prob": 0.2358,
      "cuota": 5.5,
      "cierre": 7.0,
+     "res": "P",
+     "hg": 5,
+     "ag": 0,
+     "mercado": 0.1632,
+     "ev": 0.2969
+    }
+   ]
+  },
+  "2026-11-25": {
+   "fijado": "2026-11-25T02:30Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401915378",
+     "liga": "champions",
+     "kickoff": "2026-11-25T17:45Z",
+     "home": "Sabah FK",
+     "away": "Barcelona",
+     "est": "seguro",
+     "lado": "A",
+     "prob": 0.9163,
+     "cuota": 1.083,
+     "cierre": 1.083,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401915291",
+     "liga": "champions",
+     "kickoff": "2026-11-25T20:00Z",
+     "home": "Atlético Madrid",
+     "away": "Viking FK",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8917,
+     "cuota": 1.111,
+     "cierre": 1.111,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401889182",
+     "liga": "nationalleague",
+     "kickoff": "2026-11-25T19:00Z",
+     "home": "Boreham Wood",
+     "away": "Aldershot Town",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.8315,
+     "cuota": 1.167,
+     "cierre": 1.167,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401915375",
+     "liga": "champions",
+     "kickoff": "2026-11-25T20:00Z",
+     "home": "Shakhtar Donetsk",
+     "away": "Fenerbahce",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.4899,
+     "cuota": 2.95,
+     "cierre": 2.95,
      "res": null,
      "hg": null,
      "ag": null,
-     "mercado": 0.1632,
-     "ev": 0.2969
+     "mercado": 0.3176,
+     "ev": 0.4452
+    },
+    {
+     "id": "401915292",
+     "liga": "champions",
+     "kickoff": "2026-11-25T20:00Z",
+     "home": "Club Brugge",
+     "away": "Liverpool",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.2998,
+     "cuota": 4.4,
+     "cierre": 4.4,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2094,
+     "ev": 0.3191
+    },
+    {
+     "id": "401915373",
+     "liga": "champions",
+     "kickoff": "2026-11-25T20:00Z",
+     "home": "Sporting CP",
+     "away": "Manchester United",
+     "est": "valor",
+     "lado": "H",
+     "prob": 0.5147,
+     "cuota": 2.55,
+     "cierre": 2.55,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.3774,
+     "ev": 0.3125
     }
    ]
   }
@@ -2203,5 +2305,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-24T17:46Z"
+ "actualizado": "2026-11-25T02:30Z"
 }
