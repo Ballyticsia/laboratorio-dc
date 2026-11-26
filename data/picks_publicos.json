@@ -2311,9 +2311,9 @@
      "prob": 0.8758,
      "cuota": 1.125,
      "cierre": 1.125,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 4,
+     "ag": 0
     },
     {
      "id": "401915802",
@@ -2341,9 +2341,9 @@
      "prob": 0.8481,
      "cuota": 1.154,
      "cierre": 1.143,
-     "res": null,
-     "hg": null,
-     "ag": null
+     "res": "G",
+     "hg": 2,
+     "ag": 0
     },
     {
      "id": "401915816",
@@ -2356,9 +2356,9 @@
      "prob": 0.5961,
      "cuota": 3.35,
      "cierre": 3.35,
-     "res": null,
-     "hg": null,
-     "ag": null,
+     "res": "P",
+     "hg": 1,
+     "ag": 0,
      "mercado": 0.284,
      "ev": 0.9969
     },
@@ -2390,11 +2390,113 @@
      "prob": 0.2901,
      "cuota": 5.5,
      "cierre": 5.75,
+     "res": "P",
+     "hg": 2,
+     "ag": 3,
+     "mercado": 0.1664,
+     "ev": 0.5956
+    }
+   ]
+  },
+  "2026-11-27": {
+   "fijado": "2026-11-26T21:32Z",
+   "tarde": false,
+   "picks": [
+    {
+     "id": "401900870",
+     "liga": "arabia",
+     "kickoff": "2026-11-27T14:20Z",
+     "home": "Al Qadsiah",
+     "away": "Al Fayha",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.7972,
+     "cuota": 1.222,
+     "cierre": 1.222,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401876813",
+     "liga": "costarica",
+     "kickoff": "2026-11-28T02:00Z",
+     "home": "Herediano",
+     "away": "Escorpiones Belén",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.7721,
+     "cuota": 1.25,
+     "cierre": 1.25,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401875829",
+     "liga": "eerste",
+     "kickoff": "2026-11-27T19:00Z",
+     "home": "NAC Breda",
+     "away": "FC Den Bosch",
+     "est": "seguro",
+     "lado": "H",
+     "prob": 0.7126,
+     "cuota": 1.37,
+     "cierre": 1.37,
+     "res": null,
+     "hg": null,
+     "ag": null
+    },
+    {
+     "id": "401885389",
+     "liga": "portugal",
+     "kickoff": "2026-11-27T20:15Z",
+     "home": "Maritimo",
+     "away": "C.D. Nacional",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.4351,
+     "cuota": 3.55,
+     "cierre": 3.55,
      "res": null,
      "hg": null,
      "ag": null,
-     "mercado": 0.1664,
-     "ev": 0.5956
+     "mercado": 0.2604,
+     "ev": 0.5446
+    },
+    {
+     "id": "401933198",
+     "liga": "argentina2",
+     "kickoff": "2026-11-28T00:00Z",
+     "home": "Tristán Suárez",
+     "away": "Gimnasia y Tiro (Salta)",
+     "est": "valor",
+     "lado": "D",
+     "prob": 0.4556,
+     "cuota": 3.1,
+     "cierre": 3.1,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.2872,
+     "ev": 0.4124
+    },
+    {
+     "id": "401875830",
+     "liga": "eerste",
+     "kickoff": "2026-11-27T19:00Z",
+     "home": "MVV Maastricht",
+     "away": "Jong PSV",
+     "est": "valor",
+     "lado": "A",
+     "prob": 0.4412,
+     "cuota": 3.1,
+     "cierre": 3.1,
+     "res": null,
+     "hg": null,
+     "ag": null,
+     "mercado": 0.3019,
+     "ev": 0.3677
     }
    ]
   }
@@ -2407,5 +2509,5 @@
   "monto": "1 unidad por pick con la cuota de DraftKings (vía ESPN) del momento en que se fijó la lista.",
   "cambios": []
  },
- "actualizado": "2026-11-26T10:55Z"
+ "actualizado": "2026-11-26T21:32Z"
 }
