@@ -1,7 +1,7 @@
 {
  "activa": true,
- "creditos_usados": 0,
- "restantes": 24,
+ "creditos_usados": 6,
+ "restantes": 18,
  "consultas": {
   "soccer_epl": "copia",
   "soccer_spain_la_liga": "copia",
@@ -10,23 +10,23 @@
   "soccer_france_ligue_one": "copia",
   "soccer_efl_champ": "copia",
   "soccer_portugal_primeira_liga": "copia",
-  "soccer_netherlands_eredivisie": "reserva de créditos",
+  "soccer_netherlands_eredivisie": "actualizada",
   "soccer_chile_campeonato": "sin partidos cerca",
   "soccer_argentina_primera_division": "sin partidos cerca",
-  "soccer_brazil_campeonato": "reserva de créditos",
-  "soccer_usa_mls": "reserva de créditos",
+  "soccer_brazil_campeonato": "actualizada",
+  "soccer_usa_mls": "actualizada",
   "soccer_uefa_champs_league": "sin partidos cerca",
   "soccer_conmebol_copa_libertadores": "sin partidos cerca",
   "soccer_uefa_europa_league": "copia",
   "soccer_uefa_europa_conference_league": "sin partidos cerca",
   "soccer_conmebol_copa_sudamericana": "sin partidos cerca",
-  "soccer_mexico_ligamx": "reserva de créditos",
+  "soccer_mexico_ligamx": "sin partidos cerca",
   "soccer_turkey_super_league": "copia",
-  "soccer_spl": "sin partidos cerca",
+  "soccer_spl": "reserva de créditos",
   "soccer_belgium_first_div": "reserva de créditos"
  },
  "errores": [],
  "ligas": {},
- "partidos_con_cuota": 94,
- "actualizado": "2026-11-26T21:39+00:00"
+ "partidos_con_cuota": 95,
+ "actualizado": "2026-11-27T04:22+00:00"
 }
