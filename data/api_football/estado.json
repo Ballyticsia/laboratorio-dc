@@ -1,21 +1,21 @@
 {
  "activa": true,
  "consultas": 6,
- "restantes": 42,
+ "restantes": 96,
  "errores": [
-  "2026-11-29: {'plan': 'Free plans do not have access to this date, try from 2026-11-26 to 2026-11-28.'}"
+  "2026-11-30: {'plan': 'Free plans do not have access to this date, try from 2026-11-27 to 2026-11-29.'}"
  ],
  "fechas": {
-  "2026-11-27": {
-   "filas": 84,
-   "desde_cache": false
-  },
   "2026-11-28": {
    "filas": 364,
    "desde_cache": false
+  },
+  "2026-11-29": {
+   "filas": 460,
+   "desde_cache": false
   }
  },
- "partidos_con_bajas": 106,
- "partidos_ajustados": 76,
- "actualizado": "2026-11-27T22:50+00:00"
+ "partidos_con_bajas": 102,
+ "partidos_ajustados": 73,
+ "actualizado": "2026-11-28T07:56+00:00"
 }
